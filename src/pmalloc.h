@@ -10,11 +10,11 @@
 
 
 #if defined(DEBUG) || defined(USE_MALLOC)
-#   define pmalloc(size)            malloc(size)
-#   define pfree(ptr)               free(ptr)
-#   define pcalloc(nmemb, size)     calloc(nmemb, size)
-#   define prealloc(ptr, size)       realloc(ptr, size)
-#   define pmused()                 (0)
+#   define pmalloc(size)					malloc(size)
+#   define pfree(ptr)						free(ptr)
+#   define pcalloc(nmemb, size)				calloc(nmemb, size)
+#   define prealloc(ptr, size)				realloc(ptr, size)
+#   define pmused()							(0)
 #else
 void    *pmalloc(size_t size);
 void    pfree(void *ptr);

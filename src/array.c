@@ -115,4 +115,3 @@ static int __array_resize__(array_t *array, size_t n)
     array->nalloc = n;
     return n;
 }
-

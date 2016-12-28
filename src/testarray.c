@@ -4,6 +4,7 @@
 #include "array.h"
 
 
+static
 void test_array(void)
 {
     array_t *array;
