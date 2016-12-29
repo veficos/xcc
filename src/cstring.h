@@ -5,6 +5,7 @@
 
 
 #include "config.h"
+#include "pmalloc.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -24,10 +25,23 @@ typedef char* cstring_t;
             (unsigned char*)(&(((cstring_hdr_t *)0)->buffer))))
 
 
+#define str2ll(ptr, base)                                               \
+    strtoll(ptr, NULL, base)
+
+
+#define str2ull(ptr, base)                                              \
+    ((unsigned long long) strtoll(ptr, NULL, base))
+
+
 cstring_t cstring_create_n(const void *data, size_t size);
-void cstring_destroy(cstring_t cs);
 cstring_t cstring_cat_n(cstring_t cs, const void *data, size_t size);
 cstring_t cstring_cpy_n(cstring_t cs, const void *data, size_t size);
+cstring_t cstring_from_ll(long long value);
+cstring_t cstring_from_ull(unsigned long long value, int base);
+
+
+size_t ull2str(char *s, unsigned long long value, int base);
+size_t ll2str(char *s, long long value);
 
 
 static inline
@@ -47,7 +61,7 @@ size_t cstring_sizeof(const cstring_t cs)
 
 
 static inline
-size_t cstring_update_length(cstring_t cs)
+void cstring_update_length(cstring_t cs)
 {
     cstring_hdr_t *hdr = cstring_of(cs);
     size_t n = strlen(cs);
@@ -80,4 +94,14 @@ size_t cstring_capacity(const cstring_t cs)
 }
 
 
+static inline
+void cstring_destroy(cstring_t cs)
+{
+    if (cs) {
+        pfree(cstring_of(cs));
+    }
+}
+
+
 #endif
+
