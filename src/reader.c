@@ -1,7 +1,7 @@
 
 
+#include "config.h"
 #include "array.h"
-#include "reader.h"
 #include "pmalloc.h"
 #include "cstring.h"
 
@@ -36,10 +36,10 @@ file_reader_t file_reader_create(const char *filename)
 
     file = fopen(filename, "rb");
     if (!file) {
-        goto done;
+        goto failed;
     }
 
-    fr = (file_reader_t *) pmalloc(sizeof(file_reader_t));
+    fr = (file_reader_t) pmalloc(sizeof(struct file_reader_s));
     if (!fr) {
         goto close_fp;
     }
@@ -53,6 +53,8 @@ file_reader_t file_reader_create(const char *filename)
     fr->file = file;
     fr->line = 1;
     fr->column = 1;
+    
+    return fr;
 
 close_fr:
     pfree(fr);
@@ -60,8 +62,8 @@ close_fr:
 close_fp:
     fclose(file);
 
-done:
-    return file_reader;
+failed:
+    return NULL;
 }
 
 
@@ -77,6 +79,7 @@ void file_reader_destroy(file_reader_t fr)
         }
 
         fclose(fr->file);
+
         pfree(fr);
     }
 }

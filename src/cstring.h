@@ -7,8 +7,10 @@
 #include "config.h"
 #include "pmalloc.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 
 
 typedef struct cstring_hdr_s {

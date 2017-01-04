@@ -2,8 +2,8 @@
 
 #include "cstring.h"
 
-#include <stdarg.h>
 #include <ctype.h>
+
 
 #ifndef CSTRING_MAX_PREALLOC
 #define CSTRING_MAX_PREALLOC    (1024 * 1024)
