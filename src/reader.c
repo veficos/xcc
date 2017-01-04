@@ -22,40 +22,40 @@ typedef struct file_reader_s {
     FILE *file;
     long line;
     long column;
-} file_reader_t;
+}* file_reader_t;
 
 
-static inline void __file_reader_stashed_push__(file_reader_t *fr, char ch);
-static inline int __file_reader_stashed_pop__(file_reader_t *fr);
+static inline void __file_reader_stashed_push__(file_reader_t fr, char ch);
+static inline int __file_reader_stashed_pop__(file_reader_t fr);
 
 
-file_reader_t *file_reader_create(const char *filename)
+file_reader_t file_reader_create(const char *filename)
 {
-    file_reader_t *file_reader = NULL;
+    file_reader_t fr = NULL;
     FILE *file;
 
     file = fopen(filename, "rb");
     if (!file) {
         goto done;
     }
-    
-    file_reader = (file_reader_t *) pmalloc(sizeof(file_reader_t));
-    if (!file_reader) {
+
+    fr = (file_reader_t *) pmalloc(sizeof(file_reader_t));
+    if (!fr) {
         goto close_fp;
     }
 
-    file_reader->filename = cstring_create(filename);
-    if (!file_reader->filename) {
+    fr->filename = cstring_create(filename);
+    if (!fr->filename) {
         goto close_fr;
     }
 
-    file_reader->stashed = NULL;
-    file_reader->file = file;
-    file_reader->line = 1;
-    file_reader->column = 1;
+    fr->stashed = NULL;
+    fr->file = file;
+    fr->line = 1;
+    fr->column = 1;
 
 close_fr:
-    pfree(file_reader);
+    pfree(fr);
 
 close_fp:
     fclose(file);
@@ -65,24 +65,24 @@ done:
 }
 
 
-void file_reader_destroy(file_reader_t *file_reader)
+void file_reader_destroy(file_reader_t fr)
 {
-    if (file_reader) {
-        if (file_reader->filename) {
-            cstring_destroy(file_reader->filename);
+    if (fr) {
+        if (fr->filename) {
+            cstring_destroy(fr->filename);
         }
 
-        if (file_reader->stashed) {
-            cstring_destroy(file_reader->stashed);
+        if (fr->stashed) {
+            cstring_destroy(fr->stashed);
         }
 
-        fclose(file_reader->file);
-        pfree(file_reader);
+        fclose(fr->file);
+        pfree(fr);
     }
 }
 
 
-int file_reader_get(file_reader_t *fr)
+int file_reader_get(file_reader_t fr)
 {
     int ch;
     
@@ -108,7 +108,7 @@ int file_reader_get(file_reader_t *fr)
 }
 
 
-int file_reader_peek(file_reader_t *fr)
+int file_reader_peek(file_reader_t fr)
 {
     int ch;
     
@@ -121,20 +121,20 @@ int file_reader_peek(file_reader_t *fr)
 }
 
 
-void file_reader_unget(file_reader_t *fr, char ch)
+void file_reader_unget(file_reader_t fr, char ch)
 {
     __file_reader_stashed_push__(fr, ch);
 }
 
 
-const char *file_reader_name(file_reader_t *fr)
+const char *file_reader_name(file_reader_t fr)
 {
     return fr->filename;
 }
 
 
 static inline
-void __file_reader_stashed_push__(file_reader_t *fr, char ch)
+void __file_reader_stashed_push__(file_reader_t fr, char ch)
 {
     if (!fr->stashed) {
         fr->stashed = cstring_create_n(NULL, MAX_STASHED_SIZE);
@@ -145,7 +145,7 @@ void __file_reader_stashed_push__(file_reader_t *fr, char ch)
 
 
 static inline
-int __file_reader_stashed_pop__(file_reader_t *fr)
+int __file_reader_stashed_pop__(file_reader_t fr)
 {
     if (!fr->stashed) {
         return EOF;
