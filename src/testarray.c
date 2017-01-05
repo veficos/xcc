@@ -42,13 +42,12 @@ void test_array(void)
     TEST_COND("array_capacity()", array_capacity(array) == 16);
 
     array_destroy(array);
-
-    TEST_REPORT();
 }
 
 
 int main(void)
 {
     test_array();
+    TEST_REPORT();
     return 0;
 }

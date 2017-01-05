@@ -66,13 +66,12 @@ void test_cstring(void)
     TEST_COND("cstring_length()", cstring_length(cs) == 9);
     TEST_COND("cstring_capacity()", cstring_capacity(cs) == 11);
     cstring_destroy(cs);
-    
-    TEST_REPORT();
 }
 
 
 int main(void)
 {
     test_cstring();
+    TEST_REPORT();
     return 0;
 }
