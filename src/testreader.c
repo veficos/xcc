@@ -26,7 +26,7 @@ void removefile(const char *filename)
     remove(filename);
 }
 
-
+/*
 static 
 void test_file_reader()
 {
@@ -68,7 +68,7 @@ void test_file_reader()
         removefile("emp1.txt");
     }
 }
-
+*/
 
 static
 void test_string_reader()
@@ -82,10 +82,20 @@ void test_string_reader()
     {
         sr = string_reader_create(s);
         assert(sr != NULL);
+        TEST_COND("string_reader_line()", string_reader_line(sr));
+
+        string_reader_unget(sr, 'a');
+
+        TEST_COND("string_reader_column()", string_reader_column(sr) == 1);
+        TEST_COND("string_reader_peek()", string_reader_peek(sr) == 'a');
+        TEST_COND("string_reader_get()", string_reader_get(sr) == 'a');
+        TEST_COND("string_reader_column()", string_reader_column(sr) == 1);
 
         for (i = 0;; i++) {
             if (i < slen) {
+                TEST_COND("string_reader_column()", string_reader_column(sr) == i+1);
                 TEST_COND("string_reader_peek()", string_reader_peek(sr) == s[i]);
+                TEST_COND("string_reader_column()", string_reader_column(sr) == i+1);
             }
 
             ch = string_reader_get(sr);
@@ -93,17 +103,21 @@ void test_string_reader()
                 break;
             }
 
+            TEST_COND("string_reader_column()", string_reader_column(sr) == i+2);
             TEST_COND("string_reader_get()", ch == s[i]);
 
             string_reader_unget(sr, ch);
 
+            TEST_COND("string_reader_column()", string_reader_column(sr) == i+2);
+
             TEST_COND("string_reader_unget()", string_reader_peek(sr) == s[i]);
 
             string_reader_get(sr);
+
+            TEST_COND("string_reader_column()", string_reader_column(sr) == i+2);
         }
 
         TEST_COND("string_reader_name()", memcmp("<string>", string_reader_name(sr), 8) == 0);
-
         string_reader_destroy(sr);
     }
 }
@@ -111,7 +125,7 @@ void test_string_reader()
 
 int main(void)
 {
-    test_file_reader();
+    /* test_file_reader(); */
     test_string_reader();
     TEST_REPORT();
     return 0;

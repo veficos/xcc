@@ -157,4 +157,3 @@ void cstring_destroy(cstring_t cs)
 
 
 #endif
-
