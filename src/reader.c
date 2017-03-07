@@ -26,13 +26,13 @@
 
 
 static inline string_reader_t __string_reader_create_n__(cstring_t text);
-static inline void __string_reader_stashed_push__(string_reader_t sr, char ch);
+static inline bool __string_reader_stashed_push__(string_reader_t sr, char ch);
 static inline int __string_reader_stashed_pop__(string_reader_t sr);
 
 
 string_reader_t string_reader_create_n(const void *data, size_t n)
 {
-    cstring_t *buf;
+    cstring_t buf;
 
     buf = cstring_create_n(data, n);
     if (!buf) {
@@ -46,9 +46,7 @@ string_reader_t string_reader_create_n(const void *data, size_t n)
 void string_reader_destroy(string_reader_t sr)
 {
     if (sr) {
-        if (sr->text) {
-            cstring_destroy(sr->text);
-        }
+        cstring_destroy(sr->text);
 
         if (sr->stashed) {
             cstring_destroy(sr->stashed);
@@ -103,9 +101,45 @@ int string_reader_peek(string_reader_t sr)
 }
 
 
-void string_reader_unget(string_reader_t sr, int ch)
+bool string_reader_unget(string_reader_t sr, int ch)
 {
-    __string_reader_stashed_push__(sr, ch);
+    return __string_reader_stashed_push__(sr, ch);
+}
+
+
+cstring_t string_reader_peeksome(string_reader_t sr, size_t n)
+{
+    cstring_t cs = cstring_create_n(NULL, n);
+    if (!cs) {
+        return NULL;
+    }
+
+    if (n > (cstring_length(sr->text) - sr->seek)) {
+        n = (cstring_length(sr->text) - sr->seek);
+    }
+
+    cs = cstring_cpy_n(cs, &sr->text[sr->seek], n);
+
+    return cs;
+}
+
+
+cstring_t string_reader_readsome(string_reader_t sr, size_t n)
+{
+    cstring_t cs = cstring_create_n(NULL, n);
+    if (!cs) {
+        return NULL;
+    }
+
+    if (n > (cstring_length(sr->text) - sr->seek)) {
+        n = (cstring_length(sr->text) - sr->seek);
+    }
+
+    cs = cstring_cpy_n(cs, &sr->text[sr->seek], n);
+
+    sr->seek += n;
+
+    return cs;
 }
 
 
@@ -147,16 +181,14 @@ file_reader_t file_reader_create(const char *filename)
 
     readn = fread(buf, sizeof(char), st.st_size, fp);
     if (readn != st.st_size) {
-        goto clean_fp;
+        goto clean_cs;
     }
-
-    fclose(fp);
 
     cstring_of(buf)->length = st.st_size;
 
     fr = (file_reader_t) pmalloc(sizeof(struct file_reader_s));
     if (!fr) {
-        goto done;
+        goto clean_cs;
     }
 
     fr->filename = cstring_create(filename);
@@ -164,16 +196,37 @@ file_reader_t file_reader_create(const char *filename)
         goto clean_fr;
     }
 
+    fr->sreader = __string_reader_create_n__(buf);
+    if (!fr->sreader) {
+        goto clean_fr;
+    }
+    
+    fclose(fp);
     return fr;
 
 clean_fr:
     pfree(fr);
+
+clean_cs:
+    cstring_destroy(buf);
 
 clean_fp:
     fclose(fp);
 
 done:
     return NULL;
+}
+
+
+void file_reader_destroy(file_reader_t fr)
+{
+    if (fr) {
+        cstring_destroy(fr->filename);
+
+        string_reader_destroy(fr->sreader);
+
+        pfree(fr);
+    }
 }
 
 
@@ -199,13 +252,20 @@ string_reader_t __string_reader_create_n__(cstring_t text)
 
 
 static inline
-void __string_reader_stashed_push__(string_reader_t sr, char ch)
+bool __string_reader_stashed_push__(string_reader_t sr, char ch)
 {
     if (!sr->stashed) {
         sr->stashed = cstring_create_n(NULL, MAX_STASHED_SIZE);
+        if (!sr->stashed) {
+            return false;
+        }
     }
 
-    sr->stashed = cstring_push_ch(sr->stashed, ch);
+    if (!(sr->stashed = cstring_push_ch(sr->stashed, ch))){
+        return false;
+    }
+
+    return true;
 }
 
 

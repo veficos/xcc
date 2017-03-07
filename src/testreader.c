@@ -26,7 +26,7 @@ void removefile(const char *filename)
     remove(filename);
 }
 
-/*
+
 static 
 void test_file_reader()
 {
@@ -34,6 +34,7 @@ void test_file_reader()
     size_t slen = strlen(s);
     int i;
     int ch;
+    cstring_t cs;
     file_reader_t fr;
 
     {
@@ -41,6 +42,18 @@ void test_file_reader()
 
         fr = file_reader_create("emp1.txt");
         assert(fr != NULL);
+
+        cs = file_reader_peeksome(fr, 2);
+        TEST_COND("file_reader_peeksome", cstring_cmp(cs, "Do") == 0);
+        cstring_destroy(cs);
+        
+        file_reader_unget(fr, 'a');
+
+        TEST_COND("file_reader_column()", file_reader_column(fr) == 1);
+        TEST_COND("file_reader_peek()", file_reader_peek(fr) == 'a');
+        TEST_COND("file_reader_get()", file_reader_get(fr) == 'a');
+        TEST_COND("file_reader_column()", file_reader_column(fr) == 1);
+
 
         for (i = 0;; i++) {
             if (i < slen) {
@@ -68,7 +81,7 @@ void test_file_reader()
         removefile("emp1.txt");
     }
 }
-*/
+
 
 static
 void test_string_reader()
@@ -78,12 +91,17 @@ void test_string_reader()
     int i;
     int ch;
     string_reader_t sr;
+    cstring_t cs;
 
     {
         sr = string_reader_create(s);
         assert(sr != NULL);
         TEST_COND("string_reader_line()", string_reader_line(sr));
-
+        
+        cs = string_reader_peeksome(sr, 2);
+        TEST_COND("string_reader_peeksome", cstring_cmp(cs, "Do") == 0);
+        cstring_destroy(cs);
+        
         string_reader_unget(sr, 'a');
 
         TEST_COND("string_reader_column()", string_reader_column(sr) == 1);
@@ -125,7 +143,7 @@ void test_string_reader()
 
 int main(void)
 {
-    /* test_file_reader(); */
+    test_file_reader();
     test_string_reader();
     TEST_REPORT();
     return 0;
