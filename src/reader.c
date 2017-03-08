@@ -204,6 +204,9 @@ file_reader_t file_reader_create(const char *filename)
     fclose(fp);
     return fr;
 
+clean_filename:
+    cstring_destroy(fr->filename);
+
 clean_fr:
     pfree(fr);
 
