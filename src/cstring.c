@@ -386,7 +386,7 @@ size_t ull2str(char *s, unsigned long long v, int base)
     p = s;
     do {
         remainder = (v % base);
-        *p++ = (base > 10 && remainder >= 10) ? radix[remainder-10] : '0' + remainder;
+        *p++ = (char) ((base > 10 && remainder >= 10) ? radix[remainder-10] : '0' + remainder);
         v /= base;
     } while (v);
 

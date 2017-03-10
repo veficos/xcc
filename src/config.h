@@ -3,10 +3,18 @@
 #ifndef __CONFIG__H__
 #define __CONFIG__H__
 
-
 #define     DEBUG
 
 #define     USE_MALLOC
+
+
+#if defined(WIN32) || defined(_WIN32)
+#define _CRT_SECURE_NO_WARNINGS     1
+#define _CRT_NONSTDC_NO_DEPRECATE   1
+#define _CRTDBG_MAP_ALLOC 
+#include <crtdbg.h>
+#endif
+
 
 #ifndef bool 
 typedef enum {
@@ -15,9 +23,11 @@ typedef enum {
 }bool;
 #endif 
 
+
 #ifndef inline
 #define inline
 #endif
+
 
 #ifndef va_copy 
 # ifdef __va_copy 
@@ -26,5 +36,6 @@ typedef enum {
 # define va_copy(DEST, SRC) memcpy((&DEST), (&SRC), sizeof(va_list)) 
 # endif 
 #endif 
+
 
 #endif

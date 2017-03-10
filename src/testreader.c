@@ -32,7 +32,7 @@ void test_file_reader()
 {
     const char *s = "Do one thing at a time, and do well.";
     size_t slen = strlen(s);
-    int i;
+    size_t i;
     int ch;
     cstring_t cs;
     file_reader_t fr;

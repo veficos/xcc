@@ -71,7 +71,7 @@ int string_reader_get(string_reader_t sr)
         return EOF;
     }
 
-    if (ch == '\n') {
+    if (sr->lastch == '\n') {
         sr->line++;
         sr->column = 1;
         sr->begin = &sr->text[sr->seek];
@@ -80,6 +80,7 @@ int string_reader_get(string_reader_t sr)
         sr->column++;
     }
 
+    sr->lastch = ch;
     return ch;
 }
 
@@ -145,7 +146,7 @@ cstring_t string_reader_readsome(string_reader_t sr, size_t n)
 
 cstring_t string_reader_current_line(string_reader_t sr)
 {
-    int i = sr->seek;
+    size_t i = sr->seek;
 
     do {
         if (sr->text[i] == '\n') {
@@ -198,7 +199,7 @@ file_reader_t file_reader_create(const char *filename)
 
     fr->sreader = __string_reader_create_n__(buf);
     if (!fr->sreader) {
-        goto clean_fr;
+        goto clean_filename;
     }
     
     fclose(fp);
@@ -249,6 +250,7 @@ string_reader_t __string_reader_create_n__(cstring_t text)
     sr->line = 1;
     sr->column = 1;
     sr->seek = 0;
+    sr->lastch = EOF;
 
     return sr;
 }

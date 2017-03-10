@@ -20,6 +20,7 @@ typedef struct string_reader_s {
     size_t line;
     size_t column;
     size_t seek;
+    int lastch;
 } *string_reader_t;
 
 
@@ -51,7 +52,7 @@ typedef struct reader_s {
 #define file_reader_peeksome(fr, n) string_reader_peeksome((fr)->sreader, n)
 #define file_reader_line(fr)        string_reader_line((fr)->sreader)
 #define file_reader_column(fr)      string_reader_column((fr)->sreader)
-#define file_reader_name(fr)        (fr)->filename
+#define file_reader_name(fr)        ((const char *)(fr)->filename)
 #define file_reader_current_line(fr) string_reader_current_line((fr)->sreader)
 
 file_reader_t file_reader_create(const char *filename);
@@ -223,30 +224,28 @@ void reader_unget(reader_t reader, int ch)
 
 
 static inline
-void reader_line(reader_t reader)
+size_t reader_line(reader_t reader)
 {
     switch (reader->type) {
-        case READER_TYPE_FILE:
-            file_reader_line(reader->u.fr);
-            break;
-        case READER_TYPE_STRING:
-            string_reader_line(reader->u.sr);
-            break;
+    case READER_TYPE_FILE:
+        return file_reader_line(reader->u.fr);
+    case READER_TYPE_STRING:
+        return string_reader_line(reader->u.sr);
     }
+    return 0;
 }
 
 
 static inline
-void reader_column(reader_t reader)
+size_t reader_column(reader_t reader)
 {
     switch (reader->type) {
-        case READER_TYPE_FILE:
-            file_reader_column(reader->u.fr);
-            break;
-        case READER_TYPE_STRING:
-            string_reader_column(reader->u.sr);
-            break;
+    case READER_TYPE_FILE:
+        return file_reader_column(reader->u.fr);
+    case READER_TYPE_STRING:
+        return string_reader_column(reader->u.sr);
     }
+    return 0;
 }
 
 
@@ -254,15 +253,46 @@ static inline
 cstring_t reader_current_line(reader_t reader)
 { 
     switch (reader->type) {
-        case READER_TYPE_FILE:
-            file_reader_current_line(reader->u.fr);
-            break;
-        case READER_TYPE_STRING:
-            string_reader_current_line(reader->u.sr);
-            break;
+    case READER_TYPE_FILE:
+        file_reader_current_line(reader->u.fr);
+        break;
+    case READER_TYPE_STRING:
+        string_reader_current_line(reader->u.sr);
+        break;
     }
     return NULL;
 } 
 
-#endif
 
+static inline
+bool reader_try(reader_t reader, int ch)
+{
+    bool ret;
+    switch (reader->type) {
+    case READER_TYPE_FILE:
+         ret = file_reader_peek(reader->u.fr) == ch;
+         file_reader_get(reader->u.fr);
+         return ret;
+    case READER_TYPE_STRING:
+        ret = string_reader_peek(reader->u.sr) == ch;
+        string_reader_get(reader->u.sr);
+        return ret;
+    }
+    return false;
+}
+
+
+static inline
+bool reader_test(reader_t reader, int ch)
+{
+    switch (reader->type) {
+    case READER_TYPE_FILE:
+        return file_reader_peek(reader->u.fr) == ch;
+    case READER_TYPE_STRING:
+        return string_reader_peek(reader->u.sr) == ch;
+    }
+    return false;
+}
+
+
+#endif
