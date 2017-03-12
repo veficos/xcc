@@ -3,6 +3,7 @@
 #include "config.h"
 #include "pmalloc.h"
 #include "lexer.h"
+#include "reader.h"
 
 #include <assert.h>
 #include <ctype.h>

@@ -27,51 +27,71 @@
 #endif 
 
 
-static inline void __diag_errorvf_with_line__(source_location_t loc, const char *fmt, va_list ap);
+static inline void __diag_errorvf_with_location__(diag_t diag, source_location_t loc, const char *fmt, va_list ap);
 
 
-void diag_errorvf(const char *fmt, va_list ap)
+diag_t diag_create()
 {
-    vfprintf(stderr, fmt, ap);
+	diag_t diag = pmalloc(sizeof(struct diag_s));
+	if (!diag) {
+		return NULL;
+	}
+
+	diag->nwarnings = 0;
+	diag->nerrors = 0;
+
+	return diag;
 }
 
 
-void diag_errorf(const char *fmt, ...)
+void diag_destroy(diag_t diag)
 {
-    va_list ap;
+	if (diag) {
+		pfree(diag);
+	}
+}
 
-    va_start(ap, fmt);
 
+void diag_errorvf(diag_t diag, const char *fmt, va_list ap)
+{
     vfprintf(stderr, fmt, ap);
     fprintf(stderr, "\n");
-
-    va_end(ap);
-
-    exit(-1);
+    diag->nerrors++;
 }
 
 
-void diag_errorvf_with_line(source_location_t loc, const char *fmt, va_list ap)
-{
-    __diag_errorvf_with_line__(loc, fmt, ap);
-    exit(-1);
-}
-
-
-void diag_errorf_with_line(source_location_t loc, const char *fmt, ...)
+void diag_errorf(diag_t diag, const char *fmt, ...)
 {
     va_list ap;
 
     va_start(ap, fmt);
 
-    __diag_errorvf_with_line__(loc, fmt, ap);
+    diag_errorvf(diag, fmt, ap);
+
+    va_end(ap);
+}
+
+
+void diag_errorvf_with_location(diag_t diag, source_location_t loc, const char *fmt, va_list ap)
+{
+    __diag_errorvf_with_location__(diag, loc, fmt, ap);
+}
+
+
+void diag_errorf_with_location(diag_t diag, source_location_t loc, const char *fmt, ...)
+{
+    va_list ap;
+
+    va_start(ap, fmt);
+
+    __diag_errorvf_with_location__(diag, loc, fmt, ap);
 
     va_end(ap);
 }
 
 
 static inline
-void __diag_errorvf_with_line__(source_location_t loc, const char *fmt, va_list ap)
+void __diag_errorvf_with_location__(diag_t diag, source_location_t loc, const char *fmt, va_list ap)
 {
     bool pass_spaces = false;
     int nspaces = 0;
@@ -84,15 +104,14 @@ void __diag_errorvf_with_line__(source_location_t loc, const char *fmt, va_list 
             loc->column);
 
     vfprintf(stderr, fmt, ap);
-
     fprintf(stderr, "\n");
 
     if (loc->column >= MAX_COLUMN_HEAD) {
         p = loc->current_line;
 
-        fprintf(stderr, "    ...");
+        fprintf(stderr, "...");
         fprintf(stderr, p + loc->column);
-        fprintf(stderr, CONSOLE_COLOR_GREEN "\n       ^\n" CONSOLE_COLOR_DEFAULT);
+        fprintf(stderr, CONSOLE_COLOR_GREEN "\n   ^\n" CONSOLE_COLOR_DEFAULT);
 
     } else {
         for (p = loc->current_line; *p != '\n' && *p != 0; p++) {
@@ -111,4 +130,6 @@ void __diag_errorvf_with_line__(source_location_t loc, const char *fmt, va_list 
 
         fprintf(stderr, CONSOLE_COLOR_GREEN "^\n" CONSOLE_COLOR_DEFAULT);
     }
+
+	diag->nerrors++;
 }

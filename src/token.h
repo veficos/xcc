@@ -205,6 +205,7 @@ typedef struct token_s {
 
 token_t token_dup(token_t tok);
 
+
 static inline
 void token_init(token_t token)
 {

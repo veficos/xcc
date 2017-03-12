@@ -66,7 +66,7 @@ cstring_t cstring_pool_push_n(cstring_pool_t pool, const void *data, size_t n)
         return NULL;
     }
 
-    return cstring_pool_push(pool, cs);
+    return cstring_pool_push(pool->d, cs);
 }
 
 
@@ -75,7 +75,7 @@ cstring_t cstring_pool_push(cstring_pool_t pool, cstring_t cs)
     cstring_t ret;
     dict_entry_t *entry;
 
-    entry = dict_add_or_find((dict_t *)pool, cs);
+    entry = dict_add_or_find(pool->d, cs);
     if (!entry) {
         return NULL;
     }

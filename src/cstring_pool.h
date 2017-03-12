@@ -15,8 +15,10 @@
 #define DISABLE_CSTRING_POOL
 #endif
 
+typedef struct cstring_pool_s {
+    dict_t* d;
+} *cstring_pool_t;
 
-typedef dict_t* cstring_pool_t;
 
 cstring_pool_t cstring_pool_create();
 void cstring_pool_destroy(cstring_pool_t pool);
