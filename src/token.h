@@ -5,7 +5,8 @@
 
 
 #include "config.h"
-#include "cstring_pool.h"
+#include "cstring.h"
+#include "encoding.h"
 
 
 typedef enum token_type_e {
@@ -13,38 +14,33 @@ typedef enum token_type_e {
     TOKEN_END,
     TOKEN_IGNORE,
     
-    TOKEN_L_SQUARE,         /* [ */
-    TOKEN_R_SQUARE,         /* ] */
-    TOKEN_L_PAREN,          /* ) */
-    TOKEN_R_PAREN,          /* ( */
-    TOKEN_L_BRACE,          /* { */
-    TOKEN_R_BRACE,          /* } */
-    TOKEN_PERIOD,           /* . */
-
-    
-    TOKEN_COLON,            /* : */
-    TOKEN_COMMA,            /* , */
-    TOKEN_SEMI,             /* ; */
-    TOKEN_PLUS,
-    TOKEN_MINUS,
-    TOKEN_MUL,
-    
-    TOKEN_OR,
-    TOKEN_AND,
-    TOKEN_XOR,
-    
-    
-    
-    TOKEN_TILDE,                /* ~ */
-    TOKEN_NOT,
-    TOKEN_QUESTION,
-    
-    TOKEN_NEW_LINE,             /* \n */
+    TOKEN_L_SQUARE,             /* [ */
+    TOKEN_R_SQUARE,             /* ] */
+    TOKEN_L_PAREN,              /* ) */
+    TOKEN_R_PAREN,              /* ( */
+    TOKEN_L_BRACE,              /* { */
+    TOKEN_R_BRACE,              /* } */
+    TOKEN_PERIOD,               /* . */
     TOKEN_ELLIPSIS,             /* ... */
-
+    TOKEN_AMP,                  /* & */
+    TOKEN_AMPAMP,               /* && */
+    TOKEN_AMPEQUAL,             /* &= */
+    TOKEN_STAR,                 /* * */
+    TOKEN_STAREQUAL,            /* *= */
+    TOKEN_PLUS,                 /* + */
+    TOKEN_PLUSPLUS,             /* ++ */
+    TOKEN_PLUSEQUAL,            /* += */
+    TOKEN_MINUS,                /* - */
+    TOKEN_MINUSMINUS,           /* -- */
+    TOKEN_MINUSEQUAL,           /* -= */
+    TOKEN_ARROW,                /* -> */
+    TOKEN_TILDE,                /* ~ */
+    TOKEN_EXCLAIM,              /* ! */
+    TOKEN_EXCLAIMEQUAL,         /* != */
+    TOKEN_SLASH,                /* / */
+    TOKEN_SLASHEQUAL,           /* /= */
     TOKEN_PERCENT,              /* % */
     TOKEN_PERCENTEQUAL,         /* %= */
-
     TOKEN_LESS,                 /* < */
     TOKEN_LESSLESS,             /* << */
     TOKEN_LESSLESSEQUAL,        /* <<= */
@@ -53,55 +49,38 @@ typedef enum token_type_e {
     TOKEN_GREATERGREATER,       /* >> */
     TOKEN_GREATEREQUAL,         /* >= */
     TOKEN_GREATERGREATEREQUAL,  /* >>= */
-
-    TOKEN_EXCLAIM,              /* ! */
-    TOKEN_EXCLAIMEQUAL,         /* != */
-
-    TOKEN_EQUAL,                /* = */
-    TOKEN_EQUALEQUAL,           /* == */
-
-    TOKEN_AMP,                  /* & */
-    TOKEN_AMPAMP,               /* && */
-    TOKEN_AMPEQUAL,             /* &= */
+    TOKEN_CARET,                /* ^ */
+    TOKEN_CARETEQUAL,           /* ^= */
     TOKEN_PIPE,                 /* | */
     TOKEN_PIPEPIPE,             /* || */
     TOKEN_PIPEEQUAL,            /* |= */
-    TOKEN_STAR,                 /* * */
-    TOKEN_STAREQUAL,            /* *= */
-    TOKEN_SLASH,                /* / */
-    TOKEN_SLASHEQUAL,           /* /= */
+    TOKEN_QUESTION,             /* ? */
+    TOKEN_COLON,                /* : */
+    TOKEN_SEMI,                 /* ; */
+    TOKEN_EQUAL,                /* = */
+    TOKEN_EQUALEQUAL,           /* == */
+    TOKEN_COMMA,                /* , */
+    TOKEN_HASH,                 /* # */
+    TOKEN_HASHHASH,             /* ## */
+    TOKEN_BACKSLASH,            /* \ */
+    TOKEN_NEW_LINE,             /* \n */
+    
 
-    TOKEN_PLUSPLUS,         /* ++ */
-    TOKEN_PLUSEQUAL,        /* += */
-    TOKEN_MINUSMINUS,       /* -- */
-    TOKEN_MINUSEQUAL,       /* -= */
-    TOKEN_ARROW,            /* -> */
+    TOKEN_CONSTANT_STRING,               /* "" */
+    TOKEN_CONSTANT_WSTRING,              /* L"" */
+    TOKEN_CONSTANT_STRING16,             /* u"" */
+    TOKEN_CONSTANT_STRING32,             /* U"" */
+    TOKEN_CONSTANT_UTF8STRING,           /* u8"" */
 
-    TOKEN_HASH,             /* # */
-    TOKEN_HASHHASH,         /* ## */
+    TOKEN_CONSTANT_CHAR,                 /* '' */
+    TOKEN_CONSTANT_WCHAR,                /* L'' */
+    TOKEN_CONSTANT_CHAR16,               /* u'' */
+    TOKEN_CONSTANT_CHAR32,               /* U'' */
+    TOKEN_CONSTANT_UTF8CHAR,             /* u8'' */
+    
+    TOKEN_NUMBER,
+    TOKEN_IDENTIFIER,
 
-    TOKEN_PTR,
-    TOKEN_INC,
-    TOKEN_DEC,
-    TOKEN_LEFT,
-    TOKEN_RIGHT,
-    TOKEN_LE,
-    TOKEN_GE,
-    TOKEN_EQ,
-    TOKEN_NE,
-    TOKEN_LOGICAL_AND,
-    TOKEN_LOGICAL_OR,
-
-    TOKEN_MUL_ASSIGN,
-    TOKEN_DIV_ASSIGN,
-    TOKEN_MOD_ASSIGN,
-    TOKEN_ADD_ASSIGN,
-    TOKEN_SUB_ASSIGN,
-    TOKEN_LEFT_ASSIGN,
-    TOKEN_RIGHT_ASSIGN,
-    TOKEN_AND_ASSIGN,
-    TOKEN_XOR_ASSIGN,
-    TOKEN_OR_ASSIGN,
 
     TOKEN_CONST,
     TOKEN_RESTRICT,
@@ -109,7 +88,6 @@ typedef enum token_type_e {
     TOKEN_ATOMIC,
 
     TOKEN_VOID,
-    TOKEN_CHAR,
     TOKEN_SHORT,
     TOKEN_INT,
     TOKEN_LONG,
@@ -155,7 +133,6 @@ typedef enum token_type_e {
     TOKEN_GENERIC,
     TOKEN_IMAGINARY,
 
-    TOKEN_IDENTIFIER,
     TOKEN_CONSTANT,
     TOKEN_ICONSTANT,
     TOKEN_CCONSTANT,
@@ -188,43 +165,58 @@ typedef enum token_type_e {
 } token_type_t;
 
 
+#define DEFUALT_LITERALS_LENGTH     12
+#define DEFAULT_FILENAME_LENGTH     32
+#define DEFAULT_CURRENTLINE_LENGTH  64
+
+
 typedef struct source_location_s {
     size_t line;
     size_t column;
-    cstring_t current_line;
-    cstring_t filename;
+    cstring_t current_line;     /* Shallow Copy */
+    cstring_t filename;         /* Shallow Copy */
 } *source_location_t;
 
 
 typedef struct token_s {
     token_type_t type;
-    cstring_t literal;
-    struct source_location_s location;
+    cstring_t literals;
+    source_location_t location;
 } *token_t;
 
 
+token_t token_create(void);
+void token_init(token_t token);
+void token_destroy(token_t tok);
 token_t token_dup(token_t tok);
 
 
+#define token_init_loc(tok, line, column, current_line, filename) \
+    source_location_init((tok)->location, line, column, current_line, filename)
+
+
+source_location_t source_location_create(void);
+void source_location_destroy(source_location_t loc);
+source_location_t source_location_dup(source_location_t loc);
+
+
 static inline
-void token_init(token_t token)
+void source_location_init(source_location_t loc, size_t line, size_t column, cstring_t current_line, cstring_t filename)
 {
-    token->type = TOKEN_UNKNOWN;
-    token->location.line = 0;
-    token->location.column = 0;
-    token->location.current_line = NULL;
-    token->location.filename = NULL;
+    loc->line = line;
+    loc->column = column;
+    loc->current_line = current_line;
+    loc->filename = filename;
 }
 
 
 static inline
-void source_location_init(source_location_t sl, size_t line, size_t column, cstring_t current_line, cstring_t filename)
+token_type_t encoding_to_token_type(encoding_type_t ent)
 {
-    sl->line = line;
-    sl->column = column;
-    sl->current_line = current_line;
-    sl->filename = filename;
+    return ent == ENCODING_CHAR16 ? TOKEN_CONSTANT_STRING16 :
+           ent == ENCODING_CHAR32 ? TOKEN_CONSTANT_STRING32 :
+           ent == ENCODING_UTF8   ? TOKEN_CONSTANT_UTF8STRING :
+           ent == ENCODING_WCHAR  ? TOKEN_CONSTANT_WSTRING : TOKEN_CONSTANT_STRING;
 }
-
 
 #endif

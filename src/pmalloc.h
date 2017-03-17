@@ -5,8 +5,6 @@
 
 #include "config.h"
 
-#include <stdlib.h>
-
 
 #define pmalloc(size)           malloc(size)
 #define pfree(ptr)              free(ptr)
@@ -16,4 +14,3 @@
 
 
 #endif
-

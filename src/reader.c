@@ -6,13 +6,6 @@
 #include "pmalloc.h"
 #include "cstring.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-
 
 #ifndef MAX_STASHED_SIZE
 #define MAX_STASHED_SIZE (12)
@@ -24,9 +17,8 @@
 #endif
 
 
-
-static inline string_reader_t __string_reader_create_n__(cstring_t text);
-static inline bool __string_reader_stashed_push__(string_reader_t sr, char ch);
+static inline string_reader_t __string_reader_create__(cstring_t text);
+static inline bool __string_reader_stashed_push__(string_reader_t sr, int ch);
 static inline int __string_reader_stashed_pop__(string_reader_t sr);
 
 
@@ -39,21 +31,21 @@ string_reader_t string_reader_create_n(const void *data, size_t n)
         return NULL;
     }
 
-    return __string_reader_create_n__(buf);
+    return __string_reader_create__(buf);
 }
 
 
 void string_reader_destroy(string_reader_t sr)
 {
-    if (sr) {
-        cstring_destroy(sr->text);
+    assert(sr && sr->text);
 
-        if (sr->stashed) {
-            cstring_destroy(sr->stashed);
-        }
+    cstring_destroy(sr->text);
 
-        pfree(sr);
+    if (sr->stashed) {
+        cstring_destroy(sr->stashed);
     }
+
+    pfree(sr);
 }
 
 
@@ -61,9 +53,13 @@ int string_reader_get(string_reader_t sr)
 {
     int ch;
 
+    if (sr->lastch == '\n') {
+        sr->begin = &sr->text[sr->seek];
+    }
+
     ch = __string_reader_stashed_pop__(sr);
     if (ch != EOF) {
-        return ch;
+        goto done;
     }
 
     ch = cstring_length(sr->text) > sr->seek ? sr->text[sr->seek++] : '\0';
@@ -71,11 +67,10 @@ int string_reader_get(string_reader_t sr)
         return EOF;
     }
 
-    if (sr->lastch == '\n') {
+done:
+    if (ch == '\n') {
         sr->line++;
         sr->column = 1;
-        sr->begin = &sr->text[sr->seek];
-
     } else {
         sr->column++;
     }
@@ -152,7 +147,8 @@ cstring_t string_reader_current_line(string_reader_t sr)
         if (sr->text[i] == '\n') {
             break;
         }
-    } while(i < cstring_length(sr->text) && i++);
+        i++;
+    } while(i < cstring_length(sr->text));
 
     return cstring_create_n(sr->begin, (&sr->text[i] - (char *)sr->begin));
 }
@@ -161,7 +157,7 @@ cstring_t string_reader_current_line(string_reader_t sr)
 file_reader_t file_reader_create(const char *filename)
 {
     file_reader_t fr;
-    cstring_t buf;
+    void *buf;
     FILE *fp;
     int readn;
     struct stat st;
@@ -175,8 +171,8 @@ file_reader_t file_reader_create(const char *filename)
         goto clean_fp;
     }
 
-    buf = cstring_create_n(NULL, st.st_size);
-    if (!buf) {
+    buf = pmalloc(st.st_size);
+    if (buf == NULL) {
         goto clean_fp;
     }
 
@@ -185,24 +181,23 @@ file_reader_t file_reader_create(const char *filename)
         goto clean_cs;
     }
 
-    cstring_of(buf)->length = st.st_size;
-
     fr = (file_reader_t) pmalloc(sizeof(struct file_reader_s));
-    if (!fr) {
+    if (fr == NULL) {
         goto clean_cs;
     }
 
     fr->filename = cstring_create(filename);
-    if (!fr->filename) {
+    if (fr->filename == NULL) {
         goto clean_fr;
     }
 
-    fr->sreader = __string_reader_create_n__(buf);
-    if (!fr->sreader) {
+    fr->sreader = string_reader_create_n(buf, st.st_size);
+    if (fr->sreader == NULL) {
         goto clean_filename;
     }
     
     fclose(fp);
+    pfree(buf);
     return fr;
 
 clean_filename:
@@ -212,7 +207,7 @@ clean_fr:
     pfree(fr);
 
 clean_cs:
-    cstring_destroy(buf);
+    pfree(buf);
 
 clean_fp:
     fclose(fp);
@@ -224,18 +219,18 @@ done:
 
 void file_reader_destroy(file_reader_t fr)
 {
-    if (fr) {
-        cstring_destroy(fr->filename);
+    assert(fr);
 
-        string_reader_destroy(fr->sreader);
+    cstring_destroy(fr->filename);
 
-        pfree(fr);
-    }
+    string_reader_destroy(fr->sreader);
+
+    pfree(fr);
 }
 
 
 static inline
-string_reader_t __string_reader_create_n__(cstring_t text)
+string_reader_t __string_reader_create__(cstring_t text)
 {
     string_reader_t sr;
 
@@ -257,7 +252,7 @@ string_reader_t __string_reader_create_n__(cstring_t text)
 
 
 static inline
-bool __string_reader_stashed_push__(string_reader_t sr, char ch)
+bool __string_reader_stashed_push__(string_reader_t sr, int ch)
 {
     if (!sr->stashed) {
         sr->stashed = cstring_create_n(NULL, MAX_STASHED_SIZE);
@@ -268,6 +263,13 @@ bool __string_reader_stashed_push__(string_reader_t sr, char ch)
 
     if (!(sr->stashed = cstring_push_ch(sr->stashed, ch))){
         return false;
+    }
+
+    if (ch == '\n') {
+        sr->column = 1;
+        sr->line--;
+    } else {
+        sr->column--;
     }
 
     return true;

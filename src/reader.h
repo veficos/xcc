@@ -8,10 +8,6 @@
 #include "cstring.h"
 #include "pmalloc.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 
 typedef struct string_reader_s {
     cstring_t text;
@@ -54,6 +50,7 @@ typedef struct reader_s {
 #define file_reader_column(fr)      string_reader_column((fr)->sreader)
 #define file_reader_name(fr)        ((const char *)(fr)->filename)
 #define file_reader_current_line(fr) string_reader_current_line((fr)->sreader)
+
 
 file_reader_t file_reader_create(const char *filename);
 void file_reader_destroy(file_reader_t fr);
@@ -132,15 +129,17 @@ reader_t reader_create(reader_type_t type, const char *s)
 static inline
 void reader_destroy(reader_t reader)
 {
-    switch (reader->type) {
-    case READER_TYPE_FILE:
-        file_reader_destroy(reader->u.fr);
-        break;
-    case READER_TYPE_STRING:
-        string_reader_destroy(reader->u.sr);
-        break;
+    if (reader) {
+        switch (reader->type) {
+        case READER_TYPE_FILE:
+            file_reader_destroy(reader->u.fr);
+            break;
+        case READER_TYPE_STRING:
+            string_reader_destroy(reader->u.sr);
+            break;
+        }
+        pfree(reader);
     }
-    pfree(reader);
 }
 
 
@@ -180,6 +179,19 @@ int reader_peek(reader_t reader)
         return string_reader_peek(reader->u.sr);
     }
     return EOF;
+}
+
+
+static inline
+bool reader_is_empty(reader_t reader)
+{
+    switch (reader->type) {
+    case READER_TYPE_FILE:
+        return file_reader_peek(reader->u.fr) == EOF;
+    case READER_TYPE_STRING:
+        return string_reader_peek(reader->u.sr) == EOF;
+    }
+    return true;
 }
 
 
@@ -254,11 +266,9 @@ cstring_t reader_current_line(reader_t reader)
 { 
     switch (reader->type) {
     case READER_TYPE_FILE:
-        file_reader_current_line(reader->u.fr);
-        break;
+        return file_reader_current_line(reader->u.fr);
     case READER_TYPE_STRING:
-        string_reader_current_line(reader->u.sr);
-        break;
+        return string_reader_current_line(reader->u.sr);
     }
     return NULL;
 } 
@@ -267,16 +277,19 @@ cstring_t reader_current_line(reader_t reader)
 static inline
 bool reader_try(reader_t reader, int ch)
 {
-    bool ret;
     switch (reader->type) {
     case READER_TYPE_FILE:
-         ret = file_reader_peek(reader->u.fr) == ch;
-         file_reader_get(reader->u.fr);
-         return ret;
+        if (file_reader_peek(reader->u.fr) == ch) {
+            file_reader_get(reader->u.fr);
+            return true;
+        }
+        break;
     case READER_TYPE_STRING:
-        ret = string_reader_peek(reader->u.sr) == ch;
-        string_reader_get(reader->u.sr);
-        return ret;
+        if (string_reader_peek(reader->u.sr) == ch) {
+            string_reader_get(reader->u.sr);
+            return true;
+        }
+        break;
     }
     return false;
 }

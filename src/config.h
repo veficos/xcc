@@ -14,6 +14,18 @@
 #endif
 
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <malloc.h>
+#include <string.h>
+#include <stdarg.h>
+#include <ctype.h>
+#include <assert.h>
+#include <stdint.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
+
 #ifndef bool 
 typedef enum {
     false,

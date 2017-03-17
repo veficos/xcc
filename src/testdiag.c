@@ -2,6 +2,7 @@
 
 #include "config.h"
 #include "diag.h"
+#include "token.h"
 #include "cstring.h"
 
 
@@ -16,10 +17,9 @@ void test_diag(void)
     loc.line = 8;
     loc.column = 220;
     loc.filename = cstring_create("<string>");
-    loc.current_line = cstring_create("                                                                                                                                                                                                                            int val;");
+    loc.current_line = cstring_create("                                                                                                                                                                                                                            int val;xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 
-    diag_errorf_with_location(diag, &loc, "unknown identifier");
-
+    diag_errorf_location(diag, &loc, "unknown identifier");
 	cstring_destroy(loc.filename);
 	cstring_destroy(loc.current_line);
 
@@ -28,13 +28,14 @@ void test_diag(void)
     loc.filename = cstring_create("<string>");
     loc.current_line = cstring_create("int val;");
     
-    diag_errorf_with_location(diag, &loc, "unknown identifier");
+    diag_errorf_location(diag, &loc, "unknown identifier");
 	cstring_destroy(loc.filename);
 	cstring_destroy(loc.current_line);
 
+    diag_report(diag);
+
 	diag_destroy(diag);
 }
-
 
 
 int main(void)

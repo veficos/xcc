@@ -4,7 +4,6 @@
 #define __HASH__H__
 
 #include "config.h"
-#include <stdint.h>
 
 
 uint64_t siphash(const uint8_t *in, const size_t inlen, const uint8_t *k);

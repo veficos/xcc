@@ -85,7 +85,7 @@ typedef struct dict_s {
     long              rehashidx;
     bool              dict_can_resize;
     unsigned long     iterators;
-} dict_t;
+}* dict_t;
 
 
 /* If safe is set to 1 this is a safe iterator, that means, you can call
@@ -93,7 +93,7 @@ typedef struct dict_s {
 * iterating. Otherwise it is a non safe iterator, and only dictNext()
 * should be called while iterating. */
 typedef struct dict_iterator_s {
-    dict_t *d;
+    dict_t d;
     long index;
     int table, safe;
     dict_entry_t *entry, *nextEntry;
@@ -102,8 +102,8 @@ typedef struct dict_iterator_s {
 } dict_iterator_t;
 
 
-typedef void (dict_scan_function)(void *privdata, const dict_entry_t *de);
-typedef void (dict_scan_bucket_function)(void *privdata, dict_entry_t **bucketref);
+typedef void (dict_scan_function_pt)(void *privdata, const dict_entry_t *de);
+typedef void (dict_scan_bucket_function_pt)(void *privdata, dict_entry_t **bucketref);
 
 
 #define DICT_HASH_TABLE_INITIAL_SIZE        4
@@ -168,36 +168,36 @@ typedef void (dict_scan_bucket_function)(void *privdata, dict_entry_t **bucketre
 #define dict_is_rehashing(d)                ((d)->rehashidx != -1)
 
 
-dict_t *dict_create(dict_type_t *type, void *privDataPtr);
-void dict_destroy(dict_t *d);
-int dict_expand(dict_t *d, unsigned long size);
-int dict_add(dict_t *d, void *key, void *val);
-dict_entry_t *dict_add_raw(dict_t *d, void *key, dict_entry_t **existing);
-dict_entry_t *dict_add_or_find(dict_t *d, void *key);
-int dict_replace(dict_t *d, void *key, void *val);
-int dict_delete(dict_t *d, const void *key);
-dict_entry_t *dict_unlink(dict_t *ht, const void *key);
-void dict_free_unlinked_entry(dict_t *d, dict_entry_t *he);
-dict_entry_t *dict_find(dict_t *d, const void *key);
-void *dict_fetch_value(dict_t *d, const void *key);
-int dict_resize(dict_t *d);
-dict_iterator_t *dict_get_iterator(dict_t *d);
-dict_iterator_t *dict_get_safe_iterator(dict_t *d);
+dict_t dict_create(dict_type_t *type, void *privDataPtr);
+void dict_destroy(dict_t d);
+int dict_expand(dict_t d, unsigned long size);
+int dict_add(dict_t d, void *key, void *val);
+dict_entry_t *dict_add_raw(dict_t d, void *key, dict_entry_t **existing);
+dict_entry_t *dict_add_or_find(dict_t d, void *key);
+int dict_replace(dict_t d, void *key, void *val);
+int dict_delete(dict_t d, const void *key);
+dict_entry_t *dict_unlink(dict_t ht, const void *key);
+void dict_free_unlinked_entry(dict_t d, dict_entry_t *he);
+dict_entry_t *dict_find(dict_t d, const void *key);
+void *dict_fetch_value(dict_t d, const void *key);
+int dict_resize(dict_t d);
+dict_iterator_t *dict_get_iterator(dict_t d);
+dict_iterator_t *dict_get_safe_iterator(dict_t d);
 dict_entry_t *dict_next(dict_iterator_t *iter);
 void dict_release_iterator(dict_iterator_t *iter);
-void dict_get_stats(char *buf, size_t bufsize, dict_t *d);
+void dict_get_stats(char *buf, size_t bufsize, dict_t d);
 
 uint64_t dict_gen_hash_function(const void *key, int len);
 uint64_t dict_gen_case_hash_function(const unsigned char *buf, int len);
-void dict_empty(dict_t *d, void(callback)(void*));
-void dict_enable_resize(dict_t *d);
-void dict_disable_resize(dict_t *d);
-int dict_rehash(dict_t *d, int n);
+void dict_empty(dict_t d, void(callback)(void*));
+void dict_enable_resize(dict_t d);
+void dict_disable_resize(dict_t d);
+int dict_rehash(dict_t d, int n);
 void dict_set_hash_function_seed(uint8_t *seed);
 uint8_t *dict_get_hash_function_seed(void);
-unsigned long dict_scan(dict_t *d, unsigned long v, dict_scan_function *fn, dict_scan_bucket_function *bucketfn, void *privdata);
-unsigned int dict_get_hash(dict_t *d, const void *key);
-dict_entry_t **dict_find_entry_ref_by_ptr_and_hash(dict_t *d, const void *oldptr, unsigned int hash);
+unsigned long dict_scan(dict_t d, unsigned long v, dict_scan_function_pt *fn, dict_scan_bucket_function_pt *bucketfn, void *privdata);
+unsigned int dict_get_hash(dict_t d, const void *key);
+dict_entry_t **dict_find_entry_ref_by_ptr_and_hash(dict_t d, const void *oldptr, unsigned int hash);
 
 
 #endif

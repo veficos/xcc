@@ -5,11 +5,12 @@
 
 
 #include "config.h"
-#include "token.h"
-#include <stdarg.h>
 
 
 #define MAX_COLUMN_HEAD  64
+
+
+typedef struct source_location_s* source_location_t;
 
 
 typedef struct diag_s {
@@ -17,12 +18,23 @@ typedef struct diag_s {
 	size_t nerrors;
 } *diag_t;
 
-diag_t diag_create();
+
+#define diag_nerrors(diag)      ((diag)->nerrors)
+#define diag_nwarnings(diag)    ((diag)->nwarnings)
+
+
+diag_t diag_create(void);
 void diag_destroy(diag_t diag);
+void diag_report(diag_t diag);
+
 void diag_errorvf(diag_t diag, const char *fmt, va_list ap);
 void diag_errorf(diag_t diag, const char *fmt, ...);
-void diag_errorvf_with_location(diag_t diag, source_location_t loc, const char *fmt, va_list ap);
-void diag_errorf_with_location(diag_t diag, source_location_t loc, const char *fmt, ...);
+void diag_errorvf_location(diag_t diag, source_location_t loc, const char *fmt, va_list ap);
+void diag_errorf_location(diag_t diag, source_location_t loc, const char *fmt, ...);
 
+void diag_warningf_location(diag_t diag, source_location_t loc, const char *fmt, ...);
+void diag_warningvf_location(diag_t diag, source_location_t loc, const char *fmt, va_list ap);
+
+void diag_panic(const char *fmt, ...);
 
 #endif

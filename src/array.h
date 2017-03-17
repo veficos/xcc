@@ -6,8 +6,6 @@
 
 #include "config.h"
 
-#include <stdlib.h>
-
 
 typedef struct array_s {
     void        *elts;

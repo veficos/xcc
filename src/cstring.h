@@ -7,20 +7,15 @@
 #include "config.h"
 #include "pmalloc.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdarg.h>
-
 
 typedef struct cstring_hdr_s {
     size_t length;
     size_t unused;
-    char buffer[1];
+    unsigned char buffer[1];
 } cstring_hdr_t;
 
 
-typedef char* cstring_t;
+typedef unsigned char* cstring_t;
 
 
 #define cstring_of(cs)                                                  \
@@ -73,16 +68,16 @@ size_t cstring_sizeof(const cstring_t cs)
 
 
 static inline
-cstring_t cstring_cat_ch(cstring_t cs, char ch)
+cstring_t cstring_cat_ch(cstring_t cs, unsigned char ch)
 {
-    return cstring_cat_n(cs, &ch, sizeof(char));
+    return cstring_cat_n(cs, &ch, sizeof(unsigned char));
 }
 
 
 static inline
-cstring_t cstring_push_ch(cstring_t cs, char ch)
+cstring_t cstring_push_ch(cstring_t cs, unsigned char ch)
 {
-    return cstring_cat_n(cs, &ch, sizeof(char));
+    return cstring_cat_n(cs, &ch, sizeof(unsigned char));
 }
 
 
@@ -90,7 +85,7 @@ static inline
 int cstring_pop_ch(cstring_t cs)
 {
     cstring_hdr_t *hdr;
-    char ch;
+    unsigned char ch;
 
     hdr = cstring_of(cs);
 
@@ -150,9 +145,8 @@ size_t cstring_capacity(const cstring_t cs)
 static inline
 void cstring_destroy(cstring_t cs)
 {
-    if (cs) {
-        pfree(cstring_of(cs));
-    }
+    assert(cs);
+    pfree(cstring_of(cs));
 }
 
 

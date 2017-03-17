@@ -49,6 +49,8 @@ array_t *array_create_n(size_t size, size_t n)
 
 void array_destroy(array_t *array)
 {
+    assert(array && array->elts);
+
     if (array->elts) {
         pfree(array->elts);
     }

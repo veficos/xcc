@@ -48,10 +48,10 @@
 #include "dict.h"
 
 
-static inline int __dict_expand_if_needed__(dict_t *ht);
+static inline int __dict_expand_if_needed__(dict_t ht);
 static inline unsigned long __dict_next_power__(unsigned long size);
-static inline int __dict_key_index__(dict_t *ht, const void *key, unsigned int hash, dict_entry_t **existing);
-static inline int __dict_init__(dict_t *ht, dict_type_t *type, void *privDataPtr);
+static inline int __dict_key_index__(dict_t ht, const void *key, unsigned int hash, dict_entry_t **existing);
+static inline int __dict_init__(dict_t ht, dict_type_t *type, void *privDataPtr);
 
 
 static unsigned int dict_force_resize_ratio = 5;
@@ -90,9 +90,9 @@ void __dict_reset__(dict_hash_table_t *ht)
 }
 
 
-dict_t *dict_create(dict_type_t *type, void *privDataPtr)
+dict_t dict_create(dict_type_t *type, void *privDataPtr)
 {
-    dict_t *d = pmalloc(sizeof(*d));
+    dict_t d = pmalloc(sizeof(struct dict_s));
 
     __dict_init__(d, type, privDataPtr);
 
@@ -100,7 +100,7 @@ dict_t *dict_create(dict_type_t *type, void *privDataPtr)
 }
 
 
-int __dict_init__(dict_t *d, dict_type_t *type, void *priv_data_ptr)
+int __dict_init__(dict_t d, dict_type_t *type, void *priv_data_ptr)
 {
     __dict_reset__(&d->ht[0]);
     __dict_reset__(&d->ht[1]);
@@ -116,7 +116,7 @@ int __dict_init__(dict_t *d, dict_type_t *type, void *priv_data_ptr)
 
 /* Resize the table to the minimal size that contains all the elements,
 * but with the invariant of a USED/BUCKETS ratio near to <= 1 */
-int dict_resize(dict_t *d)
+int dict_resize(dict_t d)
 {
     int minimal;
 
@@ -135,7 +135,7 @@ int dict_resize(dict_t *d)
 
 
 /* Expand or create the hash table */
-int dict_expand(dict_t *d, unsigned long size)
+int dict_expand(dict_t d, unsigned long size)
 {
     dict_hash_table_t n; /* the new hash table */
     unsigned long realsize = __dict_next_power__(size);
@@ -179,7 +179,7 @@ int dict_expand(dict_t *d, unsigned long size)
 * guaranteed that this function will rehash even a single bucket, since it
 * will visit at max N*10 empty buckets in total, otherwise the amount of
 * work it does would be unbound and the function may block for a long time. */
-int dict_rehash(dict_t *d, int n) {
+int dict_rehash(dict_t d, int n) {
     int empty_visits = n * 10; /* Max number of empty buckets to visit. */
 
     if (!dict_is_rehashing(d)) {
@@ -237,7 +237,7 @@ int dict_rehash(dict_t *d, int n) {
 * This function is called by common lookup or update operations in the
 * dictionary so that the hash table automatically migrates from H1 to H2
 * while it is actively used. */
-static void __dict_rehash_step__(dict_t *d) {
+static void __dict_rehash_step__(dict_t d) {
     if (d->iterators == 0) {
         dict_rehash(d, 1);
     }
@@ -245,7 +245,7 @@ static void __dict_rehash_step__(dict_t *d) {
 
 
 /* Add an element to the target hash table */
-int dict_add(dict_t *d, void *key, void *val)
+int dict_add(dict_t d, void *key, void *val)
 {
     dict_entry_t *entry = dict_add_raw(d, key, NULL);
 
@@ -276,7 +276,7 @@ int dict_add(dict_t *d, void *key, void *val)
 *
 * If key was added, the hash entry is returned to be manipulated by the caller.
 */
-dict_entry_t *dict_add_raw(dict_t *d, void *key, dict_entry_t **existing)
+dict_entry_t *dict_add_raw(dict_t d, void *key, dict_entry_t **existing)
 {
     int index;
     dict_entry_t *entry;
@@ -314,7 +314,7 @@ dict_entry_t *dict_add_raw(dict_t *d, void *key, dict_entry_t **existing)
 * Return 1 if the key was added from scratch, 0 if there was already an
 * element with such key and dictReplace() just performed a value update
 * operation. */
-int dict_replace(dict_t *d, void *key, void *val)
+int dict_replace(dict_t d, void *key, void *val)
 {
     dict_entry_t *entry, *existing, auxentry;
 
@@ -345,7 +345,7 @@ int dict_replace(dict_t *d, void *key, void *val)
 * existing key is returned.)
 *
 * See dictAddRaw() for more information. */
-dict_entry_t *dict_add_or_find(dict_t *d, void *key) 
+dict_entry_t *dict_add_or_find(dict_t d, void *key) 
 {
     dict_entry_t *entry, *existing;
 
@@ -358,7 +358,7 @@ dict_entry_t *dict_add_or_find(dict_t *d, void *key)
 /* Search and remove an element. This is an helper function for
 * dictDelete() and dictUnlink(), please check the top comment
 * of those functions. */
-static dict_entry_t *__dict_generic_delete__(dict_t *d, const void *key, int nofree)
+static dict_entry_t *__dict_generic_delete__(dict_t d, const void *key, int nofree)
 {
     unsigned int h, idx;
     dict_entry_t *he, *prevhe;
@@ -407,7 +407,7 @@ static dict_entry_t *__dict_generic_delete__(dict_t *d, const void *key, int nof
 
 /* Remove an element, returning DICT_OK on success or DICT_ERR if the
 * element was not found. */
-int dict_delete(dict_t *ht, const void *key) {
+int dict_delete(dict_t ht, const void *key) {
     return __dict_generic_delete__(ht, key, 0) ? DICT_OK : DICT_ERR;
 }
 
@@ -433,7 +433,7 @@ int dict_delete(dict_t *ht, const void *key) {
 * // Do something with entry
 * dictFreeUnlinkedEntry(entry); // <- This does not need to lookup again.
 */
-dict_entry_t *dict_unlink(dict_t *ht, const void *key) 
+dict_entry_t *dict_unlink(dict_t ht, const void *key) 
 {
     return __dict_generic_delete__(ht, key, 1);
 }
@@ -441,7 +441,7 @@ dict_entry_t *dict_unlink(dict_t *ht, const void *key)
 
 /* You need to call this function to really free the entry after a call
 * to dictUnlink(). It's safe to call this function with 'he' = NULL. */
-void dict_free_unlinked_entry(dict_t *d, dict_entry_t *he) 
+void dict_free_unlinked_entry(dict_t d, dict_entry_t *he) 
 {
     if (he == NULL) {
         return;
@@ -454,7 +454,7 @@ void dict_free_unlinked_entry(dict_t *d, dict_entry_t *he)
 
 
 static inline
-int __dict_clear__(dict_t *d, dict_hash_table_t *ht, void(callback)(void *)) {
+int __dict_clear__(dict_t d, dict_hash_table_t *ht, void(callback)(void *)) {
     unsigned long i;
 
     for (i = 0; i < ht->size && ht->used > 0; i++) {
@@ -486,7 +486,7 @@ int __dict_clear__(dict_t *d, dict_hash_table_t *ht, void(callback)(void *)) {
 }
 
 
-void dict_destroy(dict_t *d)
+void dict_destroy(dict_t d)
 {
     __dict_clear__(d, &d->ht[0], NULL);
     __dict_clear__(d, &d->ht[1], NULL);
@@ -494,7 +494,7 @@ void dict_destroy(dict_t *d)
 }
 
 
-dict_entry_t *dict_find(dict_t *d, const void *key)
+dict_entry_t *dict_find(dict_t d, const void *key)
 {
     dict_entry_t *he;
     unsigned int h, idx, table;
@@ -527,7 +527,7 @@ dict_entry_t *dict_find(dict_t *d, const void *key)
 }
 
 
-void *dict_fetch_value(dict_t *d, const void *key) {
+void *dict_fetch_value(dict_t d, const void *key) {
     dict_entry_t *he;
 
     he = dict_find(d, key);
@@ -542,7 +542,7 @@ void *dict_fetch_value(dict_t *d, const void *key) {
 * the fingerprint again when the iterator is released.
 * If the two fingerprints are different it means that the user of the iterator
 * performed forbidden operations against the dictionary while iterating. */
-long long dict_finger_print(dict_t *d) {
+long long dict_finger_print(dict_t d) {
     long long integers[6], hash = 0;
     int j;
 
@@ -575,7 +575,7 @@ long long dict_finger_print(dict_t *d) {
 }
 
 
-dict_iterator_t *dict_get_iterator(dict_t *d)
+dict_iterator_t *dict_get_iterator(dict_t d)
 {
     dict_iterator_t *iter = pmalloc(sizeof(*iter));
 
@@ -589,7 +589,7 @@ dict_iterator_t *dict_get_iterator(dict_t *d)
 }
 
 
-dict_iterator_t *dict_get_safe_iterator(dict_t *d) {
+dict_iterator_t *dict_get_safe_iterator(dict_t d) {
     dict_iterator_t *i = dict_get_iterator(d);
 
     i->safe = 1;
@@ -749,7 +749,7 @@ unsigned long __reverse__(unsigned long v) {
 * 3) The reverse cursor is somewhat hard to understand at first, but this
 *    comment is supposed to help.
 */
-unsigned long dict_scan(dict_t *d, unsigned long v, dict_scan_function *fn, dict_scan_bucket_function* bucketfn, void *privdata)
+unsigned long dict_scan(dict_t d, unsigned long v, dict_scan_function_pt *fn, dict_scan_bucket_function_pt* bucketfn, void *privdata)
 {
     dict_hash_table_t *t0, *t1;
     const dict_entry_t *de, *next;
@@ -827,7 +827,7 @@ unsigned long dict_scan(dict_t *d, unsigned long v, dict_scan_function *fn, dict
 
 
 static inline
-int __dict_expand_if_needed__(dict_t *d)
+int __dict_expand_if_needed__(dict_t d)
 {
     /* Incremental rehashing already in progress. Return. */
     if (dict_is_rehashing(d)) return DICT_OK;
@@ -872,7 +872,7 @@ unsigned long __dict_next_power__(unsigned long size)
 *
 * Note that if we are in the process of rehashing the hash table, the
 * index is always returned in the context of the second (new) hash table. */
-static int __dict_key_index__(dict_t *d, const void *key, unsigned int hash, dict_entry_t **existing)
+static int __dict_key_index__(dict_t d, const void *key, unsigned int hash, dict_entry_t **existing)
 {
     unsigned int idx, table;
     dict_entry_t *he;
@@ -909,7 +909,7 @@ static int __dict_key_index__(dict_t *d, const void *key, unsigned int hash, dic
 }
 
 
-void dict_empty(dict_t *d, void(callback)(void*)) {
+void dict_empty(dict_t d, void(callback)(void*)) {
     __dict_clear__(d, &d->ht[0], callback);
     __dict_clear__(d, &d->ht[1], callback);
 
@@ -918,17 +918,17 @@ void dict_empty(dict_t *d, void(callback)(void*)) {
 }
 
 
-void dict_enable_resize(dict_t *d) {
+void dict_enable_resize(dict_t d) {
     d->dict_can_resize = true;
 }
 
 
-void dict_disable_resize(dict_t *d) {
+void dict_disable_resize(dict_t d) {
     d->dict_can_resize = false;
 }
 
 
-unsigned int dict_get_hash(dict_t *d, const void *key) {
+unsigned int dict_get_hash(dict_t d, const void *key) {
     return (unsigned int) dict_hash_key(d, key);
 }
 
@@ -938,7 +938,7 @@ unsigned int dict_get_hash(dict_t *d, const void *key) {
 * the hash value should be provided using dictGetHash.
 * no string / key comparison is performed.
 * return value is the reference to the dictEntry if found, or NULL if not found. */
-dict_entry_t **dict_find_entry_ref_by_ptr_and_hash(dict_t *d, const void *oldptr, unsigned int hash) {
+dict_entry_t **dict_find_entry_ref_by_ptr_and_hash(dict_t d, const void *oldptr, unsigned int hash) {
     dict_entry_t *he, **heref;
     unsigned int idx, table;
 
@@ -1020,7 +1020,7 @@ size_t __dict_get_stats_ht__(char *buf, size_t bufsize, dict_hash_table_t *ht, i
 }
 
 
-void dict_get_stats(char *buf, size_t bufsize, dict_t *d) {
+void dict_get_stats(char *buf, size_t bufsize, dict_t d) {
     size_t l;
     char *orig_buf = buf;
     size_t orig_bufsize = bufsize;
