@@ -20,7 +20,7 @@ void test_lexer(void)
 
     token_t  tok;
 
-    reader = reader_create(READER_TYPE_FILE, "C:\\Users\\sshtc\\Desktop\\occ_vs\\1.c");
+    reader = reader_create(READER_TYPE_FILE, "1.h");
     diag = diag_create();
     
     lexer = lexer_create(reader, &option, diag);
@@ -30,16 +30,16 @@ void test_lexer(void)
             break;
         }
 
-        printf("current line: %s\n"
-               "filename: %s\n"
-               "line: %d\n"
-               "column: %d\n"
-               "token: %s\n", 
-               tok->location->current_line,
-               tok->location->filename, 
-               tok->location->line, 
-               tok->location->column,
-               tok->literals ? tok->literals : "unkown");
+        // printf("current line: %s\n"
+        //        "filename: %s\n"
+        //        "line: %d\n"
+        //        "column: %d\n"
+        //        "token: %s\n", 
+        //        tok->location->current_line,
+        //        tok->location->filename, 
+        //        tok->location->line, 
+        //        tok->location->column,
+        //        tok->literals ? tok->literals : "unkown");
 
         token_destroy(tok);
     }

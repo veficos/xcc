@@ -116,7 +116,7 @@ int __count_leading_ones__(char ch)
 
 
 static inline
-bool __read_rune__(uint32_t *rune, size_t *rune_size, const char *s, int n) {
+bool __read_rune__(uint32_t *rune, size_t *rune_size, char *s, int n) {
 
     int len = __count_leading_ones__(s[0]);
 

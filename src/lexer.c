@@ -9,7 +9,6 @@
 #include "encoding.h"
 
 
-
 static inline void __lexer_errorf_location__(lexer_t lexer, const char *fmt, ...);
 static inline void __lexer_warningf_location__(lexer_t lexer, const char *fmt, ...);
 
@@ -136,6 +135,8 @@ token_t lexer_scan(lexer_t lexer)
         return __lexer_token_make__(lexer, reader_try(lexer->reader, '=') ? TOKEN_EXCLAIM : TOKEN_EXCLAIMEQUAL);
     case '/':
         if (reader_test(lexer->reader, '/') || reader_test(lexer->reader, '*')) {
+            cstring_destroy(lexer->tok->location->current_line);
+            cstring_destroy(lexer->tok->location->filename);
             __lexer_skip_comment__(lexer);
             return lexer_scan(lexer);
         }
@@ -214,10 +215,8 @@ token_t lexer_scan(lexer_t lexer)
         if (reader_test(lexer->reader, 'u') || reader_test(lexer->reader, 'U'))
             return __lexer_parse_identifier__(lexer);
         return __lexer_token_make__(lexer, TOKEN_BACKSLASH);
-
     case EOF:
         return __lexer_token_make__(lexer, TOKEN_END);
-            
     default:
         if (__isalpha__(ch) || (0x80 <= ch && ch <= 0xfd) || ch == '_' || ch == '$') {
             /* parse identifier */
