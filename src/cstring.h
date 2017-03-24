@@ -145,7 +145,7 @@ size_t cstring_capacity(const cstring_t cs)
 static inline
 void cstring_destroy(cstring_t cs)
 {
-    assert(cs);
+    assert(cs != NULL);
     pfree(cstring_of(cs));
 }
 

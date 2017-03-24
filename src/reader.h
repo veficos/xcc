@@ -9,6 +9,9 @@
 #include "pmalloc.h"
 
 
+typedef struct array_s* array_t;
+
+
 typedef struct string_reader_s {
     cstring_t text;
     cstring_t stashed;
@@ -41,15 +44,20 @@ typedef struct reader_s {
 } *reader_t;
 
 
-#define file_reader_get(fr)         string_reader_get((fr)->sreader)
-#define file_reader_peek(fr)        string_reader_peek((fr)->sreader)
-#define file_reader_unget(fr, ch)   string_reader_unget((fr)->sreader, (ch))
-#define file_reader_readsome(fr, n) string_reader_readsome((fr)->sreader, n)
-#define file_reader_peeksome(fr, n) string_reader_peeksome((fr)->sreader, n)
-#define file_reader_line(fr)        string_reader_line((fr)->sreader)
-#define file_reader_column(fr)      string_reader_column((fr)->sreader)
-#define file_reader_name(fr)        ((const char *)(fr)->filename)
-#define file_reader_current_line(fr) string_reader_current_line((fr)->sreader)
+/* source code reader */
+typedef struct screader_s {
+    array_t files;
+    reader_t last;
+} *screader_t;
+
+
+#define file_reader_get(fr)             string_reader_get((fr)->sreader)
+#define file_reader_peek(fr)            string_reader_peek((fr)->sreader)
+#define file_reader_unget(fr, ch)       string_reader_unget((fr)->sreader, (ch))
+#define file_reader_line(fr)            string_reader_line((fr)->sreader)
+#define file_reader_column(fr)          string_reader_column((fr)->sreader)
+#define file_reader_name(fr)            ((const char *)(fr)->filename)
+#define file_reader_current_line(fr)    string_reader_current_line((fr)->sreader)
 
 
 file_reader_t file_reader_create(const char *filename);
@@ -60,10 +68,16 @@ string_reader_t string_reader_create_n(const void *data, size_t n);
 void string_reader_destroy(string_reader_t sr);
 int string_reader_get(string_reader_t sr);
 int string_reader_peek(string_reader_t sr);
-cstring_t string_reader_peeksome(string_reader_t sr, size_t n);
-cstring_t string_reader_readsome(string_reader_t sr, size_t n);
 bool string_reader_unget(string_reader_t sr, int ch);
 cstring_t string_reader_current_line(string_reader_t sr);
+
+
+screader_t screader_create(reader_type_t type, const char *s);
+void screader_destroy(screader_t screader);
+reader_t screader_push(screader_t screader, reader_type_t type, const char *s);
+void screader_pop(screader_t screader);
+int screader_get(screader_t screader);
+int screader_peek(screader_t screader);
 
 
 static inline
@@ -96,15 +110,11 @@ size_t string_reader_column(string_reader_t sr)
 
 
 static inline
-reader_t reader_create(reader_type_t type, const char *s)
+reader_t reader_init(reader_t reader, reader_type_t type, const char *s)
 {
-    reader_t reader = (reader_t) pmalloc(sizeof(struct reader_s));
-    if (!reader) {
-        return NULL;
-    }
+    assert(reader != NULL);
 
     reader->type = type;
-
     switch (type) {
     case READER_TYPE_STRING:
         reader->u.sr = string_reader_create(s);
@@ -121,25 +131,46 @@ reader_t reader_create(reader_type_t type, const char *s)
         }
         return reader;
     }
-
     return NULL;
+}
+
+
+static inline
+void reader_uninit(reader_t reader)
+{
+    assert(reader != NULL);
+
+    switch (reader->type) {
+    case READER_TYPE_FILE:
+        file_reader_destroy(reader->u.fr);
+        break;
+    case READER_TYPE_STRING:
+        string_reader_destroy(reader->u.sr);
+        break;
+    }
+}
+
+
+static inline
+reader_t reader_create(reader_type_t type, const char *s)
+{
+    reader_t reader = (reader_t) pmalloc(sizeof(struct reader_s));
+    if (!reader) {
+        return NULL;
+    }
+
+    return reader_init(reader, type, s);
 }
 
 
 static inline
 void reader_destroy(reader_t reader)
 {
-    if (reader) {
-        switch (reader->type) {
-        case READER_TYPE_FILE:
-            file_reader_destroy(reader->u.fr);
-            break;
-        case READER_TYPE_STRING:
-            string_reader_destroy(reader->u.sr);
-            break;
-        }
-        pfree(reader);
-    }
+    assert(reader != NULL);
+
+    reader_uninit(reader);
+
+    pfree(reader);
 }
 
 
@@ -196,42 +227,15 @@ bool reader_is_empty(reader_t reader)
 
 
 static inline
-cstring_t reader_peeksome(reader_t reader, size_t n)
+bool reader_unget(reader_t reader, int ch)
 {
     switch (reader->type) {
     case READER_TYPE_FILE:
-        return file_reader_peeksome(reader->u.fr, n);
+        return file_reader_unget(reader->u.fr, ch);
     case READER_TYPE_STRING:
-        return string_reader_peeksome(reader->u.sr, n);
+        return string_reader_unget(reader->u.sr, ch);
     }
-    return NULL;
-}
-
-
-static inline
-cstring_t reader_readsome(reader_t reader, size_t n)
-{
-    switch (reader->type) {
-    case READER_TYPE_FILE:
-        return file_reader_readsome(reader->u.fr, n);
-    case READER_TYPE_STRING:
-        return string_reader_readsome(reader->u.sr, n);
-    }
-    return NULL;
-}
-
-
-static inline
-void reader_unget(reader_t reader, int ch)
-{
-    switch (reader->type) {
-    case READER_TYPE_FILE:
-        file_reader_unget(reader->u.fr, ch);
-        break;
-    case READER_TYPE_STRING:
-        string_reader_unget(reader->u.sr, ch);
-        break;
-    }
+    return false;
 }
 
 
@@ -305,6 +309,69 @@ bool reader_test(reader_t reader, int ch)
         return string_reader_peek(reader->u.sr) == ch;
     }
     return false;
+}
+
+
+static inline
+bool screader_unget(screader_t screader, int ch)
+{
+    return reader_unget(screader->last, ch);
+}
+
+
+static inline
+int screader_depth(screader_t sreader)
+{
+    return array_size(sreader->files);
+}
+
+
+static inline
+bool screader_try(screader_t screader, int ch)
+{
+    return reader_try(screader->last, ch);
+}
+
+
+static inline
+bool screader_test(screader_t screader, int ch)
+{
+    return reader_test(screader->last, ch);
+}
+
+
+static inline
+bool screader_is_empty(screader_t screader)
+{
+    return screader_peek(screader) == EOF;
+}
+
+
+static inline
+const char *screader_name(screader_t screader)
+{
+    return reader_name(screader->last);
+}
+
+
+static inline
+size_t screader_line(screader_t screader)
+{
+    return reader_line(screader->last);
+}
+
+
+static inline
+size_t screader_column(screader_t screader)
+{
+    return reader_column(screader->last);
+}
+
+
+static inline
+cstring_t screader_current_line(screader_t screader)
+{
+    return reader_current_line(screader->last);
 }
 
 

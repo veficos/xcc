@@ -78,14 +78,13 @@ cstring_t cstring_cast_to_utf16(cstring_t cs)
 
 cstring_t cstring_cast_to_utf32(cstring_t cs)
 {
-    cstring_t to;
+    cstring_t ret;
     uint32_t rune;
     size_t rune_size;
     size_t i, length;
 
     length = cstring_length(cs);
-    to = cstring_create_n(NULL, length * sizeof(uint32_t));
-    if (!to) {
+    if ((ret = cstring_create_n(NULL, length * sizeof(uint32_t))) == NULL) {
         return NULL;
     }
 
@@ -94,12 +93,12 @@ cstring_t cstring_cast_to_utf32(cstring_t cs)
             return NULL;
         }
 
-        to = __write32__(to, rune);
+        ret = __write32__(ret, rune);
 
         i += rune_size;
     }
 
-    return to;
+    return ret;
 }
 
 

@@ -13,17 +13,19 @@
 static
 void test_lexer(void)
 {
-    reader_t reader;
+    screader_t screader;
     diag_t diag;
     lexer_t lexer;
     struct option_s option;
-
+    const char *p;
     token_t  tok;
 
-    reader = reader_create(READER_TYPE_FILE, "1.h");
+    screader = screader_create(READER_TYPE_FILE, "3.h");
     diag = diag_create();
+
+    //screader_push(screader, READER_TYPE_FILE, "2.h");
     
-    lexer = lexer_create(reader, &option, diag);
+    lexer = lexer_create(screader, &option, diag);
     while (tok = lexer_scan(lexer)) {
         if (tok->type == TOKEN_END) {
             token_destroy(tok);
@@ -41,6 +43,13 @@ void test_lexer(void)
         //        tok->location->column,
         //        tok->literals ? tok->literals : "unkown");
 
+        p = token_type2str(tok);
+
+        printf("token: %s\n"
+               "line: %d\n"
+               "column: %d\n",
+               p ? p : tok->literals, tok->location->line, tok->location->column);
+        
         token_destroy(tok);
     }
 
@@ -49,7 +58,7 @@ void test_lexer(void)
 
     diag_destroy(diag);
 
-    reader_destroy(reader);
+    screader_destroy(screader);
 }
 
 

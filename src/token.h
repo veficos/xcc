@@ -5,6 +5,7 @@
 
 
 #include "config.h"
+#include "array.h"
 #include "cstring.h"
 #include "encoding.h"
 
@@ -12,75 +13,74 @@
 typedef enum token_type_e {
     TOKEN_UNKNOWN = -1,
     TOKEN_END,
-    TOKEN_IGNORE,
     
-    TOKEN_L_SQUARE,             /* [ */
-    TOKEN_R_SQUARE,             /* ] */
-    TOKEN_L_PAREN,              /* ) */
-    TOKEN_R_PAREN,              /* ( */
-    TOKEN_L_BRACE,              /* { */
-    TOKEN_R_BRACE,              /* } */
-    TOKEN_PERIOD,               /* . */
-    TOKEN_ELLIPSIS,             /* ... */
-    TOKEN_AMP,                  /* & */
-    TOKEN_AMPAMP,               /* && */
-    TOKEN_AMPEQUAL,             /* &= */
-    TOKEN_STAR,                 /* * */
-    TOKEN_STAREQUAL,            /* *= */
-    TOKEN_PLUS,                 /* + */
-    TOKEN_PLUSPLUS,             /* ++ */
-    TOKEN_PLUSEQUAL,            /* += */
-    TOKEN_MINUS,                /* - */
-    TOKEN_MINUSMINUS,           /* -- */
-    TOKEN_MINUSEQUAL,           /* -= */
-    TOKEN_ARROW,                /* -> */
-    TOKEN_TILDE,                /* ~ */
-    TOKEN_EXCLAIM,              /* ! */
-    TOKEN_EXCLAIMEQUAL,         /* != */
-    TOKEN_SLASH,                /* / */
-    TOKEN_SLASHEQUAL,           /* /= */
-    TOKEN_PERCENT,              /* % */
-    TOKEN_PERCENTEQUAL,         /* %= */
-    TOKEN_LESS,                 /* < */
-    TOKEN_LESSLESS,             /* << */
-    TOKEN_LESSLESSEQUAL,        /* <<= */
-    TOKEN_LESSEQUAL,            /* <= */
-    TOKEN_GREATER,              /* > */
-    TOKEN_GREATERGREATER,       /* >> */
-    TOKEN_GREATEREQUAL,         /* >= */
-    TOKEN_GREATERGREATEREQUAL,  /* >>= */
-    TOKEN_CARET,                /* ^ */
-    TOKEN_CARETEQUAL,           /* ^= */
-    TOKEN_PIPE,                 /* | */
-    TOKEN_PIPEPIPE,             /* || */
-    TOKEN_PIPEEQUAL,            /* |= */
-    TOKEN_QUESTION,             /* ? */
-    TOKEN_COLON,                /* : */
-    TOKEN_SEMI,                 /* ; */
-    TOKEN_EQUAL,                /* = */
-    TOKEN_EQUALEQUAL,           /* == */
-    TOKEN_COMMA,                /* , */
-    TOKEN_HASH,                 /* # */
-    TOKEN_HASHHASH,             /* ## */
-    TOKEN_BACKSLASH,            /* \ */
-    TOKEN_NEW_LINE,             /* \n */
+    TOKEN_L_SQUARE,                         /* [ */
+    TOKEN_R_SQUARE,                         /* ] */
+    TOKEN_L_PAREN,                          /* ) */
+    TOKEN_R_PAREN,                          /* ( */
+    TOKEN_L_BRACE,                          /* { */
+    TOKEN_R_BRACE,                          /* } */
+    TOKEN_PERIOD,                           /* . */
+    TOKEN_ELLIPSIS,                         /* ... */
+    TOKEN_AMP,                              /* & */
+    TOKEN_AMPAMP,                           /* && */
+    TOKEN_AMPEQUAL,                         /* &= */
+    TOKEN_STAR,                             /* * */
+    TOKEN_STAREQUAL,                        /* *= */
+    TOKEN_PLUS,                             /* + */
+    TOKEN_PLUSPLUS,                         /* ++ */
+    TOKEN_PLUSEQUAL,                        /* += */
+    TOKEN_MINUS,                            /* - */
+    TOKEN_MINUSMINUS,                       /* -- */
+    TOKEN_MINUSEQUAL,                       /* -= */
+    TOKEN_ARROW,                            /* -> */
+    TOKEN_TILDE,                            /* ~ */
+    TOKEN_EXCLAIM,                          /* ! */
+    TOKEN_EXCLAIMEQUAL,                     /* != */
+    TOKEN_SLASH,                            /* / */
+    TOKEN_SLASHEQUAL,                       /* /= */
+    TOKEN_PERCENT,                          /* % */
+    TOKEN_PERCENTEQUAL,                     /* %= */
+    TOKEN_LESS,                             /* < */
+    TOKEN_LESSLESS,                         /* << */
+    TOKEN_LESSLESSEQUAL,                    /* <<= */
+    TOKEN_LESSEQUAL,                        /* <= */
+    TOKEN_GREATER,                          /* > */
+    TOKEN_GREATERGREATER,                   /* >> */
+    TOKEN_GREATEREQUAL,                     /* >= */
+    TOKEN_GREATERGREATEREQUAL,              /* >>= */
+    TOKEN_CARET,                            /* ^ */
+    TOKEN_CARETEQUAL,                       /* ^= */
+    TOKEN_PIPE,                             /* | */
+    TOKEN_PIPEPIPE,                         /* || */
+    TOKEN_PIPEEQUAL,                        /* |= */
+    TOKEN_QUESTION,                         /* ? */
+    TOKEN_COLON,                            /* : */
+    TOKEN_SEMI,                             /* ; */
+    TOKEN_EQUAL,                            /* = */
+    TOKEN_EQUALEQUAL,                       /* == */
+    TOKEN_COMMA,                            /* , */
+    TOKEN_HASH,                             /* # */
+    TOKEN_HASHHASH,                         /* ## */
+    TOKEN_BACKSLASH,                        /* \ */
+    TOKEN_NEW_LINE,                         /* \n */
+    TOKEN_SPACE,                            /* spaces */
+    TOKEN_COMMENT,                          /* comment */
+
+    TOKEN_CONSTANT_STRING,                  /* "" */
+    TOKEN_CONSTANT_WSTRING,                 /* L"" */
+    TOKEN_CONSTANT_STRING16,                /* u"" */
+    TOKEN_CONSTANT_STRING32,                /* U"" */
+    TOKEN_CONSTANT_UTF8STRING,              /* u8"" */
+
+    TOKEN_CONSTANT_CHAR,                    /* '' */
+    TOKEN_CONSTANT_WCHAR,                   /* L'' */
+    TOKEN_CONSTANT_CHAR16,                  /* u'' */
+    TOKEN_CONSTANT_CHAR32,                  /* U'' */
+    TOKEN_CONSTANT_UTF8CHAR,                /* u8'' */
     
-
-    TOKEN_CONSTANT_STRING,               /* "" */
-    TOKEN_CONSTANT_WSTRING,              /* L"" */
-    TOKEN_CONSTANT_STRING16,             /* u"" */
-    TOKEN_CONSTANT_STRING32,             /* U"" */
-    TOKEN_CONSTANT_UTF8STRING,           /* u8"" */
-
-    TOKEN_CONSTANT_CHAR,                 /* '' */
-    TOKEN_CONSTANT_WCHAR,                /* L'' */
-    TOKEN_CONSTANT_CHAR16,               /* u'' */
-    TOKEN_CONSTANT_CHAR32,               /* U'' */
-    TOKEN_CONSTANT_UTF8CHAR,             /* u8'' */
-    
-    TOKEN_NUMBER,
-    TOKEN_IDENTIFIER,
-
+    TOKEN_NUMBER,                           /* number */
+    TOKEN_IDENTIFIER,                       /* identifier */
 
     TOKEN_CONST,
     TOKEN_RESTRICT,
@@ -190,6 +190,7 @@ void token_init(token_t token);
 void token_destroy(token_t tok);
 token_t token_dup(token_t tok);
 
+const char *token_type2str(token_t tok);
 
 #define token_init_loc(tok, line, column, current_line, filename) \
     source_location_init((tok)->location, line, column, current_line, filename)
@@ -218,5 +219,6 @@ token_type_t encoding_to_token_type(encoding_type_t ent)
            ent == ENCODING_UTF8   ? TOKEN_CONSTANT_UTF8STRING :
            ent == ENCODING_WCHAR  ? TOKEN_CONSTANT_WSTRING : TOKEN_CONSTANT_STRING;
 }
+
 
 #endif

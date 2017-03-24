@@ -4,6 +4,65 @@
 #include "token.h"
 
 
+struct token_dictionary_s {
+    token_type_t type;
+    const char *type2str;
+    const char *token;
+} token_dictionary[] = {
+    { TOKEN_L_SQUARE,            "TOKEN_L_SQUARE",            "["        },
+    { TOKEN_R_SQUARE,            "TOKEN_R_SQUARE",            "]"        },
+    { TOKEN_L_PAREN,             "TOKEN_L_PAREN",             ")"        },
+    { TOKEN_R_PAREN,             "TOKEN_R_PAREN",             "("        },
+    { TOKEN_L_BRACE,             "TOKEN_L_BRACE",             "{"        },
+    { TOKEN_R_BRACE,             "TOKEN_R_BRACE",             "}"        },
+    { TOKEN_PERIOD,              "TOKEN_PERIOD",              "."        },
+    { TOKEN_ELLIPSIS,            "TOKEN_ELLIPSIS",            "..."      },
+    { TOKEN_AMP,                 "TOKEN_AMP",                 "&"        },
+    { TOKEN_AMPAMP,              "TOKEN_AMPAMP",              "&&"       },
+    { TOKEN_AMPEQUAL,            "TOKEN_AMPEQUAL",            "&="       },
+    { TOKEN_STAR,                "TOKEN_STAR",                "*"        },
+    { TOKEN_STAREQUAL,           "TOKEN_STAREQUAL",           "*="       },
+    { TOKEN_PLUS,                "TOKEN_PLUS",                "+"        },
+    { TOKEN_PLUSPLUS,            "TOKEN_PLUSPLUS",            "++"       },
+    { TOKEN_PLUSEQUAL,           "TOKEN_PLUSEQUAL",           "+="       },
+    { TOKEN_MINUS,               "TOKEN_MINUS",               "-"        },
+    { TOKEN_MINUSMINUS,          "TOKEN_MINUSMINUS",          "--"       },
+    { TOKEN_MINUSEQUAL,          "TOKEN_MINUSEQUAL",          "-="       },
+    { TOKEN_ARROW,               "TOKEN_ARROW",               "->"       },
+    { TOKEN_TILDE,               "TOKEN_TILDE",               "~"        },
+    { TOKEN_EXCLAIM,             "TOKEN_EXCLAIM",             "!"        },
+    { TOKEN_EXCLAIMEQUAL,        "TOKEN_EXCLAIMEQUAL",        "!="       },
+    { TOKEN_SLASH,               "TOKEN_SLASH",               "/"        },
+    { TOKEN_SLASHEQUAL,          "TOKEN_SLASHEQUAL",          "/="       },
+    { TOKEN_PERCENT,             "TOKEN_PERCENT",             "%"        },
+    { TOKEN_PERCENTEQUAL,        "TOKEN_PERCENTEQUAL",        "%="       },
+    { TOKEN_LESS,                "TOKEN_LESS",                "<"        },
+    { TOKEN_LESSLESS,            "TOKEN_LESSLESS",            "<<"       },
+    { TOKEN_LESSLESSEQUAL,       "TOKEN_LESSLESSEQUAL",       "<<="      },
+    { TOKEN_LESSEQUAL,           "TOKEN_LESSEQUAL",           "<="       },
+    { TOKEN_GREATER,             "TOKEN_GREATER",             ">"        },
+    { TOKEN_GREATERGREATER,      "TOKEN_GREATERGREATER",      ">>"       },
+    { TOKEN_GREATEREQUAL,        "TOKEN_GREATEREQUAL",        ">="       },
+    { TOKEN_GREATERGREATEREQUAL, "TOKEN_GREATERGREATEREQUAL", ">>="      },
+    { TOKEN_CARET,               "TOKEN_CARET",               "^"        },
+    { TOKEN_CARETEQUAL,          "TOKEN_CARETEQUAL",          "^="       },
+    { TOKEN_PIPE,                "TOKEN_PIPE",                "|"        },
+    { TOKEN_PIPEPIPE,            "TOKEN_PIPEPIPE",            "||"       },
+    { TOKEN_PIPEEQUAL,           "TOKEN_PIPEEQUAL",           "|="       },
+    { TOKEN_QUESTION,            "TOKEN_QUESTION",            "?"        },
+    { TOKEN_COLON,               "TOKEN_COLON",               ":"        },
+    { TOKEN_SEMI,                "TOKEN_SEMI",                ";"        },
+    { TOKEN_EQUAL,               "TOKEN_EQUAL",               "="        },
+    { TOKEN_EQUALEQUAL,          "TOKEN_EQUALEQUAL",          "=="       },
+    { TOKEN_COMMA,               "TOKEN_COMMA",               ","        },
+    { TOKEN_HASH,                "TOKEN_HASH",                "#"        },
+    { TOKEN_HASHHASH,            "TOKEN_HASHHASH",            "##"       },
+    { TOKEN_BACKSLASH,           "TOKEN_BACKSLASH",           "\\"       },
+    { TOKEN_NEW_LINE,            "TOKEN_NEW_LINE",            "\\n"      },
+    { TOKEN_SPACE,               "TOKEN_SPACE",               "spaces"   },
+    { TOKEN_COMMENT,             "TOKEN_COMMENT",             "comment"  },
+};
+
 token_t token_create(void)
 {
     token_t tok;
@@ -91,6 +150,21 @@ clean_tok:
     pfree(ret);
 
 done:
+    return NULL;
+}
+
+
+const char *token_type2str(token_t tok)
+{
+    size_t i, length;
+    length = sizeof(token_dictionary) / sizeof(struct token_dictionary_s);
+
+    for (i = 0; i < length; i++) {
+        if (token_dictionary[i].type == tok->type) {
+            return token_dictionary[i].type2str;
+        }
+    }
+
     return NULL;
 }
 

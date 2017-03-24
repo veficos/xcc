@@ -12,7 +12,7 @@ typedef struct array_s {
     size_t      nelts;
     size_t      size;
     size_t      nalloc;
-} array_t;
+} *array_t;
 
 
 #define array_pop(array)                            \
@@ -59,11 +59,11 @@ typedef struct array_s {
          (index)++)
 
 
-array_t *array_create(size_t size);
-array_t *array_create_n(size_t size, size_t n);
-void array_destroy(array_t *array);
-void *array_push(array_t *array);
-void *array_push_n(array_t *array, size_t n);
+array_t array_create(size_t size);
+array_t array_create_n(size_t size, size_t n);
+void array_destroy(array_t array);
+void *array_push(array_t array);
+void *array_push_n(array_t array, size_t n);
 
 
 #endif

@@ -6,6 +6,7 @@
 #include "reader.h"
 #include "diag.h"
 #include "lexer.h"
+#include "array.h"
 #include "encoding.h"
 
 
@@ -14,7 +15,7 @@ static inline void __lexer_warningf_location__(lexer_t lexer, const char *fmt, .
 
 static inline token_t __lexer_token_make__(lexer_t lexer, token_type_t type);
 static inline void __lexer_token_mark_location__(lexer_t lexer);
-static inline void __lexer_skip_white_space__(lexer_t lexer);
+static inline bool __lexer_skip_white_space__(lexer_t lexer);
 static inline void __lexer_skip_comment__(lexer_t lexer);
 static inline token_t __lexer_parse_number__(lexer_t lexer);
 static inline token_t __lexer_parse_character__(lexer_t lexer, encoding_type_t ent);
@@ -28,6 +29,10 @@ static inline encoding_type_t __lexer_parse_encoding__(lexer_t lexer, int ch);
 
 static inline bool __lexer_is_unc__(lexer_t lexer, int ch);
 
+
+static inline bool __lexer_make_stash__(array_t a);
+
+
 static inline int __todigit__(int ch);
 static inline int __isoct__(int ch);
 static inline int __ishex__(int ch);
@@ -38,32 +43,63 @@ static inline int __isdigit__(int ch);
 static inline int __isidnum__(int ch);
 
 
-lexer_t lexer_create(reader_t reader, option_t option, diag_t diag)
+lexer_t lexer_create(screader_t reader, option_t option, diag_t diag)
 {
     lexer_t lexer;
     token_t tok;
+    array_t snapshot;
+
+    snapshot = array_create_n(sizeof(array_t), DEFAULT_TOKEN_SEQUENCE_LENGTH);
+    if (snapshot == NULL) {
+        goto done;
+    }
+
+    if (!__lexer_make_stash__(snapshot)) {
+        goto done;
+    }
 
     if ((tok = token_create()) == NULL) {
-        return NULL;
+        goto clean_ss;
     }
 
     if ((lexer = pmalloc(sizeof(struct lexer_s))) == NULL) {
-        token_destroy(tok);
-        return NULL;
+        goto clean_tok;
     }
-
    
     lexer->reader = reader;
     lexer->option = option;
     lexer->diag = diag;
     lexer->tok = tok;
+    lexer->snapshot = snapshot;
     return lexer;
+
+clean_tok:
+    token_destroy(tok);
+
+clean_ss:
+    array_destroy(snapshot);
+
+done:
+    return NULL;
 }
 
 
 void lexer_destroy(lexer_t lexer)
 {
-    assert(lexer && lexer->tok);
+    array_t *arrs;
+    token_t *toks;
+    size_t i, j;
+
+    assert(lexer && lexer->tok && lexer->snapshot);
+
+    array_foreach(lexer->snapshot, arrs, i) {
+        array_foreach(arrs[i], toks, j) {
+            token_destroy(toks[j]);
+        }
+        array_destroy(arrs[i]);
+    }
+
+    array_destroy(lexer->snapshot);
 
     token_destroy(lexer->tok);
 
@@ -73,19 +109,18 @@ void lexer_destroy(lexer_t lexer)
 
 token_t lexer_scan(lexer_t lexer)
 {
-    token_t tok = NULL;
     int ch;
-
-    __lexer_skip_white_space__(lexer);
 
     __lexer_token_mark_location__(lexer);
 
-    if (reader_try(lexer->reader, '\n')) {
-        return __lexer_token_make__(lexer, TOKEN_NEW_LINE);
+    if (__lexer_skip_white_space__(lexer)) {
+        return __lexer_token_make__(lexer, TOKEN_SPACE);
     }
 
-    ch = reader_get(lexer->reader);
+    ch = screader_get(lexer->reader);
     switch (ch) {
+    case '\n':
+        return __lexer_token_make__(lexer, TOKEN_NEW_LINE);
     case '[':
         return __lexer_token_make__(lexer, TOKEN_L_SQUARE);
     case ']':
@@ -99,112 +134,110 @@ token_t lexer_scan(lexer_t lexer)
     case '}':
         return __lexer_token_make__(lexer, TOKEN_R_BRACE);
     case '.':
-        if (__isdigit__(reader_peek(lexer->reader))) {
-            reader_unget(lexer->reader, ch);
+        if (__isdigit__(screader_peek(lexer->reader))) {
+            screader_unget(lexer->reader, ch);
             return __lexer_parse_number__(lexer);
         }
-        if (reader_try(lexer->reader, '.')) {
-            if (reader_try(lexer->reader, '.')) {
+        if (screader_try(lexer->reader, '.')) {
+            if (screader_try(lexer->reader, '.')) {
                 return __lexer_token_make__(lexer, TOKEN_ELLIPSIS);
             }
 
-            reader_unget(lexer->reader, '.');
+            screader_unget(lexer->reader, '.');
             return __lexer_token_make__(lexer, TOKEN_PERIOD);
         }
         return __lexer_token_make__(lexer, TOKEN_PERIOD);
     case '&':
-        if (reader_try(lexer->reader, '&'))
+        if (screader_try(lexer->reader, '&'))
             return __lexer_token_make__(lexer, TOKEN_AMPAMP);
-        if (reader_try(lexer->reader, '='))
+        if (screader_try(lexer->reader, '='))
             return __lexer_token_make__(lexer, TOKEN_AMPEQUAL);
         return __lexer_token_make__(lexer, TOKEN_AMP);
     case '*':
-        return __lexer_token_make__(lexer, reader_try(lexer->reader, '=') ? TOKEN_STAREQUAL : TOKEN_STAR);
+        return __lexer_token_make__(lexer, screader_try(lexer->reader, '=') ? TOKEN_STAREQUAL : TOKEN_STAR);
     case '+':
-        if (reader_try(lexer->reader, '+'))	return __lexer_token_make__(lexer, TOKEN_PLUSPLUS);
-        if (reader_try(lexer->reader, '=')) return __lexer_token_make__(lexer, TOKEN_PLUSEQUAL);
+        if (screader_try(lexer->reader, '+'))	return __lexer_token_make__(lexer, TOKEN_PLUSPLUS);
+        if (screader_try(lexer->reader, '=')) return __lexer_token_make__(lexer, TOKEN_PLUSEQUAL);
         return __lexer_token_make__(lexer, TOKEN_PLUS);
     case '-':
-        if (reader_try(lexer->reader, '>')) return __lexer_token_make__(lexer, TOKEN_ARROW);
-        if (reader_try(lexer->reader, '-')) return __lexer_token_make__(lexer, TOKEN_MINUSMINUS);
-        if (reader_try(lexer->reader, '=')) return __lexer_token_make__(lexer, TOKEN_MINUSEQUAL);
+        if (screader_try(lexer->reader, '>')) return __lexer_token_make__(lexer, TOKEN_ARROW);
+        if (screader_try(lexer->reader, '-')) return __lexer_token_make__(lexer, TOKEN_MINUSMINUS);
+        if (screader_try(lexer->reader, '=')) return __lexer_token_make__(lexer, TOKEN_MINUSEQUAL);
         return __lexer_token_make__(lexer, TOKEN_MINUS);
     case '~':
         return __lexer_token_make__(lexer, TOKEN_TILDE);
     case '!':
-        return __lexer_token_make__(lexer, reader_try(lexer->reader, '=') ? TOKEN_EXCLAIM : TOKEN_EXCLAIMEQUAL);
+        return __lexer_token_make__(lexer, screader_try(lexer->reader, '=') ? TOKEN_EXCLAIM : TOKEN_EXCLAIMEQUAL);
     case '/':
-        if (reader_test(lexer->reader, '/') || reader_test(lexer->reader, '*')) {
-            cstring_destroy(lexer->tok->location->current_line);
-            cstring_destroy(lexer->tok->location->filename);
+        if (screader_test(lexer->reader, '/') || screader_test(lexer->reader, '*')) {
             __lexer_skip_comment__(lexer);
-            return lexer_scan(lexer);
+            return __lexer_token_make__(lexer, TOKEN_COMMENT);
         }
-        return __lexer_token_make__(lexer, reader_try(lexer->reader, '=') ? TOKEN_SLASHEQUAL : TOKEN_SLASH);
+        return __lexer_token_make__(lexer, screader_try(lexer->reader, '=') ? TOKEN_SLASHEQUAL : TOKEN_SLASH);
     case '%':
-        if (reader_try(lexer->reader, '=')) return __lexer_token_make__(lexer, TOKEN_PERCENTEQUAL);
-        if (reader_try(lexer->reader, '>')) return __lexer_token_make__(lexer, TOKEN_R_BRACE);
-        if (reader_try(lexer->reader, ':')) {
-            if (reader_try(lexer->reader, '%')) {
-                if (reader_try(lexer->reader, ':'))
+        if (screader_try(lexer->reader, '=')) return __lexer_token_make__(lexer, TOKEN_PERCENTEQUAL);
+        if (screader_try(lexer->reader, '>')) return __lexer_token_make__(lexer, TOKEN_R_BRACE);
+        if (screader_try(lexer->reader, ':')) {
+            if (screader_try(lexer->reader, '%')) {
+                if (screader_try(lexer->reader, ':'))
                     return __lexer_token_make__(lexer, TOKEN_HASHHASH);
-                reader_unget(lexer->reader, '%');
+                screader_unget(lexer->reader, '%');
             }
             return __lexer_token_make__(lexer, TOKEN_HASH);
         }
         return __lexer_token_make__(lexer, TOKEN_PERCENT);
     case '<':
-        if (reader_try(lexer->reader, '<'))
-            return __lexer_token_make__(lexer, reader_try(lexer->reader, '=') ? TOKEN_LESSLESSEQUAL : TOKEN_LESSLESS);
-        if (reader_try(lexer->reader, '='))
+        if (screader_try(lexer->reader, '<'))
+            return __lexer_token_make__(lexer, screader_try(lexer->reader, '=') ? TOKEN_LESSLESSEQUAL : TOKEN_LESSLESS);
+        if (screader_try(lexer->reader, '='))
             return __lexer_token_make__(lexer, TOKEN_LESSEQUAL);
-        if (reader_try(lexer->reader, ':'))
+        if (screader_try(lexer->reader, ':'))
             return __lexer_token_make__(lexer, TOKEN_L_SQUARE);
-        if (reader_try(lexer->reader, '%'))
+        if (screader_try(lexer->reader, '%'))
             return __lexer_token_make__(lexer, TOKEN_L_BRACE);
         return __lexer_token_make__(lexer, TOKEN_LESS);
     case '>':
-        if (reader_try(lexer->reader, '>'))
-            return __lexer_token_make__(lexer, reader_try(lexer->reader, '=') ? TOKEN_GREATERGREATEREQUAL : TOKEN_GREATERGREATER);
-        if (reader_try(lexer->reader, '='))
+        if (screader_try(lexer->reader, '>'))
+            return __lexer_token_make__(lexer, screader_try(lexer->reader, '=') ? TOKEN_GREATERGREATEREQUAL : TOKEN_GREATERGREATER);
+        if (screader_try(lexer->reader, '='))
             return __lexer_token_make__(lexer, TOKEN_GREATEREQUAL);
         return __lexer_token_make__(lexer, TOKEN_GREATER);
     case '^':
-        return __lexer_token_make__(lexer, reader_try(lexer->reader, '=') ? TOKEN_CARETEQUAL : TOKEN_CARET);
+        return __lexer_token_make__(lexer, screader_try(lexer->reader, '=') ? TOKEN_CARETEQUAL : TOKEN_CARET);
     case '|':
-        if (reader_try(lexer->reader, '|'))
+        if (screader_try(lexer->reader, '|'))
             return __lexer_token_make__(lexer, TOKEN_PIPEPIPE);
-        if (reader_try(lexer->reader, '='))
+        if (screader_try(lexer->reader, '='))
             return __lexer_token_make__(lexer, TOKEN_PIPEEQUAL);
         return __lexer_token_make__(lexer, TOKEN_PIPE);
     case '?':
         return __lexer_token_make__(lexer, TOKEN_QUESTION);
     case ':':
-        return __lexer_token_make__(lexer, reader_try(lexer->reader, '>') ? TOKEN_R_SQUARE : TOKEN_COLON);
+        return __lexer_token_make__(lexer, screader_try(lexer->reader, '>') ? TOKEN_R_SQUARE : TOKEN_COLON);
     case ';':
         return __lexer_token_make__(lexer, TOKEN_SEMI);
     case '=':
-        return __lexer_token_make__(lexer, reader_try(lexer->reader, '=') ? TOKEN_EQUALEQUAL : TOKEN_EQUAL);
+        return __lexer_token_make__(lexer, screader_try(lexer->reader, '=') ? TOKEN_EQUALEQUAL : TOKEN_EQUAL);
     case ',':
         return __lexer_token_make__(lexer, TOKEN_COMMA);
     case '#':
-        return __lexer_token_make__(lexer, reader_try(lexer->reader, '#') ? TOKEN_HASHHASH : TOKEN_HASH);
+        return __lexer_token_make__(lexer, screader_try(lexer->reader, '#') ? TOKEN_HASHHASH : TOKEN_HASH);
     case '0': case '1': case '2': case '3': case '4': 
     case '5': case '6': case '7': case '8': case '9':
-        reader_unget(lexer->reader, ch);
+        screader_unget(lexer->reader, ch);
         return __lexer_parse_number__(lexer);
     case 'u': case 'U': case 'L': {
         encoding_type_t ent = __lexer_parse_encoding__(lexer, ch);
 
-        if (reader_test(lexer->reader, '\"')) {
+        if (screader_test(lexer->reader, '\"')) {
             return __lexer_parse_string__(lexer, ent);
         }
 
-        if (reader_test(lexer->reader, '\'')) {
+        if (screader_test(lexer->reader, '\'')) {
             return __lexer_parse_character__(lexer, ent);
         }
 
-        reader_unget(lexer->reader, ch);
+        screader_unget(lexer->reader, ch);
         return __lexer_parse_identifier__(lexer);
     }
     case '\'':
@@ -212,7 +245,7 @@ token_t lexer_scan(lexer_t lexer)
     case '\"':
         return __lexer_parse_string__(lexer, ENCODING_NONE);
     case '\\':
-        if (reader_test(lexer->reader, 'u') || reader_test(lexer->reader, 'U'))
+        if (screader_test(lexer->reader, 'u') || screader_test(lexer->reader, 'U'))
             return __lexer_parse_identifier__(lexer);
         return __lexer_token_make__(lexer, TOKEN_BACKSLASH);
     case EOF:
@@ -220,12 +253,60 @@ token_t lexer_scan(lexer_t lexer)
     default:
         if (__isalpha__(ch) || (0x80 <= ch && ch <= 0xfd) || ch == '_' || ch == '$') {
             /* parse identifier */
-            reader_unget(lexer->reader, ch);
+            screader_unget(lexer->reader, ch);
             return __lexer_parse_identifier__(lexer);
         }
     }
     
-    return tok;
+    assert(false);
+    return NULL;
+}
+
+
+token_t lexer_tokenize(lexer_t lexer)
+{
+    array_t *arrs;
+    array_t tokarr;
+    token_t *toks;
+
+    arrs = array_prototype(lexer->snapshot, array_t);
+    tokarr = arrs[array_size(lexer->snapshot)];
+    toks = array_prototype(tokarr, token_t);
+
+}
+
+
+bool lexer_push_back(lexer_t lexer, token_t tok)
+{
+    array_t *arrs;
+    array_t tail;
+    token_t *item;
+
+    assert(array_size(lexer->snapshot) > 0);
+
+    arrs = array_prototype(lexer->snapshot, array_t);
+    tail = arrs[array_size(lexer->snapshot)];
+
+    item = array_push(tail);
+    if (item == NULL) {
+        return false;
+    }
+
+    *item = tok;
+    return true;
+}
+
+
+bool lexer_stash(lexer_t lexer)
+{
+    return __lexer_make_stash__(lexer->snapshot);
+}
+
+
+void lexer_unstash(lexer_t lexer)
+{
+    assert(array_size(lexer->snapshot) > 0);
+    array_pop(lexer->snapshot);
 }
 
 
@@ -244,7 +325,7 @@ token_t __lexer_parse_number__(lexer_t lexer)
     || (((prevc) == 'p' || (prevc) == 'P') )))
 
     for (;;) {
-        ch = reader_get(lexer->reader);
+        ch = screader_get(lexer->reader);
         if (!(__isidnum__(ch) || ch == '.' || VALID_SIGN(ch, prev) || ch == '\'')) {
             break;
         }
@@ -254,7 +335,7 @@ token_t __lexer_parse_number__(lexer_t lexer)
         prev = ch;
     }
 
-    reader_unget(lexer->reader, ch);
+    screader_unget(lexer->reader, ch);
 
 #undef  VALID_SIGN
 
@@ -269,7 +350,7 @@ token_t __lexer_parse_character__(lexer_t lexer, encoding_type_t ent)
     bool parsed = false;
 
     for (;;) {
-        ch = reader_get(lexer->reader);
+        ch = screader_get(lexer->reader);
         if (ch == '\'' || ch == '\n' || ch == EOF) {
             break;
         }
@@ -319,7 +400,7 @@ token_t __lexer_parse_string__(lexer_t lexer, encoding_type_t ent)
     int ch;
 
     for (;;) {
-        ch = reader_get(lexer->reader);
+        ch = screader_get(lexer->reader);
         if (ch == '\"' || ch == '\n' || ch == EOF) {
             break;
         }
@@ -354,7 +435,7 @@ token_t __lexer_parse_string__(lexer_t lexer, encoding_type_t ent)
 static inline
 int __lexer_parse_escaped__(lexer_t lexer)
 {
-    int ch = reader_get(lexer->reader);
+    int ch = screader_get(lexer->reader);
     switch (ch) {
     case '\'': case '"': case '?': case '\\':
         return ch;
@@ -382,7 +463,7 @@ int __lexer_parse_escaped__(lexer_t lexer)
 static inline
 int __lexer_parse_hex_escaped__(lexer_t lexer)
 {
-    int hex = 0, ch = reader_peek(lexer->reader);
+    int hex = 0, ch = screader_peek(lexer->reader);
 
     if (!__ishex__(ch)) {
         __lexer_errorf_location__(lexer, "\\x used with no following hex digits");
@@ -390,8 +471,8 @@ int __lexer_parse_hex_escaped__(lexer_t lexer)
 
     while (__ishex__(ch)) {
         hex = (hex << 4) + __todigit__(ch);
-        reader_get(lexer->reader);
-        ch = reader_peek(lexer->reader);
+        screader_get(lexer->reader);
+        ch = screader_peek(lexer->reader);
     }
 
     return hex;
@@ -404,21 +485,21 @@ int __lexer_parse_oct_escaped__(lexer_t lexer)
     int ch;
     int oct;
     
-    ch = reader_get(lexer->reader);
+    ch = screader_get(lexer->reader);
     oct = __todigit__(ch);
 
-    ch = reader_peek(lexer->reader);
+    ch = screader_peek(lexer->reader);
     if (!__isoct__(ch))
         return oct;
     oct = (oct << 3) + __todigit__(ch);
 
-    reader_get(lexer->reader);
-    ch = reader_peek(lexer->reader);
+    screader_get(lexer->reader);
+    ch = screader_peek(lexer->reader);
     if (!__isoct__(ch))
         return oct;
     oct = (oct << 3) + __todigit__(ch);
 
-    reader_get(lexer->reader);
+    screader_get(lexer->reader);
     return oct;
 }
 
@@ -433,7 +514,7 @@ int __lexer_parse_unc__(lexer_t lexer, int len)
     assert(len == 4 || len == 8);
 
     for (; i < len; ++i) {
-        ch = reader_get(lexer->reader);
+        ch = screader_get(lexer->reader);
         if (!__ishex__(ch)) {
             __lexer_errorf_location__(lexer, "invalid universal character");
         }
@@ -450,7 +531,7 @@ token_t __lexer_parse_identifier__(lexer_t lexer)
     int ch;
 
     for (;;) {
-        ch = reader_get(lexer->reader);
+        ch = screader_get(lexer->reader);
         if (__isidnum__(ch) || ch == '$' || (0x80 <= ch && ch <= 0xfd)) {
             if ((lexer->tok->literals = cstring_cat_ch(lexer->tok->literals, ch)) == NULL) {
                 return NULL;
@@ -468,7 +549,7 @@ token_t __lexer_parse_identifier__(lexer_t lexer)
         break;
     }
 
-    reader_unget(lexer->reader, ch);
+    screader_unget(lexer->reader, ch);
     return __lexer_token_make__(lexer, TOKEN_IDENTIFIER);
 }
 
@@ -478,7 +559,7 @@ encoding_type_t __lexer_parse_encoding__(lexer_t lexer, int ch)
 {
     switch (ch) {
     case 'u': 
-        return reader_try(lexer->reader, '8') ? ENCODING_UTF8 : ENCODING_CHAR16;
+        return screader_try(lexer->reader, '8') ? ENCODING_UTF8 : ENCODING_CHAR16;
     case 'U': 
         return ENCODING_CHAR32;
     case 'L': 
@@ -490,34 +571,39 @@ encoding_type_t __lexer_parse_encoding__(lexer_t lexer, int ch)
 
 
 static inline 
-void __lexer_skip_white_space__(lexer_t lexer)
+bool __lexer_skip_white_space__(lexer_t lexer)
 {
     int ch;
-    do {
-        ch = reader_peek(lexer->reader);
+    bool ret = false;
+
+    for (;;) {
+        ch = screader_peek(lexer->reader);
         if (!__isspace__(ch) || ch == '\n' || ch == EOF) {
             break;
         }
-        reader_get(lexer->reader);
-    } while (true);
+        screader_get(lexer->reader);
+        ret = true;
+    }
+
+    return ret;
 }
 
 
 static inline 
 void __lexer_skip_comment__(lexer_t lexer)
 {
-    if (reader_try(lexer->reader, '/')) {
-        while (!reader_is_empty(lexer->reader)) {
-            if (reader_peek(lexer->reader) == '\n') {
+    if (screader_try(lexer->reader, '/')) {
+        while (!screader_is_empty(lexer->reader)) {
+            if (screader_peek(lexer->reader) == '\n') {
                 return;
             }
-            reader_get(lexer->reader);
+            screader_get(lexer->reader);
         }
-    } else if (reader_try(lexer->reader, '*')) {
+    } else if (screader_try(lexer->reader, '*')) {
         int ch;
-        while (!reader_is_empty(lexer->reader)) {
-            ch = reader_get(lexer->reader);
-            if (ch == '*' && reader_try(lexer->reader, '/')) {
+        while (!screader_is_empty(lexer->reader)) {
+            ch = screader_get(lexer->reader);
+            if (ch == '*' && screader_try(lexer->reader, '/')) {
                 return;
             }
         }
@@ -529,10 +615,27 @@ void __lexer_skip_comment__(lexer_t lexer)
 }
 
 
+static inline 
+bool __lexer_make_stash__(array_t a)
+{
+    array_t *item = array_push(a);
+    if (item == NULL) {
+        return false;
+    }
+
+    *item = array_create_n(sizeof(struct token_s), DEFAULT_TOKEN_SEQUENCE_LENGTH);
+    if (*item == NULL) {
+        return false;
+    }
+
+    return true;
+}
+
+
 static inline
 bool __lexer_is_unc__(lexer_t lexer, int ch)
 {
-    return ch == '\\' && (reader_test(lexer->reader, 'u') || reader_test(lexer->reader, 'U'));
+    return ch == '\\' && (screader_test(lexer->reader, 'u') || screader_test(lexer->reader, 'U'));
 }
 
 
@@ -566,10 +669,10 @@ static inline
 void __lexer_token_mark_location__(lexer_t lexer)
 {
     token_init_loc(lexer->tok,
-                   reader_line(lexer->reader),
-                   reader_column(lexer->reader),
-                   reader_current_line(lexer->reader),
-                   cstring_create(reader_name(lexer->reader)));
+                   screader_line(lexer->reader),
+                   screader_column(lexer->reader),
+                   screader_current_line(lexer->reader),
+                   cstring_create(screader_name(lexer->reader)));
 }
 
 

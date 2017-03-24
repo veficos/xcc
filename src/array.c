@@ -4,15 +4,14 @@
 #include "pmalloc.h"
 
 
-static int __array_resize__(array_t *array, size_t n);
+static int __array_resize__(array_t array, size_t n);
 
 
-array_t *array_create(size_t size)
+array_t array_create(size_t size)
 {
-    array_t *array;
+    array_t array;
 
-    array = (array_t *) pmalloc(sizeof(array_t));
-    if (!array) {
+    if ((array = (array_t)pmalloc(sizeof(struct array_s))) == NULL) {
         return NULL;
     }
 
@@ -25,17 +24,15 @@ array_t *array_create(size_t size)
 }
 
 
-array_t *array_create_n(size_t size, size_t n)
+array_t array_create_n(size_t size, size_t n)
 {
-    array_t *array;
+    array_t array;
 
-    array = (array_t *) pmalloc(sizeof(array_t));
-    if (!array) {
+    if ((array = (array_t)pmalloc(sizeof(struct array_s))) == NULL) {
         return NULL;
     }
 
-    array->elts = (void *) pmalloc(size * n);
-    if (!array->elts) {
+    if ((array->elts = (void *)pmalloc(size * n)) == NULL) {
         pfree(array);
         return NULL;
     }
@@ -47,11 +44,11 @@ array_t *array_create_n(size_t size, size_t n)
 }
 
 
-void array_destroy(array_t *array)
+void array_destroy(array_t array)
 {
     assert(array && array->elts);
 
-    if (array->elts) {
+    if (array->elts != NULL) {
         pfree(array->elts);
     }
 
@@ -59,7 +56,7 @@ void array_destroy(array_t *array)
 }
 
 
-void *array_push(array_t *array)
+void *array_push(array_t array)
 {
     void *elt;
 
@@ -85,7 +82,7 @@ void *array_push(array_t *array)
 }
 
 
-void *array_push_n(array_t *array, size_t n)
+void *array_push_n(array_t array, size_t n)
 {
     void *elt;
 
@@ -103,15 +100,18 @@ void *array_push_n(array_t *array, size_t n)
 }
 
 
-static int __array_resize__(array_t *array, size_t n)
+static int __array_resize__(array_t array, size_t n)
 {
     size_t resize  = array->size * n;
+    void *ptr;
 
     if (resize) {
-        array->elts = prealloc(array->elts, resize);
-        if (!array->elts) {
+        if ((ptr = pmalloc(resize)) == NULL) {
             return 0;
         }
+        
+        pfree(array->elts);
+        array->elts = ptr;
     }
     
     array->nalloc = n;
