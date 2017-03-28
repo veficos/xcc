@@ -20,7 +20,7 @@ void test_lexer(void)
     const char *p;
     token_t  tok;
 
-    screader = screader_create(READER_TYPE_FILE, "3.h");
+    screader = screader_create(STREAM_TYPE_FILE, "3.h");
     diag = diag_create();
 
     //screader_push(screader, READER_TYPE_FILE, "2.h");

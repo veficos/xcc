@@ -1,5 +1,6 @@
 
 
+#include "config.h"
 #include "cstring.h"
 
 
@@ -402,4 +403,3 @@ size_t ull2str(char *s, unsigned long long v, int base)
 
     return l;
 }
-

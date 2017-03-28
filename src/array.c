@@ -1,5 +1,6 @@
 
 
+#include "config.h"
 #include "array.h"
 #include "pmalloc.h"
 

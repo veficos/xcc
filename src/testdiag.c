@@ -41,4 +41,5 @@ void test_diag(void)
 int main(void)
 {
     test_diag();
+    return 0;
 }

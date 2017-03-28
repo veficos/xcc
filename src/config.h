@@ -3,6 +3,7 @@
 #ifndef __CONFIG__H__
 #define __CONFIG__H__
 
+
 #define     DEBUG
 
 
@@ -24,6 +25,8 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <time.h>
+#include <stdbool.h>
 
 
 #ifndef bool 
@@ -41,11 +44,16 @@ typedef enum {
 
 #ifndef va_copy 
 # ifdef __va_copy 
-# define va_copy(DEST,SRC) __va_copy((DEST),(SRC)) 
+# define va_copy(DEST,SRC)  __va_copy((DEST),(SRC)) 
 # else 
 # define va_copy(DEST, SRC) memcpy((&DEST), (&SRC), sizeof(va_list)) 
 # endif 
 #endif 
+
+
+#if defined(WIN32) || defined(_WIN32)
+#define localtime_r(tm, tmt) localtime_s(tmt, tm);
+#endif
 
 
 #endif

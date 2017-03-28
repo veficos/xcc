@@ -33,6 +33,10 @@
 * POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include "config.h"
+#include "pmalloc.h"
+#include "hash.h"
+#include "dict.h"
 
 #include <stdio.h>
 #include <assert.h>
@@ -41,11 +45,6 @@
 #include <string.h>
 #include <stdarg.h>
 #include <limits.h>
-
-#include "config.h"
-#include "pmalloc.h"
-#include "hash.h"
-#include "dict.h"
 
 
 static inline int __dict_expand_if_needed__(dict_t ht);

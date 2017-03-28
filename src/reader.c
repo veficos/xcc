@@ -8,7 +8,8 @@
 
 
 /*
-* Notes.
+*
+* Notice
 *
 * 1. C11 5.1.1: "\r\n" or "\r" are canonicalized to "\n".
 * 2. C11 5.1.1: Each instance of a backslash character (\) immediately
@@ -35,17 +36,12 @@
 #endif
 
 
-#ifndef MAX_LINE_SIZE
-#define MAX_LINE_SIZE       (120)
-#endif
-
-
 static inline string_reader_t __string_reader_create__(cstring_t text);
-static inline int __string_reader_get__(string_reader_t sr);
+static inline int __string_reader_next__(string_reader_t sr);
 static inline int __string_reader_peek__(string_reader_t sr);
 static inline bool __string_reader_stash__(string_reader_t sr, int ch);
 static inline int __string_reader_unstash__(string_reader_t sr);
-
+static inline bool __screader_skip_backslash_space__(screader_t screader);
 
 string_reader_t string_reader_create_n(const void *data, size_t n)
 {
@@ -61,7 +57,7 @@ string_reader_t string_reader_create_n(const void *data, size_t n)
 
 void string_reader_destroy(string_reader_t sr)
 {
-    assert(sr != NULL && sr->text != NULL);
+    assert(sr != NULL);
 
     cstring_destroy(sr->text);
 
@@ -73,21 +69,25 @@ void string_reader_destroy(string_reader_t sr)
 }
 
 
-int string_reader_get(string_reader_t sr)
+int string_reader_next(string_reader_t sr)
 {
     int ch;
 
-    if ((ch = __string_reader_get__(sr)) == '\r' && __string_reader_peek__(sr) == '\n') {
-        ch = __string_reader_get__(sr);
+    if (((ch = __string_reader_next__(sr)) == '\r') &&
+        __string_reader_peek__(sr) == '\n') {
+        ch = __string_reader_next__(sr);
     }
 
-    if (ch == '\n') {
-        sr->line++;
-        sr->column = 1;
-    } else {
-        sr->column++;
+    if (ch != EOF) {
+        if (ch == '\n') {
+            sr->line++;
+            sr->column = 1;
+        }
+        else {
+            sr->column++;
+        }
     }
-
+         
     sr->lastch = ch;
     return ch;
 }
@@ -97,16 +97,24 @@ int string_reader_peek(string_reader_t sr)
 {
     int ch;
 
-    if ((ch = __string_reader_peek__(sr)) == '\r' && sr->text[sr->seek + 1] == '\n') {
-        return '\n';
+    if (((ch = __string_reader_peek__(sr)) == '\r')) {
+        string_reader_next(sr);
+        if (__string_reader_peek__(sr) == '\n') {
+            return '\n';
+        }
+        string_reader_untread(sr, ch);
     }
 
     return ch;
 }
 
 
-bool string_reader_unget(string_reader_t sr, int ch)
+bool string_reader_untread(string_reader_t sr, int ch)
 {
+    if (ch == EOF) {
+        return false;
+    }
+
     if (__string_reader_stash__(sr, ch)) {
         if (ch == '\n') {
             sr->column = 1;
@@ -114,12 +122,13 @@ bool string_reader_unget(string_reader_t sr, int ch)
         } else {
             sr->column--;
         }
+        return true;
     }
     return false;
 }
 
 
-cstring_t string_reader_current_line(string_reader_t sr)
+cstring_t string_reader_row(string_reader_t sr)
 {
     size_t i = sr->seek;
 
@@ -127,10 +136,9 @@ cstring_t string_reader_current_line(string_reader_t sr)
         if (sr->text[i] == '\n') {
             break;
         }
-        i++;
-    } while(i < cstring_length(sr->text));
+    } while(i++ < cstring_length(sr->text));
 
-    return cstring_create_n(sr->begin, (&sr->text[i] - (char *)sr->begin));
+    return cstring_create_n(sr->begin, ((char *)&sr->text[sr->text[i - 1] == '\r' ? --i : i] - (char *)sr->begin));
 }
 
 
@@ -203,7 +211,7 @@ void file_reader_destroy(file_reader_t fr)
 }
 
 
-screader_t screader_create(reader_type_t type, const char *s)
+screader_t screader_create(stream_type_t type, const char *s)
 {
     reader_t reader;
     screader_t screader;
@@ -255,7 +263,7 @@ void screader_destroy(screader_t screader)
 }
 
 
-reader_t screader_push(screader_t screader, reader_type_t type, const char *s)
+reader_t screader_push(screader_t screader, stream_type_t type, const char *s)
 {
     reader_t reader;
 
@@ -283,10 +291,10 @@ void screader_pop(screader_t screader)
 }
 
 
-int screader_get(screader_t screader)
+int screader_next(screader_t screader)
 {
     for (;;) {
-        int ch = reader_get(screader->last);
+        int ch = reader_next(screader->last);
         if (ch == EOF) {
             screader_pop(screader);
             if (array_size(screader->files) == 1) {
@@ -295,7 +303,7 @@ int screader_get(screader_t screader)
             continue;
         }
 
-        if (ch == '\\' && reader_try(screader->last, '\n')) {
+        if (ch == '\\' && __screader_skip_backslash_space__(screader)) {
             continue;
         }
 
@@ -309,7 +317,7 @@ int screader_get(screader_t screader)
 int screader_peek(screader_t screader)
 {
     for (;;) {
-        int ch = reader_get(screader->last);
+        int ch = reader_next(screader->last);
         if (ch == EOF) {
             screader_pop(screader);
             if (array_size(screader->files) == 1) {
@@ -318,15 +326,43 @@ int screader_peek(screader_t screader)
             continue;
         }
 
-        if (ch == '\\' && reader_try(screader->last, '\n')) {
+        if (ch == '\\' && __screader_skip_backslash_space__(screader)) {
             continue;
         }
 
-        reader_unget(screader->last, ch);
+        reader_untread(screader->last, ch);
         return ch;
     }
 
     return EOF;
+}
+
+
+static inline
+bool __screader_skip_backslash_space__(screader_t screader)
+{
+    if (reader_try(screader->last, '\n')) {
+        return true;
+    }
+    
+    for (;;) {
+        int ch = reader_next(screader->last);
+        if (!isspace(ch)) {
+            break;
+        }
+
+        if (ch == EOF) {
+            /* TODO: backslash-newline at end of file */
+            return true;
+        }
+
+        if (ch == '\n') {
+            /* TODO: backslash and newline separated by space */
+            return true;
+        }
+    }
+
+    return false;
 }
 
 
@@ -346,13 +382,12 @@ string_reader_t __string_reader_create__(cstring_t text)
     sr->column = 1;
     sr->seek = 0;
     sr->lastch = EOF;
-
     return sr;
 }
 
 
 static inline 
-int __string_reader_get__(string_reader_t sr)
+int __string_reader_next__(string_reader_t sr)
 {
     int ch;
 
@@ -360,15 +395,14 @@ int __string_reader_get__(string_reader_t sr)
         sr->begin = &sr->text[sr->seek];
     }
 
-    ch = __string_reader_unstash__(sr);
-    if (ch != EOF) {
+    if ((ch = __string_reader_unstash__(sr)) != EOF) {
         goto done;
     }
 
-    ch = cstring_length(sr->text) > sr->seek ? sr->text[sr->seek] : '\0';
-    if (ch == '\0') {
+    if ((ch = cstring_length(sr->text) > sr->seek ? sr->text[sr->seek] : '\0') == '\0') {
         return EOF;
     }
+
     sr->seek++;
 
 done:
@@ -382,11 +416,11 @@ int __string_reader_peek__(string_reader_t sr)
 {
     int ch;
 
-    if (sr->stashed != NULL && cstring_length(sr->stashed)) {
+    if (sr->stashed != NULL && cstring_length(sr->stashed) > 0) {
         return sr->stashed[cstring_length(sr->stashed) - 1];
     }
 
-    if ((ch = sr->text[sr->seek]) == '\0') {
+    if (cstring_length(sr->text) < sr->seek || (ch = sr->text[sr->seek]) == '\0') {
         return EOF;
     }
 

@@ -26,9 +26,9 @@
 
 
 static inline void __diag_output__(const char *fmt, va_list ap);
-static inline void __diag_output_location__(source_location_t loc);
-static inline void __diag_errorvf_location__(diag_t diag, source_location_t loc, const char *fmt, va_list ap);
-static inline void __diag_warningvf_location__(diag_t diag, source_location_t loc, const char *fmt, va_list ap);
+static inline void __diag_output_with_loc__(source_location_t loc);
+static inline void __diag_errorvf_with_loc__(diag_t diag, source_location_t loc, const char *fmt, va_list ap);
+static inline void __diag_warningvf_with_loc__(diag_t diag, source_location_t loc, const char *fmt, va_list ap);
 
 
 diag_t diag_create(void)
@@ -102,26 +102,26 @@ void diag_errorf(diag_t diag, const char *fmt, ...)
 }
 
 
-void diag_errorvf_location(diag_t diag, source_location_t loc, const char *fmt, va_list ap)
+void diag_errorvf_with_loc(diag_t diag, source_location_t loc, const char *fmt, va_list ap)
 {
-    __diag_errorvf_location__(diag, loc, fmt, ap);
+    __diag_errorvf_with_loc__(diag, loc, fmt, ap);
 }
 
 
-void diag_errorf_location(diag_t diag, source_location_t loc, const char *fmt, ...)
+void diag_errorf_with_loc(diag_t diag, source_location_t loc, const char *fmt, ...)
 {
     va_list ap;
 
     va_start(ap, fmt);
 
-    __diag_errorvf_location__(diag, loc, fmt, ap);
+    __diag_errorvf_with_loc__(diag, loc, fmt, ap);
 
     va_end(ap);
 }
 
 
 static inline
-void __diag_errorvf_location__(diag_t diag, source_location_t loc, const char *fmt, va_list ap)
+void __diag_errorvf_with_loc__(diag_t diag, source_location_t loc, const char *fmt, va_list ap)
 {
     fprintf(stderr, 
             "%s:%d:%d: " CONSOLE_COLOR_RED "error: " CONSOLE_COLOR_DEFAULT, 
@@ -131,33 +131,33 @@ void __diag_errorvf_location__(diag_t diag, source_location_t loc, const char *f
 
     __diag_output__(fmt, ap);
 
-    __diag_output_location__(loc);
+    __diag_output_with_loc__(loc);
 
     diag->nerrors++;
 }
 
 
 
-void diag_warningf_location(diag_t diag, source_location_t loc, const char *fmt, ...)
+void diag_warningf_with_loc(diag_t diag, source_location_t loc, const char *fmt, ...)
 {
     va_list ap;
 
     va_start(ap, fmt);
 
-    __diag_warningvf_location__(diag, loc, fmt, ap);
+    __diag_warningvf_with_loc__(diag, loc, fmt, ap);
 
     va_end(ap);
 }
 
 
-void diag_warningvf_location(diag_t diag, source_location_t loc, const char *fmt, va_list ap)
+void diag_warningvf_with_loc(diag_t diag, source_location_t loc, const char *fmt, va_list ap)
 {
-    __diag_warningvf_location__(diag, loc, fmt, ap);
+    __diag_warningvf_with_loc__(diag, loc, fmt, ap);
 }
 
 
 static inline 
-void __diag_warningvf_location__(diag_t diag, source_location_t loc, const char *fmt, va_list ap)
+void __diag_warningvf_with_loc__(diag_t diag, source_location_t loc, const char *fmt, va_list ap)
 {
     fprintf(stderr,
             "%s:%d:%d: " CONSOLE_COLOR_MAGENTA "warning: " CONSOLE_COLOR_DEFAULT,
@@ -167,7 +167,7 @@ void __diag_warningvf_location__(diag_t diag, source_location_t loc, const char 
 
     __diag_output__(fmt, ap);
 
-    __diag_output_location__(loc);
+    __diag_output_with_loc__(loc);
 
     diag->nwarnings++;
 }
@@ -182,7 +182,7 @@ void __diag_output__(const char *fmt, va_list ap)
 
 
 static inline 
-void __diag_output_location__(source_location_t loc)
+void __diag_output_with_loc__(source_location_t loc)
 {
     const char *p;
     const char *q;
