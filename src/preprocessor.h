@@ -19,9 +19,11 @@ typedef enum macro_type_e {
     PP_MACRO_PREDEF,
 } macro_type_t;
 
+
 typedef struct macro_s {
     macro_type_t type;
 } *macro_t;
+
 
 typedef struct preprocessor_s {
     array_t std_include_paths;

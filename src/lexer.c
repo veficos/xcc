@@ -703,7 +703,6 @@ token_t __lexer_token_make__(lexer_t lexer, token_type_t type)
         return NULL;
     }
 
-    /* reset the current token */
     token_init(lexer->tok);
 
     return tok;

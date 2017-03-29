@@ -29,6 +29,12 @@ void diag_report(diag_t diag);
 
 void diag_errorvf(diag_t diag, const char *fmt, va_list ap);
 void diag_errorf(diag_t diag, const char *fmt, ...);
+
+void diag_warningvf_with_line(diag_t diag, size_t line, size_t column,
+    const char *fn, const char *fmt, va_list ap);
+void diag_warningf_with_line(diag_t diag, size_t line, size_t column,
+    const char *fn, const char *fmt, ...);
+
 void diag_errorvf_with_loc(diag_t diag, source_location_t loc, const char *fmt, va_list ap);
 void diag_errorf_with_loc(diag_t diag, source_location_t loc, const char *fmt, ...);
 

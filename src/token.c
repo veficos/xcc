@@ -186,7 +186,7 @@ source_location_t source_location_create(void)
 
 void source_location_destroy(source_location_t loc)
 {
-    assert(loc);
+    assert(loc != NULL);
 
     if (loc->filename != NULL) {
         cstring_destroy(loc->filename);

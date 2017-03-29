@@ -5,7 +5,8 @@
 #include "reader.h"
 #include "pmalloc.h"
 #include "cstring.h"
-
+#include "diag.h"
+#include "token.h"
 
 /*
 *
@@ -27,7 +28,7 @@
 * 3. C11 5.1.1: EOF not immediately following a newline is converted to
 *       a sequence of newline and EOF. (The C spec requires source
 *       files end in a newline character (5.1.1.2p2). Thus, if all
-*       source files are comforming, this step wouldn't be needed.)
+*       source files are conforming, this step wouldn't be needed.
 */
 
 
@@ -78,16 +79,18 @@ int string_reader_next(string_reader_t sr)
         ch = __string_reader_next__(sr);
     }
 
-    if (ch != EOF) {
+    if (ch == EOF) {
+        /* 	compatible with \nEOF */
+        ch = (sr->lastch == '\n' || sr->lastch == EOF) ? EOF : '\n';
+    } else {
         if (ch == '\n') {
             sr->line++;
             sr->column = 1;
-        }
-        else {
+        } else {
             sr->column++;
         }
     }
-         
+        
     sr->lastch = ch;
     return ch;
 }
@@ -95,16 +98,8 @@ int string_reader_next(string_reader_t sr)
 
 int string_reader_peek(string_reader_t sr)
 {
-    int ch;
-
-    if (((ch = __string_reader_peek__(sr)) == '\r')) {
-        string_reader_next(sr);
-        if (__string_reader_peek__(sr) == '\n') {
-            return '\n';
-        }
-        string_reader_untread(sr, ch);
-    }
-
+    int ch = string_reader_next(sr);
+    string_reader_untread(sr, ch);
     return ch;
 }
 
@@ -211,7 +206,7 @@ void file_reader_destroy(file_reader_t fr)
 }
 
 
-screader_t screader_create(stream_type_t type, const char *s)
+screader_t screader_create(stream_type_t type, const char *s, option_t option, diag_t diag)
 {
     reader_t reader;
     screader_t screader;
@@ -233,6 +228,8 @@ screader_t screader_create(stream_type_t type, const char *s)
     }
 
     screader->last = reader;
+    screader->option = option;
+    screader->diag = diag;
     return screader;
 
 clean_array:
@@ -341,24 +338,32 @@ int screader_peek(screader_t screader)
 static inline
 bool __screader_skip_backslash_space__(screader_t screader)
 {
+    size_t line, column;
+
+    line = screader_line(screader);
+    column = screader_column(screader);
+
     if (reader_try(screader->last, '\n')) {
         return true;
     }
     
     for (;;) {
         int ch = reader_next(screader->last);
-        if (!isspace(ch)) {
-            break;
-        }
 
         if (ch == EOF) {
-            /* TODO: backslash-newline at end of file */
+            diag_warningf_with_line(screader->diag, line, column, 
+                screader_name(screader), "backslash-newline at end of file");
             return true;
         }
 
         if (ch == '\n') {
-            /* TODO: backslash and newline separated by space */
+            diag_warningf_with_line(screader->diag, line, column,
+                screader_name(screader), "backslash and newline separated by space");
             return true;
+        }
+
+        if (!isspace(ch)) {
+            break;
         }
     }
 

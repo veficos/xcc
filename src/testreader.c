@@ -1,7 +1,10 @@
 
 
+#include "config.h"
 #include "reader.h"
 #include "unittest.h"
+#include "diag.h"
+#include "option.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -12,10 +15,15 @@
 static 
 void test_screader()
 {
+    diag_t diag;
     screader_t screader;
-    const char *s = "Hello World\r \n\r\n";
+    struct option_s option;
 
-    screader = screader_create(STREAM_TYPE_STRING, s);
+    const char *s = "Hello World\r \n\r\n";
+    
+    diag = diag_create();
+
+    screader = screader_create(STREAM_TYPE_STRING, s, &option, diag);
     TEST_COND("screader_create()", screader != NULL);
     TEST_COND("screader_peek()", screader_peek(screader) == 'H');
     TEST_COND("screader_column()", screader_column(screader) == 1);
@@ -61,6 +69,7 @@ void test_screader()
     TEST_COND("screader_next()", screader_next(screader) == EOF);
     TEST_COND("screader_column()", screader_column(screader) == 1);
     screader_destroy(screader);
+    diag_destroy(diag);
 }
 
 

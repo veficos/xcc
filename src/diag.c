@@ -29,7 +29,8 @@ static inline void __diag_output__(const char *fmt, va_list ap);
 static inline void __diag_output_with_loc__(source_location_t loc);
 static inline void __diag_errorvf_with_loc__(diag_t diag, source_location_t loc, const char *fmt, va_list ap);
 static inline void __diag_warningvf_with_loc__(diag_t diag, source_location_t loc, const char *fmt, va_list ap);
-
+static inline void __diag_warningvf_with_line__(diag_t diag, size_t line, size_t column,
+    const char *fn, const char *fmt, va_list ap);
 
 diag_t diag_create(void)
 {
@@ -47,8 +48,7 @@ diag_t diag_create(void)
 
 void diag_destroy(diag_t diag)
 {
-    assert(diag);
-
+    assert(diag != NULL);
     pfree(diag);
 }
 
@@ -102,6 +102,26 @@ void diag_errorf(diag_t diag, const char *fmt, ...)
 }
 
 
+void diag_warningvf_with_line(diag_t diag, size_t line, size_t column,
+    const char *fn, const char *fmt, va_list ap)
+{
+    __diag_warningvf_with_line__(diag, line, column, fn, fmt, ap);
+}
+
+
+void diag_warningf_with_line(diag_t diag, size_t line, size_t column,
+    const char *fn, const char *fmt, ...)
+{
+    va_list ap;
+
+    va_start(ap, fmt);
+
+    __diag_warningvf_with_line__(diag, line, column, fn, fmt, ap);
+
+    va_end(ap);
+}
+
+
 void diag_errorvf_with_loc(diag_t diag, source_location_t loc, const char *fmt, va_list ap)
 {
     __diag_errorvf_with_loc__(diag, loc, fmt, ap);
@@ -135,7 +155,6 @@ void __diag_errorvf_with_loc__(diag_t diag, source_location_t loc, const char *f
 
     diag->nerrors++;
 }
-
 
 
 void diag_warningf_with_loc(diag_t diag, source_location_t loc, const char *fmt, ...)
@@ -172,6 +191,21 @@ void __diag_warningvf_with_loc__(diag_t diag, source_location_t loc, const char 
     diag->nwarnings++;
 }
 
+
+static inline 
+void __diag_warningvf_with_line__(diag_t diag, size_t line, size_t column,
+    const char *fn, const char *fmt, va_list ap)
+{
+    fprintf(stderr,
+        "%s:%d:%d: " CONSOLE_COLOR_MAGENTA "warning: " CONSOLE_COLOR_DEFAULT,
+        fn,
+        line,
+        column);
+
+    __diag_output__(fmt, ap);
+
+    diag->nwarnings++;
+}
 
 static inline 
 void __diag_output__(const char *fmt, va_list ap)

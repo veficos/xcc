@@ -21,7 +21,7 @@ typedef struct lexer_s {
     token_t         tok;        /* current token */
     array_t         snapshot;
     struct tm       tm;
-}* lexer_t;
+} *lexer_t;
 
 
 lexer_t lexer_create(screader_t reader, option_t option, diag_t diag);

@@ -10,7 +10,9 @@
 #include "pmalloc.h"
 
 
-typedef struct array_s* array_t;
+typedef struct array_s*     array_t;
+typedef struct option_s*    option_t;
+typedef struct diag_s*      diag_t;
 
 
 typedef struct string_reader_s {
@@ -298,14 +300,15 @@ bool reader_test(reader_t reader, int ch)
 }
 
 
-/* source code reader */
 typedef struct screader_s {
     array_t files;
     reader_t last;
+    option_t option;
+    diag_t diag;
 } *screader_t;
 
 
-screader_t screader_create(stream_type_t type, const char *s);
+screader_t screader_create(stream_type_t type, const char *s, option_t option, diag_t diag);
 void screader_destroy(screader_t screader);
 reader_t screader_push(screader_t screader, stream_type_t type, const char *s);
 void screader_pop(screader_t screader);
