@@ -223,16 +223,16 @@ void __diag_output_with_loc__(source_location_t loc)
     size_t step;
 
     if (loc->column >= MAX_COLUMN_HEAD) {
-        p = loc->current_line;
+        p = loc->row;
         fprintf(stderr, "   ...");
         fprintf(stderr, p + loc->column);
         fprintf(stderr, CONSOLE_COLOR_GREEN "\n      ^\n" CONSOLE_COLOR_DEFAULT);
 
     } else {
-        p = loc->current_line;
+        p = loc->row;
         q = p + (loc->column - 1);
 
-        fprintf(stderr, "%s\n", loc->current_line);
+        fprintf(stderr, "%s\n", loc->row);
 
         for (; p < q;) {
             step = utf8_rune_size(*p);

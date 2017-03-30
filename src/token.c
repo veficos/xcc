@@ -176,7 +176,7 @@ source_location_t source_location_create(void)
         return NULL;
     }
 
-    loc->current_line = NULL;
+    loc->row = NULL;
     loc->filename = NULL;
     loc->line = 0;
     loc->column = 0;
@@ -192,8 +192,8 @@ void source_location_destroy(source_location_t loc)
         cstring_destroy(loc->filename);
     }
 
-    if (loc->current_line != NULL) {
-        cstring_destroy(loc->current_line);
+    if (loc->row != NULL) {
+        cstring_destroy(loc->row);
     }
 
     pfree(loc);
@@ -208,7 +208,7 @@ source_location_t source_location_dup(source_location_t loc)
         return NULL;
     }
 
-    ret->current_line = loc->current_line;
+    ret->row = loc->row;
     ret->filename = loc->filename;
     ret->line = loc->line;
     ret->column = loc->column;

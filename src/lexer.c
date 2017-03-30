@@ -43,7 +43,7 @@ static inline int __isdigit__(int ch);
 static inline int __isidnum__(int ch);
 
 
-lexer_t lexer_create(screader_t reader, option_t option, diag_t diag)
+lexer_t lexer_create(reader_t reader, option_t option, diag_t diag)
 {
     lexer_t lexer;
     token_t tok;

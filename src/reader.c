@@ -13,6 +13,7 @@
 * Notice
 *
 * 1. C11 5.1.1: "\r\n" or "\r" are canonicalized to "\n".
+*
 * 2. C11 5.1.1: Each instance of a backslash character (\) immediately
 *       followed by a new-line character is deleted, splicing physical
 *       source lines to form logical source lines.Only the last backslash 
@@ -32,120 +33,144 @@
 */
 
 
-#ifndef MAX_STASHED_SIZE
+#ifndef INI_STASHED_SIZE
 #define MAX_STASHED_SIZE    (12)
 #endif
 
 
-static inline string_reader_t __string_reader_create__(cstring_t text);
-static inline int __string_reader_next__(string_reader_t sr);
-static inline int __string_reader_peek__(string_reader_t sr);
-static inline bool __string_reader_stash__(string_reader_t sr, int ch);
-static inline int __string_reader_unstash__(string_reader_t sr);
-static inline bool __screader_skip_backslash_space__(screader_t screader);
+#ifndef READER_STREAM_DEPTH
+#define READER_STREAM_DEPTH         (8)
+#endif
 
-string_reader_t string_reader_create_n(const void *data, size_t n)
+static inline int __stream_next__(stream_t stream);
+static inline int __stream_peek__(stream_t stream);
+static inline int __stream_last__(stream_t stream);
+static inline bool __stream_untread__(stream_t stream, int ch);
+
+
+static inline sstream_t __sstream_create__(cstring_t text);
+static inline bool __sstream_stash__(sstream_t ss, int ch);
+static inline int __sstream_unstash__(sstream_t ss);
+
+
+static inline bool __reader_skip_backslash_space__(reader_t reader);
+
+sstream_t sstream_create(const char *s)
+{
+    return sstream_create_n(s, strlen(s));
+}
+
+
+sstream_t sstream_create_n(const void *data, size_t n)
 {
     cstring_t buf;
+    sstream_t ss;
 
     if ((buf = cstring_create_n(data, n)) == NULL) {
         return NULL;
     }
 
-    return __string_reader_create__(buf);
-}
-
-
-void string_reader_destroy(string_reader_t sr)
-{
-    assert(sr != NULL);
-
-    cstring_destroy(sr->text);
-
-    if (sr->stashed != NULL) {
-        cstring_destroy(sr->stashed);
+    if ((ss = __sstream_create__(buf)) == NULL) {
+        cstring_destroy(buf);
+        return NULL;
     }
 
-    pfree(sr);
+    return ss;
 }
 
 
-int string_reader_next(string_reader_t sr)
+void sstream_destroy(sstream_t ss)
+{
+    assert(ss != NULL);
+
+    cstring_destroy(ss->text);
+
+    if (ss->stashed != NULL) {
+        cstring_destroy(ss->stashed);
+    }
+
+    pfree(ss);
+}
+
+
+int sstream_next(sstream_t ss)
 {
     int ch;
 
-    if (((ch = __string_reader_next__(sr)) == '\r') &&
-        __string_reader_peek__(sr) == '\n') {
-        ch = __string_reader_next__(sr);
+    if (ss->lastch == '\n') {
+        ss->begin = &ss->text[ss->seek];
     }
 
-    if (ch == EOF) {
-        /* 	compatible with \nEOF */
-        ch = (sr->lastch == '\n' || sr->lastch == EOF) ? EOF : '\n';
-    } else {
-        if (ch == '\n') {
-            sr->line++;
-            sr->column = 1;
-        } else {
-            sr->column++;
-        }
+    if ((ch = __sstream_unstash__(ss)) != EOF) {
+        goto done;
     }
-        
-    sr->lastch = ch;
+
+    if ((ch = cstring_length(ss->text) > ss->seek ? ss->text[ss->seek] : '\0') == '\0') {
+        return EOF;
+    }
+
+    ss->seek++;
+
+done:
+    ss->lastch = ch;
     return ch;
 }
 
 
-int string_reader_peek(string_reader_t sr)
+int sstream_peek(sstream_t sstream)
 {
-    int ch = string_reader_next(sr);
-    string_reader_untread(sr, ch);
+    int ch;
+
+    if ((sstream->stashed != NULL) &&
+        (cstring_length(sstream->stashed) > 0)) {
+        return sstream->stashed[cstring_length(sstream->stashed) - 1];
+    }
+
+    if ((cstring_length(sstream->text) < sstream->seek) ||
+        (ch = sstream->text[sstream->seek]) == '\0') {
+        return EOF;
+    }
+
     return ch;
 }
 
 
-bool string_reader_untread(string_reader_t sr, int ch)
+bool sstream_untread(sstream_t ss, int ch)
 {
-    if (ch == EOF) {
-        return false;
-    }
-
-    if (__string_reader_stash__(sr, ch)) {
-        if (ch == '\n') {
-            sr->column = 1;
-            sr->line--;
-        } else {
-            sr->column--;
-        }
-        return true;
-    }
-    return false;
+    return ch == EOF ? false : __sstream_stash__(ss, ch);
 }
 
 
-cstring_t string_reader_row(string_reader_t sr)
+cstring_t sstream_row(sstream_t ss)
 {
-    size_t i = sr->seek;
+    size_t i = ss->seek;
 
     do {
-        if (sr->text[i] == '\n') {
+        if (ss->text[i] == '\n') {
             break;
         }
-    } while(i++ < cstring_length(sr->text));
+    } while (i++ < cstring_length(ss->text));
 
-    return cstring_create_n(sr->begin, ((char *)&sr->text[sr->text[i - 1] == '\r' ? --i : i] - (char *)sr->begin));
+    return cstring_create_n(ss->begin, ((char *)&ss->text[ss->text[i - 1] == '\r' ? --i : i] - (char *)ss->begin));
 }
 
 
-file_reader_t file_reader_create(const char *filename)
+const char *sstream_name(sstream_t ss)
 {
-    file_reader_t fr;
+    (void)ss;
+    return "<string>";
+}
+
+
+fstream_t fstream_create(const char *fn)
+{
+    fstream_t fs;
     void *buf;
     FILE *fp;
     int readn;
     struct stat st;
 
-    if ((fp = fopen(filename, "rb")) == NULL) {
+    if ((fp = fopen(fn, "rb")) == NULL) {
         goto done;
     }
 
@@ -161,27 +186,27 @@ file_reader_t file_reader_create(const char *filename)
         goto clean_buf;
     }
 
-    if ((fr = (file_reader_t) pmalloc(sizeof(struct file_reader_s))) == NULL) {
+    if ((fs = (fstream_t) pmalloc(sizeof(struct fstream_s))) == NULL) {
         goto clean_buf;
     }
 
-    if ((fr->filename = cstring_create(filename)) == NULL) {
-        goto clean_fr;
+    if ((fs->fn = cstring_create(fn)) == NULL) {
+        goto clean_fs;
     }
 
-    if ((fr->sreader = string_reader_create_n(buf, st.st_size)) == NULL) {
+    if ((fs->ss = sstream_create_n(buf, st.st_size)) == NULL) {
         goto clean_fn;
     }
-    
+
     fclose(fp);
     pfree(buf);
-    return fr;
+    return fs;
 
 clean_fn:
-    cstring_destroy(fr->filename);
+    cstring_destroy(fs->fn);
 
-clean_fr:
-    pfree(fr);
+clean_fs:
+    pfree(fs);
 
 clean_buf:
     pfree(buf);
@@ -194,113 +219,101 @@ done:
 }
 
 
-void file_reader_destroy(file_reader_t fr)
+void fstream_destroy(fstream_t fs)
 {
-    assert(fr != NULL);
+    assert(fs != NULL);
 
-    cstring_destroy(fr->filename);
-
-    string_reader_destroy(fr->sreader);
-
-    pfree(fr);
+    cstring_destroy(fs->fn);
+    sstream_destroy(fs->ss);
+    pfree(fs);
 }
 
 
-screader_t screader_create(stream_type_t type, const char *s, option_t option, diag_t diag)
-{
-    reader_t reader;
-    screader_t screader;
-
-    if ((screader = (screader_t) pmalloc(sizeof(struct screader_s))) == NULL) {
-        goto done;
-    }
-
-    if ((screader->files = array_create_n(sizeof(struct reader_s), 8)) == NULL) {
-        goto clean_scr;
-    }
-    
-    if ((reader = array_push(screader->files)) == NULL) {
-        goto clean_scr;
-    }
-
-    if (reader_init(reader, type, s) == NULL) {
-        goto clean_array;
-    }
-
-    screader->last = reader;
-    screader->option = option;
-    screader->diag = diag;
-    return screader;
-
-clean_array:
-    array_destroy(screader->files);
-
-clean_scr:
-    pfree(screader);
-
-done:
-    return NULL;
-}
-
-
-void screader_destroy(screader_t screader)
-{
-    reader_t readers;
-    size_t i;
-
-    assert(screader != NULL);
-
-    array_foreach(screader->files, readers, i) {
-        reader_uninit(&readers[i]);
-    }
-
-    array_destroy(screader->files);
-
-    pfree(screader);
-}
-
-
-reader_t screader_push(screader_t screader, stream_type_t type, const char *s)
+reader_t reader_create(option_t op, diag_t diag)
 {
     reader_t reader;
 
-    if ((reader = array_push(screader->files)) == NULL) {
+    if ((reader = (reader_t) pmalloc(sizeof(struct reader_s))) == NULL) {
         return NULL;
     }
 
-    if (reader_init(reader, type, s) == NULL) {
+    if ((reader->streams = array_create_n(sizeof(struct reader_s), READER_STREAM_DEPTH)) == NULL) {
+        pfree(reader);
         return NULL;
     }
 
-    screader->last = reader;
+    reader->option = op;
+    reader->diag = diag;
     return reader;
 }
 
 
-void screader_pop(screader_t screader)
+void reader_destroy(reader_t reader)
 {
-    if (array_size(screader->files) > 1) {
-        reader_t readers = array_prototype(screader->files, struct reader_s);
-        reader_uninit(&(readers[array_size(screader->files) - 1]));
-        array_pop(screader->files);
-        screader->last = &(readers[array_size(screader->files) - 1]);
+    stream_t streams;
+    size_t i;
+
+    assert(reader != NULL);
+
+    array_foreach(reader->streams, streams, i) {
+
     }
+
+    array_destroy(reader->streams);
+
+    pfree(reader);
 }
 
 
-int screader_next(screader_t screader)
+stream_t reader_push(reader_t reader, stream_type_t type, const char *s)
+{
+    stream_t stream;
+
+    if ((stream = array_push(reader->streams)) == NULL) {
+        return NULL;
+    }
+
+    if (!stream_init(stream, type, s)) {
+        return NULL;
+    }
+
+    reader->last = stream;
+    return stream;
+}
+
+
+void reader_pop(reader_t reader)
+{
+    stream_t streams;
+
+    assert(array_size(reader->streams) > 0);
+
+    streams = array_prototype(reader->streams, struct stream_s);
+    
+    stream_uinit(&(streams[array_size(reader->streams) - 1]));
+
+    array_pop(reader->streams);
+
+    reader->last = &(streams[array_size(reader->streams) - 1]);
+}
+
+
+int reader_next(reader_t reader)
 {
     for (;;) {
-        int ch = reader_next(screader->last);
+        int ch = stream_next(reader->last);
+
+        /* 	compatible with \nEOF */
         if (ch == EOF) {
-            screader_pop(screader);
-            if (array_size(screader->files) == 1) {
+            if (array_size(reader->streams) == 1) {
                 return ch;
             }
+
+            reader_pop(reader);
             continue;
         }
 
-        if (ch == '\\' && __screader_skip_backslash_space__(screader)) {
+        if (ch == '\\' && __reader_skip_backslash_space__(reader)) {
             continue;
         }
 
@@ -311,54 +324,245 @@ int screader_next(screader_t screader)
 }
 
 
-int screader_peek(screader_t screader)
+int reader_peek(reader_t reader)
 {
-    for (;;) {
-        int ch = reader_next(screader->last);
-        if (ch == EOF) {
-            screader_pop(screader);
-            if (array_size(screader->files) == 1) {
-                return EOF;
-            }
-            continue;
-        }
+    return stream_peek(reader->last);
+}
 
-        if (ch == '\\' && __screader_skip_backslash_space__(screader)) {
-            continue;
-        }
 
-        reader_untread(screader->last, ch);
-        return ch;
+bool reader_untread(reader_t reader, int ch)
+{
+    return stream_untread(reader->last, ch);
+}
+
+
+bool stream_init(stream_t stream, stream_type_t type, const char *s)
+{
+    assert(stream != NULL);
+
+    switch (type) {
+    case STREAM_TYPE_FILE:
+        if ((stream->fs = fstream_create(s)) == NULL) {
+            return false;
+        }
+    case STREAM_TYPE_STRING:
+        if ((stream->ss = sstream_create(s)) == NULL) {
+            return false;
+        }
+    }
+    
+    stream->type = type;
+    stream->line = 1;
+    stream->column = 1;
+    return true;
+}
+
+
+void stream_uinit(stream_t stream)
+{
+    assert(stream != NULL);
+    switch (stream->type) {
+    case STREAM_TYPE_FILE:
+        fstream_destroy(stream->fs);
+        break;
+    case STREAM_TYPE_STRING:
+        sstream_destroy(stream->ss);
+        break;
+    }
+}
+
+
+int stream_next(stream_t stream)
+{
+    int ch;
+
+    /* 	compatible with \r\n */
+    if (((ch = __stream_next__(stream)) == '\r') &&
+        __stream_peek__(stream) == '\n') {
+        ch = __stream_next__(stream);
     }
 
-    return EOF;
+    if (ch == '\n') {
+        stream->line++;
+        stream->column = 1;
+    } else {
+        stream->column++;
+    }
+
+    return ch;
+}
+
+
+int stream_peek(stream_t stream)
+{
+    int ch;
+    ch = stream_next(stream);
+    if (ch != EOF) stream_untread(stream, ch);
+    return ch;
+}
+
+
+bool stream_untread(stream_t stream, int ch)
+{
+    assert(ch != EOF);
+
+    if (__stream_untread__(stream, ch)) {
+        if (ch == '\n') {
+            stream->column = 1;
+            stream->line--;
+        } else {
+            stream->column--;
+        }
+        return true;
+    }
+
+    return false;
+}
+
+
+cstring_t stream_row(stream_t stream)
+{
+    switch (stream->type) {
+    case STREAM_TYPE_FILE:
+        return fstream_row(stream->fs);
+    case STREAM_TYPE_STRING:
+        return sstream_row(stream->ss);
+    }
+    return NULL;
+}
+
+
+const char *stream_name(stream_t stream)
+{
+    switch (stream->type) {
+    case STREAM_TYPE_FILE:
+        return fstream_name(stream->fs);
+    case STREAM_TYPE_STRING:
+        return sstream_name(stream->ss);
+    }
+    return NULL;
 }
 
 
 static inline
-bool __screader_skip_backslash_space__(screader_t screader)
+sstream_t __sstream_create__(cstring_t text)
+{
+    sstream_t ss;
+
+    if ((ss = (sstream_t) pmalloc(sizeof(struct sstream_s))) == NULL) {
+        return NULL;
+    }
+
+    ss->text = text;
+    ss->begin = ss->text;
+    ss->stashed = NULL;
+    ss->seek = 0;
+    ss->lastch = 0;
+    return ss;
+}
+
+
+static inline
+bool __sstream_stash__(sstream_t ss, int ch)
+{
+    if (ss->stashed == NULL) {
+        if ((ss->stashed = cstring_create_n(NULL, MAX_STASHED_SIZE)) == NULL) {
+            return false;
+        }
+    }
+
+    if ((ss->stashed = cstring_push_ch(ss->stashed, ch)) == NULL) {
+        return false;
+    }
+
+    return true;
+}
+
+
+static inline
+int __sstream_unstash__(sstream_t ss)
+{
+    return ss->stashed == NULL || cstring_length(ss->stashed) <= 0 ? \
+        EOF : cstring_pop_ch(ss->stashed);
+}
+
+
+static inline
+int __stream_last__(stream_t stream)
+{
+    switch (stream->type) {
+    case STREAM_TYPE_FILE:
+        return fstream_last(stream->fs);
+    case STREAM_TYPE_STRING:
+        return sstream_last(stream->ss);
+    }
+    return EOF;
+}
+
+
+static inline 
+int __stream_next__(stream_t stream)
+{
+    switch (stream->type) {
+    case STREAM_TYPE_FILE:
+        return fstream_next(stream->fs);
+    case STREAM_TYPE_STRING:
+        return sstream_next(stream->ss);
+    }
+    return EOF;
+}
+
+
+static inline 
+int __stream_peek__(stream_t stream)
+{
+    switch (stream->type) {
+    case STREAM_TYPE_FILE:
+        return fstream_peek(stream->fs);
+    case STREAM_TYPE_STRING:
+        return sstream_peek(stream->ss);
+    }
+    return EOF;
+}
+
+
+static inline 
+bool __stream_untread__(stream_t stream, int ch)
+{
+    switch (stream->type) {
+    case STREAM_TYPE_FILE:
+        return fstream_untread(stream->fs, ch);
+    case STREAM_TYPE_STRING:
+        return sstream_untread(stream->ss, ch);
+    }
+    return false;
+}
+
+
+static inline
+bool __reader_skip_backslash_space__(reader_t reader)
 {
     size_t line, column;
 
-    line = screader_line(screader);
-    column = screader_column(screader);
+    line = stream_line(reader->last);
+    column = stream_column(reader->last);
 
-    if (reader_try(screader->last, '\n')) {
+    if (stream_peek(reader->last) == '\n') {
         return true;
     }
-    
+
     for (;;) {
-        int ch = reader_next(screader->last);
+        int ch = stream_next(reader->last);
 
         if (ch == EOF) {
-            diag_warningf_with_line(screader->diag, line, column, 
-                screader_name(screader), "backslash-newline at end of file");
+            diag_warningf_with_line(reader->diag, line, column,
+                stream_name(reader->last), "backslash-newline at end of file");
             return true;
         }
-
+       
         if (ch == '\n') {
-            diag_warningf_with_line(screader->diag, line, column,
-                screader_name(screader), "backslash and newline separated by space");
+            diag_warningf_with_line(reader->diag, line, column,
+                stream_name(reader->last), "backslash and newline separated by space");
             return true;
         }
 
@@ -368,93 +572,4 @@ bool __screader_skip_backslash_space__(screader_t screader)
     }
 
     return false;
-}
-
-
-static inline
-string_reader_t __string_reader_create__(cstring_t text)
-{
-    string_reader_t sr;
-
-    if ((sr = (string_reader_t) pmalloc(sizeof(struct string_reader_s))) == NULL) {
-        return NULL;
-    }
-
-    sr->text = text;
-    sr->begin = sr->text;
-    sr->stashed = NULL;
-    sr->line = 1;
-    sr->column = 1;
-    sr->seek = 0;
-    sr->lastch = EOF;
-    return sr;
-}
-
-
-static inline 
-int __string_reader_next__(string_reader_t sr)
-{
-    int ch;
-
-    if (sr->lastch == '\n') {
-        sr->begin = &sr->text[sr->seek];
-    }
-
-    if ((ch = __string_reader_unstash__(sr)) != EOF) {
-        goto done;
-    }
-
-    if ((ch = cstring_length(sr->text) > sr->seek ? sr->text[sr->seek] : '\0') == '\0') {
-        return EOF;
-    }
-
-    sr->seek++;
-
-done:
-    sr->lastch = ch;
-    return ch;
-}
-
-
-static inline 
-int __string_reader_peek__(string_reader_t sr)
-{
-    int ch;
-
-    if (sr->stashed != NULL && cstring_length(sr->stashed) > 0) {
-        return sr->stashed[cstring_length(sr->stashed) - 1];
-    }
-
-    if (cstring_length(sr->text) < sr->seek || (ch = sr->text[sr->seek]) == '\0') {
-        return EOF;
-    }
-
-    return ch;
-}
-
-
-static inline
-bool __string_reader_stash__(string_reader_t sr, int ch)
-{
-    if (sr->stashed == NULL) {
-        if ((sr->stashed = cstring_create_n(NULL, MAX_STASHED_SIZE)) == NULL) {
-            return false;
-        }
-    }
-
-    if ((sr->stashed = cstring_push_ch(sr->stashed, ch)) == NULL){
-        return false;
-    }
-
-    return true;
-}
-
-
-static inline
-int __string_reader_unstash__(string_reader_t sr)
-{
-    if (sr->stashed == NULL) {
-        return EOF;
-    }
-    return cstring_pop_ch(sr->stashed);
 }

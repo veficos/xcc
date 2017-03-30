@@ -16,7 +16,7 @@ typedef struct token_s*     token_t;
 
 typedef struct lexer_s {
     option_t        option;
-    screader_t      reader;
+    reader_t      reader;
     diag_t          diag;
     token_t         tok;        /* current token */
     array_t         snapshot;
@@ -24,7 +24,7 @@ typedef struct lexer_s {
 } *lexer_t;
 
 
-lexer_t lexer_create(screader_t reader, option_t option, diag_t diag);
+lexer_t lexer_create(reader_t reader, option_t option, diag_t diag);
 void lexer_destroy(lexer_t lexer);
 token_t lexer_scan(lexer_t lexer);
 token_t lexer_tokenize(lexer_t lexer);

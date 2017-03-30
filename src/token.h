@@ -173,7 +173,7 @@ typedef enum token_type_e {
 typedef struct source_location_s {
     size_t line;
     size_t column;
-    cstring_t current_line;     /* Shallow Copy */
+    cstring_t row;              /* Shallow Copy */
     cstring_t filename;         /* Shallow Copy */
 } *source_location_t;
 
@@ -206,7 +206,7 @@ void source_location_init(source_location_t loc, size_t line, size_t column, cst
 {
     loc->line = line;
     loc->column = column;
-    loc->current_line = current_line;
+    loc->row = current_line;
     loc->filename = filename;
 }
 
