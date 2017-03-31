@@ -5,8 +5,9 @@
 #include "reader.h"
 #include "pmalloc.h"
 #include "cstring.h"
+#include "charop.h"
 #include "diag.h"
-#include "token.h"
+
 
 /*
 *
@@ -33,8 +34,8 @@
 */
 
 
-#ifndef INI_STASHED_SIZE
-#define MAX_STASHED_SIZE    (12)
+#ifndef STREAM_STASHED_SIZE
+#define STREAM_STASHED_SIZE    (12)
 #endif
 
 
@@ -47,13 +48,12 @@ static inline int __stream_peek__(stream_t stream);
 static inline int __stream_last__(stream_t stream);
 static inline bool __stream_untread__(stream_t stream, int ch);
 
-
 static inline sstream_t __sstream_create__(cstring_t text);
 static inline bool __sstream_stash__(sstream_t ss, int ch);
 static inline int __sstream_unstash__(sstream_t ss);
 
-
 static inline bool __reader_skip_backslash_space__(reader_t reader);
+
 
 sstream_t sstream_create(const char *s)
 {
@@ -151,7 +151,8 @@ cstring_t sstream_row(sstream_t ss)
         }
     } while (i++ < cstring_length(ss->text));
 
-    return cstring_create_n(ss->begin, ((char *)&ss->text[ss->text[i - 1] == '\r' ? --i : i] - (char *)ss->begin));
+    return cstring_create_n(ss->begin, 
+        ((char *)&ss->text[ss->text[i - 1] == '\r' ? --i : i] - (char *)ss->begin));
 }
 
 
@@ -229,113 +230,6 @@ void fstream_destroy(fstream_t fs)
 }
 
 
-reader_t reader_create(option_t op, diag_t diag)
-{
-    reader_t reader;
-
-    if ((reader = (reader_t) pmalloc(sizeof(struct reader_s))) == NULL) {
-        return NULL;
-    }
-
-    if ((reader->streams = array_create_n(sizeof(struct reader_s), READER_STREAM_DEPTH)) == NULL) {
-        pfree(reader);
-        return NULL;
-    }
-
-    reader->option = op;
-    reader->diag = diag;
-    return reader;
-}
-
-
-void reader_destroy(reader_t reader)
-{
-    stream_t streams;
-    size_t i;
-
-    assert(reader != NULL);
-
-    array_foreach(reader->streams, streams, i) {
-
-    }
-
-    array_destroy(reader->streams);
-
-    pfree(reader);
-}
-
-
-stream_t reader_push(reader_t reader, stream_type_t type, const char *s)
-{
-    stream_t stream;
-
-    if ((stream = array_push(reader->streams)) == NULL) {
-        return NULL;
-    }
-
-    if (!stream_init(stream, type, s)) {
-        return NULL;
-    }
-
-    reader->last = stream;
-    return stream;
-}
-
-
-void reader_pop(reader_t reader)
-{
-    stream_t streams;
-
-    assert(array_size(reader->streams) > 0);
-
-    streams = array_prototype(reader->streams, struct stream_s);
-    
-    stream_uinit(&(streams[array_size(reader->streams) - 1]));
-
-    array_pop(reader->streams);
-
-    reader->last = &(streams[array_size(reader->streams) - 1]);
-}
-
-
-int reader_next(reader_t reader)
-{
-    for (;;) {
-        int ch = stream_next(reader->last);
-
-        /* 	compatible with \nEOF */
-        if (ch == EOF) {
-            if (array_size(reader->streams) == 1) {
-                return ch;
-            }
-
-            reader_pop(reader);
-            continue;
-        }
-
-        if (ch == '\\' && __reader_skip_backslash_space__(reader)) {
-            continue;
-        }
-
-        return ch;
-    }
-
-    return EOF;
-}
-
-
-int reader_peek(reader_t reader)
-{
-    return stream_peek(reader->last);
-}
-
-
-bool reader_untread(reader_t reader, int ch)
-{
-    return stream_untread(reader->last, ch);
-}
-
-
 bool stream_init(stream_t stream, stream_type_t type, const char *s)
 {
     assert(stream != NULL);
@@ -345,12 +239,16 @@ bool stream_init(stream_t stream, stream_type_t type, const char *s)
         if ((stream->fs = fstream_create(s)) == NULL) {
             return false;
         }
+        break;
     case STREAM_TYPE_STRING:
         if ((stream->ss = sstream_create(s)) == NULL) {
             return false;
         }
+        break;
+    default:
+        assert(false);
     }
-    
+
     stream->type = type;
     stream->line = 1;
     stream->column = 1;
@@ -358,7 +256,7 @@ bool stream_init(stream_t stream, stream_type_t type, const char *s)
 }
 
 
-void stream_uinit(stream_t stream)
+void stream_uninit(stream_t stream)
 {
     assert(stream != NULL);
     switch (stream->type) {
@@ -385,7 +283,8 @@ int stream_next(stream_t stream)
     if (ch == '\n') {
         stream->line++;
         stream->column = 1;
-    } else {
+    }
+    else if (ch != EOF) {
         stream->column++;
     }
 
@@ -410,7 +309,8 @@ bool stream_untread(stream_t stream, int ch)
         if (ch == '\n') {
             stream->column = 1;
             stream->line--;
-        } else {
+        }
+        else {
             stream->column--;
         }
         return true;
@@ -444,6 +344,152 @@ const char *stream_name(stream_t stream)
 }
 
 
+bool stream_try(stream_t stream, int ch)
+{
+    if (stream_peek(stream) == ch) {
+        stream_next(stream);
+        return true;
+    }
+    return false;
+}
+
+
+bool stream_test(stream_t stream, int ch)
+{
+    return stream_peek(stream);
+}
+
+
+reader_t reader_create(option_t op, diag_t diag)
+{
+    reader_t reader;
+
+    if ((reader = (reader_t) pmalloc(sizeof(struct reader_s))) == NULL) {
+        return NULL;
+    }
+
+    if ((reader->streams = array_create_n(sizeof(struct reader_s), READER_STREAM_DEPTH)) == NULL) {
+        pfree(reader);
+        return NULL;
+    }
+
+    reader->option = op;
+    reader->diag = diag;
+    return reader;
+}
+
+
+void reader_destroy(reader_t reader)
+{
+    stream_t streams;
+    size_t i;
+
+    assert(reader != NULL);
+
+    array_foreach(reader->streams, streams, i) {
+        stream_uninit(&streams[i]);
+    }
+
+    array_destroy(reader->streams);
+
+    pfree(reader);
+}
+
+
+stream_t reader_push(reader_t reader, stream_type_t type, const char *s)
+{
+    stream_t stream;
+
+    if ((stream = array_push(reader->streams)) == NULL) {
+        return NULL;
+    }
+
+    if (!stream_init(stream, type, s)) {
+        return NULL;
+    }
+
+    reader->last = stream;
+    return stream;
+}
+
+
+void reader_pop(reader_t reader)
+{
+    stream_t streams;
+
+    assert(array_size(reader->streams) > 0);
+
+    streams = array_prototype(reader->streams, struct stream_s);
+    
+    stream_uninit(&(streams[array_size(reader->streams) - 1]));
+
+    array_pop(reader->streams);
+
+    reader->last = &(streams[array_size(reader->streams) - 1]);
+}
+
+
+int reader_next(reader_t reader)
+{
+    for (;;) {
+        int ch = stream_next(reader->last);
+
+        /* 	compatible with \nEOF */
+        if (ch == EOF) {
+            ch = (__stream_last__(reader->last) == '\n' || __stream_last__(reader->last) == EOF) ? EOF : '\n';
+            if (array_size(reader->streams) == 1) {
+                return ch;
+            }
+            reader_pop(reader);
+            continue;
+        }
+
+        /*
+         *   Each instance of a backslash character(\) immediately
+         *   followed by a newline character is deleted, splicing physical
+         *   source lines to form logical source lines
+         */
+        if (ch == '\\' && __reader_skip_backslash_space__(reader)) {
+            continue;
+        }
+
+        return ch;
+    }
+
+    return EOF;
+}
+
+
+int reader_peek(reader_t reader)
+{
+    int ch = reader_next(reader);
+    if (ch != EOF) reader_untread(reader, ch);
+    return ch;
+}
+
+
+bool reader_untread(reader_t reader, int ch)
+{
+    return stream_untread(reader->last, ch);
+}
+
+
+bool reader_try(reader_t reader, int ch)
+{
+    if (reader_peek(reader) == ch) {
+        reader_next(reader);
+        return true;
+    }
+    return false;
+}
+
+
+bool reader_test(reader_t reader, int ch)
+{
+    return reader_peek(reader) == ch;
+}
+
+
 static inline
 sstream_t __sstream_create__(cstring_t text)
 {
@@ -466,7 +512,7 @@ static inline
 bool __sstream_stash__(sstream_t ss, int ch)
 {
     if (ss->stashed == NULL) {
-        if ((ss->stashed = cstring_create_n(NULL, MAX_STASHED_SIZE)) == NULL) {
+        if ((ss->stashed = cstring_create_n(NULL, STREAM_STASHED_SIZE)) == NULL) {
             return false;
         }
     }
@@ -545,14 +591,14 @@ bool __reader_skip_backslash_space__(reader_t reader)
     size_t line, column;
 
     line = stream_line(reader->last);
-    column = stream_column(reader->last);
+    column = stream_column(reader->last) - 1;
 
-    if (stream_peek(reader->last) == '\n') {
+    if (stream_try(reader->last, '\n')) {
         return true;
     }
 
     for (;;) {
-        int ch = stream_next(reader->last);
+        int ch = stream_peek(reader->last);
 
         if (ch == EOF) {
             diag_warningf_with_line(reader->diag, line, column,
@@ -566,9 +612,11 @@ bool __reader_skip_backslash_space__(reader_t reader)
             return true;
         }
 
-        if (!isspace(ch)) {
+        if (!chisspace(ch)) {
             break;
         }
+
+        stream_next(reader->last);
     }
 
     return false;

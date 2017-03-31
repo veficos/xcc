@@ -13,7 +13,7 @@
 static
 void test_lexer(void)
 {
-    screader_t screader;
+    reader_t reader;
     diag_t diag;
     lexer_t lexer;
     struct option_s option;
@@ -23,10 +23,14 @@ void test_lexer(void)
 
     diag = diag_create();
 
-    screader = screader_create(STREAM_TYPE_FILE, "metadata.h", &option, diag);
+    reader = reader_create(&option, diag);
 
-    lexer = lexer_create(screader, &option, diag);
-    while (tok = lexer_scan(lexer)) {
+    reader_push(reader, STREAM_TYPE_FILE, "6.h");
+    // reader_push(reader, STREAM_TYPE_FILE, "2.h");
+    //reader_push(reader, STREAM_TYPE_FILE, "unicodeobject.h");
+
+    lexer = lexer_create(reader, &option, diag);
+    while (tok = lexer_next(lexer)) {
         if (tok->type == TOKEN_END) {
             token_destroy(tok);
             break;
@@ -48,17 +52,17 @@ void test_lexer(void)
         printf("token: %s\n"
                "line: %d\n"
                "column: %d\n",
-               p ? p : tok->literals, tok->location->line, tok->location->column);
+               p ? p : tok->literals, tok->loc->line, tok->loc->column);
         
         token_destroy(tok);
     }
 
-
     lexer_destroy(lexer); 
 
+    diag_report(diag);
     diag_destroy(diag);
 
-    screader_destroy(screader);
+    reader_destroy(reader);
 }
 
 

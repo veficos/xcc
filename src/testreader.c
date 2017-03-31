@@ -19,7 +19,8 @@ void test_screader_case1()
     reader_t reader;
     struct option_s option;
 
-    const char *s = "Hello World\r \n\r\n";
+    const char *s = "Hello World\r \n"
+                    "\r\n";
     
     diag = diag_create();
 
@@ -85,12 +86,12 @@ void test_screader_case2()
     const char *s = "#in\\\n"
         "clude<stdio.h>\n"
         "int main(void) { \n"
-        " printf(\"HelloWorld\"); \\ \n"
+        " printf(\"HelloWorld\"); \\ \n\n"
         "} \\";
 
     const char *d = "#include<stdio.h>\n"
         "int main(void) { \n"
-        " printf(\"HelloWorld\"); } \n\xff";
+        " printf(\"HelloWorld\"); \n} \n\xff";
 
     int i;
 
@@ -103,9 +104,6 @@ void test_screader_case2()
         int ch2 = reader_next(reader);
         TEST_COND("reader_peek()", ch1 == ch2);
         TEST_COND("reader_next()", ch2 == d[i]);
-        if (ch2 == '\n') {
-            printf("");
-        }
         if (ch2 == EOF) {
             break;
         }
@@ -118,7 +116,7 @@ void test_screader_case2()
 
 int main(void)
 {
-    //test_screader_case1();
+    test_screader_case1();
     test_screader_case2();
     TEST_REPORT();
     return 0;

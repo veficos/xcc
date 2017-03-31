@@ -181,7 +181,9 @@ typedef struct source_location_s {
 typedef struct token_s {
     token_type_t type;
     cstring_t literals;
-    source_location_t location;
+    source_location_t loc;
+    bool begin_of_line;     /* true if the token is at the beginning of a line */
+    bool leading_space;     /* true if the token has a leading space */
 } *token_t;
 
 
@@ -192,9 +194,10 @@ token_t token_dup(token_t tok);
 
 const char *token_type2str(token_t tok);
 
-#define token_init_loc(tok, line, column, current_line, filename) \
-    source_location_init((tok)->location, line, column, current_line, filename)
-
+#define token_mark_loc(tok, line, column, current_line, filename) \
+    source_location_mark((tok)->loc, line, column, current_line, filename)
+#define token_remark_loc(tok, line, column) \
+    source_location_remark((tok)->loc, line, column)
 
 source_location_t source_location_create(void);
 void source_location_destroy(source_location_t loc);
@@ -202,7 +205,7 @@ source_location_t source_location_dup(source_location_t loc);
 
 
 static inline
-void source_location_init(source_location_t loc, size_t line, size_t column, cstring_t current_line, cstring_t filename)
+void source_location_mark(source_location_t loc, size_t line, size_t column, cstring_t current_line, cstring_t filename)
 {
     loc->line = line;
     loc->column = column;
@@ -210,6 +213,12 @@ void source_location_init(source_location_t loc, size_t line, size_t column, cst
     loc->filename = filename;
 }
 
+static inline
+void source_location_remark(source_location_t loc, size_t line, size_t column)
+{
+    loc->line = line;
+    loc->column = column;
+}
 
 static inline
 token_type_t encoding_to_token_type(encoding_type_t ent)

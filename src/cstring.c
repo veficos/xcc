@@ -69,7 +69,6 @@ cstring_t cstring_cat_n(cstring_t cs, const void *data, size_t size)
     hdr->length += size;
     hdr->unused -= size;
     hdr->buffer[hdr->length] = '\0';
-
 	return cs;
 }
 
@@ -80,8 +79,7 @@ cstring_t cstring_cpy_n(cstring_t cs, const void *data, size_t size)
     size_t total = hdr->unused + hdr->length;
 
     if (total < size) {
-        cs = __cstring_make_space__(cs, size);
-        if (!cs) {
+        if ((cs = __cstring_make_space__(cs, size)) == NULL) {
             return NULL;
         }
 
@@ -94,7 +92,6 @@ cstring_t cstring_cpy_n(cstring_t cs, const void *data, size_t size)
     cs[size] = '\0';
     hdr->length = size;
     hdr->unused = total - size;
-
     return cs;
 }
 
@@ -149,8 +146,7 @@ cstring_t cstring_cat_vpf(cstring_t cs, const char *fmt, va_list ap)
             }
 
             buflen *= 2;
-            buf = pmalloc(buflen);
-            if (!buf) {
+            if ((buf = pmalloc(buflen)) == NULL) {
                 return NULL;
             }
             continue;

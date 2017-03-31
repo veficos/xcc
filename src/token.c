@@ -83,7 +83,7 @@ token_t token_create(void)
 
     tok->type = TOKEN_UNKNOWN;
     tok->literals = cs;
-    tok->location = loc;
+    tok->loc = loc;
     return tok;
 
 clean_loc:
@@ -105,7 +105,7 @@ void token_destroy(token_t tok)
         cstring_destroy(tok->literals);
     }
 
-    source_location_destroy(tok->location);
+    source_location_destroy(tok->loc);
 
     pfree(tok);
 }
@@ -117,7 +117,7 @@ void token_init(token_t token)
 
     cstring_clear(token->literals);
 
-    source_location_init(token->location, 0, 0, NULL, NULL);
+    source_location_mark(token->loc, 0, 0, NULL, NULL);
 }
 
 
@@ -137,7 +137,7 @@ token_t token_dup(token_t tok)
         goto clean_tok;
     }
 
-    if ((ret->location = source_location_dup(tok->location)) == NULL) {
+    if ((ret->loc = source_location_dup(tok->loc)) == NULL) {
         goto clean_literals;
     }
 

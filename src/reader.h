@@ -82,16 +82,21 @@ void fstream_destroy(fstream_t fs);
 #define stream_column(stream)       ((stream)->column)
 
 bool stream_init(stream_t stream, stream_type_t type, const char *s);
-void stream_uinit(stream_t stream);
+void stream_uninit(stream_t stream);
 int stream_next(stream_t stream);
 int stream_peek(stream_t stream);
 bool stream_untread(stream_t stream, int ch);
 cstring_t stream_row(stream_t stream);
 const char *stream_name(stream_t stream);
+bool stream_try(stream_t stream, int ch);
+bool stream_test(stream_t stream, int ch);
+
 
 #define reader_line(reader)         stream_line((reader)->last)
 #define reader_column(reader)       stream_column((reader)->last)
 #define reader_row(reader)          stream_row((reader)->last)
+#define reader_name(reader)         stream_name((reader)->last)
+#define reader_is_empty(reader)     (reader_peek(reader) == EOF)
 
 reader_t reader_create(option_t op, diag_t diag);
 stream_t reader_push(reader_t reader, stream_type_t type, const char *s);
@@ -99,6 +104,8 @@ void reader_destroy(reader_t reader);
 int reader_next(reader_t reader);
 int reader_peek(reader_t reader);
 bool reader_untread(reader_t reader, int ch);
+bool reader_try(reader_t reader, int ch);
+bool reader_test(reader_t reader, int ch);
 
 
 #endif

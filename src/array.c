@@ -78,7 +78,6 @@ void *array_push(array_t array)
 
     elt = (char *) array->elts + array->size * array->nelts;
     array->nelts++;
-
     return elt;
 }
 
