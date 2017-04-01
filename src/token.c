@@ -7,7 +7,7 @@
 struct token_dictionary_s {
     token_type_t type;
     const char *type2str;
-    const char *token;
+    const char *original;
 } token_dictionary[] = {
     { TOKEN_L_SQUARE,            "TOKEN_L_SQUARE",            "["        },
     { TOKEN_R_SQUARE,            "TOKEN_R_SQUARE",            "]"        },
@@ -84,6 +84,7 @@ token_t token_create(void)
     tok->type = TOKEN_UNKNOWN;
     tok->literals = cs;
     tok->loc = loc;
+    tok->hideset = NULL;
     return tok;
 
 clean_loc:
@@ -130,6 +131,9 @@ token_t token_dup(token_t tok)
     }
     
     ret->type = tok->type;
+    ret->hideset = tok->hideset;
+    ret->begin_of_line = tok->begin_of_line;
+    ret->leading_space = tok->leading_space;
     ret->literals = NULL;
 
     if ((tok->literals != NULL && cstring_length(tok->literals) != 0) &&
@@ -177,7 +181,7 @@ source_location_t source_location_create(void)
     }
 
     loc->row = NULL;
-    loc->filename = NULL;
+    loc->fn = NULL;
     loc->line = 0;
     loc->column = 0;
     return loc;
@@ -188,8 +192,8 @@ void source_location_destroy(source_location_t loc)
 {
     assert(loc != NULL);
 
-    if (loc->filename != NULL) {
-        cstring_destroy(loc->filename);
+    if (loc->fn != NULL) {
+        cstring_destroy(loc->fn);
     }
 
     if (loc->row != NULL) {
@@ -209,7 +213,7 @@ source_location_t source_location_dup(source_location_t loc)
     }
 
     ret->row = loc->row;
-    ret->filename = loc->filename;
+    ret->fn = loc->fn;
     ret->line = loc->line;
     ret->column = loc->column;
     return ret;

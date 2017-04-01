@@ -748,7 +748,7 @@ unsigned long __reverse__(unsigned long v) {
 * 3) The reverse cursor is somewhat hard to understand at first, but this
 *    comment is supposed to help.
 */
-unsigned long dict_scan(dict_t d, unsigned long v, dict_scan_function_pt *fn, dict_scan_bucket_function_pt* bucketfn, void *privdata)
+unsigned long dict_scan(dict_t d, unsigned long v, dict_scan_function_pt fn, dict_scan_bucket_function_pt bucketfn, void *privdata)
 {
     dict_hash_table_t *t0, *t1;
     const dict_entry_t *de, *next;

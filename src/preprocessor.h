@@ -10,7 +10,7 @@
 typedef struct array_s* array_t;
 typedef struct token_s* token_t;
 typedef struct lexer_s* lexer_t;
-
+typedef struct dict_s*  dict_t;
 
 typedef enum macro_type_e {
     PP_MACRO_OBJECT,
@@ -19,17 +19,28 @@ typedef enum macro_type_e {
     PP_MACRO_PREDEF,
 } macro_type_t;
 
+typedef bool (*special_macro_pt) (token_t tok);
 
 typedef struct macro_s {
     macro_type_t type;
+
+    union {
+        array_t object;
+        special_macro_pt special_macro;
+    };
 } *macro_t;
+
+
+typedef struct condition_directive_s {
+    bool condiction;
+} *condition_directive_t;
 
 
 typedef struct preprocessor_s {
     array_t std_include_paths;
-
+    array_t snapshot;
     lexer_t lexer;
-
+    dict_t macros;
 } *preprocessor_t;
 
 
@@ -37,8 +48,8 @@ preprocessor_t preprocessor_create(lexer_t lexer);
 void preprocessor_destroy(preprocessor_t pp);
 bool preprocessor_add_include_path(preprocessor_t pp, const char *path);
 token_t preprocessor_peek(preprocessor_t pp);
-token_t preprocessor_get(preprocessor_t pp);
-token_t preprocessor_unget(preprocessor_t pp);
+token_t preprocessor_next(preprocessor_t pp);
+token_t preprocessor_untread(preprocessor_t pp);
 
 
 #endif

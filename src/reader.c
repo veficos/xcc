@@ -13,7 +13,8 @@
 *
 * Notice
 *
-* 1. C11 5.1.1: "\r\n" or "\r" are canonicalized to "\n".
+* 1. C11 5.1.1: "\r\n" or "\r" are canonicalized to "\n". 
+*    [sstream]
 *
 * 2. C11 5.1.1: Each instance of a backslash character (\) immediately
 *       followed by a new-line character is deleted, splicing physical
@@ -26,11 +27,13 @@
 *     example:
 *         |#inc\
 *         |lude <stdio.h>
+*    [reader]
 *
 * 3. C11 5.1.1: EOF not immediately following a newline is converted to
 *       a sequence of newline and EOF. (The C spec requires source
 *       files end in a newline character (5.1.1.2p2). Thus, if all
 *       source files are conforming, this step wouldn't be needed.
+*    [reader]
 */
 
 
@@ -43,14 +46,14 @@
 #define READER_STREAM_DEPTH         (8)
 #endif
 
+static inline sstream_t __sstream_create__(cstring_t text);
+static inline bool __sstream_stash__(sstream_t ss, int ch);
+static inline int __sstream_unstash__(sstream_t ss);
+
 static inline int __stream_next__(stream_t stream);
 static inline int __stream_peek__(stream_t stream);
 static inline int __stream_last__(stream_t stream);
 static inline bool __stream_untread__(stream_t stream, int ch);
-
-static inline sstream_t __sstream_create__(cstring_t text);
-static inline bool __sstream_stash__(sstream_t ss, int ch);
-static inline int __sstream_unstash__(sstream_t ss);
 
 static inline bool __reader_skip_backslash_space__(reader_t reader);
 
@@ -97,7 +100,7 @@ int sstream_next(sstream_t ss)
 {
     int ch;
 
-    if (ss->lastch == '\n') {
+    if (ss->lastch == '\r' || ss->lastch == '\n') {
         ss->begin = &ss->text[ss->seek];
     }
 
@@ -110,6 +113,14 @@ int sstream_next(sstream_t ss)
     }
 
     ss->seek++;
+
+    /* "\r\n" or "\r" are canonicalized to "\n" */
+    if (ch == '\r') {
+        if (cstring_length(ss->text) > ss->seek && ss->text[ss->seek] == '\n') {
+            ss->seek++;
+        }
+        ch = '\n';
+    }
 
 done:
     ss->lastch = ch;
@@ -146,19 +157,18 @@ cstring_t sstream_row(sstream_t ss)
     size_t i = ss->seek;
 
     do {
-        if (ss->text[i] == '\n') {
+        if (ss->text[i] == '\r' || ss->text[i] == '\n') {
             break;
         }
     } while (i++ < cstring_length(ss->text));
 
-    return cstring_create_n(ss->begin, 
-        ((char *)&ss->text[ss->text[i - 1] == '\r' ? --i : i] - (char *)ss->begin));
+    return cstring_create_n(ss->begin, ((char *)&ss->text[i] - (char *)ss->begin));
 }
 
 
 const char *sstream_name(sstream_t ss)
 {
-    (void)ss;
+    (void) ss;
     return "<string>";
 }
 
@@ -266,6 +276,8 @@ void stream_uninit(stream_t stream)
     case STREAM_TYPE_STRING:
         sstream_destroy(stream->ss);
         break;
+    default:
+        assert(false);
     }
 }
 
@@ -274,17 +286,11 @@ int stream_next(stream_t stream)
 {
     int ch;
 
-    /* 	compatible with \r\n */
-    if (((ch = __stream_next__(stream)) == '\r') &&
-        __stream_peek__(stream) == '\n') {
-        ch = __stream_next__(stream);
-    }
-
+    ch = __stream_next__(stream);
     if (ch == '\n') {
         stream->line++;
         stream->column = 1;
-    }
-    else if (ch != EOF) {
+    } else if (ch != EOF) {
         stream->column++;
     }
 
@@ -309,8 +315,7 @@ bool stream_untread(stream_t stream, int ch)
         if (ch == '\n') {
             stream->column = 1;
             stream->line--;
-        }
-        else {
+        } else {
             stream->column--;
         }
         return true;
@@ -436,8 +441,9 @@ int reader_next(reader_t reader)
 
         /* 	compatible with \nEOF */
         if (ch == EOF) {
-            ch = (__stream_last__(reader->last) == '\n' || __stream_last__(reader->last) == EOF) ? EOF : '\n';
             if (array_size(reader->streams) == 1) {
+                ch = (__stream_last__(reader->last) == '\n' || 
+                      __stream_last__(reader->last) == EOF) ? EOF : '\n';
                 return ch;
             }
             reader_pop(reader);
@@ -541,6 +547,8 @@ int __stream_last__(stream_t stream)
         return fstream_last(stream->fs);
     case STREAM_TYPE_STRING:
         return sstream_last(stream->ss);
+    default:
+        assert(false);
     }
     return EOF;
 }
@@ -554,6 +562,8 @@ int __stream_next__(stream_t stream)
         return fstream_next(stream->fs);
     case STREAM_TYPE_STRING:
         return sstream_next(stream->ss);
+    default:
+        assert(false);
     }
     return EOF;
 }
@@ -567,6 +577,8 @@ int __stream_peek__(stream_t stream)
         return fstream_peek(stream->fs);
     case STREAM_TYPE_STRING:
         return sstream_peek(stream->ss);
+    default:
+        assert(false);
     }
     return EOF;
 }
@@ -580,6 +592,8 @@ bool __stream_untread__(stream_t stream, int ch)
         return fstream_untread(stream->fs, ch);
     case STREAM_TYPE_STRING:
         return sstream_untread(stream->ss, ch);
+    default:
+        assert(false);
     }
     return false;
 }
@@ -598,7 +612,7 @@ bool __reader_skip_backslash_space__(reader_t reader)
     }
 
     for (;;) {
-        int ch = stream_peek(reader->last);
+        int ch = stream_next(reader->last);
 
         if (ch == EOF) {
             diag_warningf_with_line(reader->diag, line, column,
@@ -613,10 +627,9 @@ bool __reader_skip_backslash_space__(reader_t reader)
         }
 
         if (!chisspace(ch)) {
+            stream_untread(reader->last, ch);
             break;
         }
-
-        stream_next(reader->last);
     }
 
     return false;

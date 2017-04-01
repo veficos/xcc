@@ -6,6 +6,7 @@
 
 #include "config.h"
 #include "array.h"
+#include "set.h"
 #include "cstring.h"
 #include "encoding.h"
 
@@ -174,12 +175,13 @@ typedef struct source_location_s {
     size_t line;
     size_t column;
     cstring_t row;              /* Shallow Copy */
-    cstring_t filename;         /* Shallow Copy */
+    cstring_t fn;               /* Shallow Copy */
 } *source_location_t;
 
 
 typedef struct token_s {
     token_type_t type;
+    set_t hideset;          /* used by the preprocessor for macro expansion */
     cstring_t literals;
     source_location_t loc;
     bool begin_of_line;     /* true if the token is at the beginning of a line */
@@ -205,12 +207,12 @@ source_location_t source_location_dup(source_location_t loc);
 
 
 static inline
-void source_location_mark(source_location_t loc, size_t line, size_t column, cstring_t current_line, cstring_t filename)
+void source_location_mark(source_location_t loc, size_t line, size_t column, cstring_t row, cstring_t fn)
 {
     loc->line = line;
     loc->column = column;
-    loc->row = current_line;
-    loc->filename = filename;
+    loc->row = row;
+    loc->fn = fn;
 }
 
 static inline

@@ -145,7 +145,7 @@ void __diag_errorvf_with_loc__(diag_t diag, source_location_t loc, const char *f
 {
     fprintf(stderr, 
             "%s:%d:%d: " CONSOLE_COLOR_RED "error: " CONSOLE_COLOR_DEFAULT, 
-            loc->filename, 
+            loc->fn, 
             loc->line, 
             loc->column);
 
@@ -180,7 +180,7 @@ void __diag_warningvf_with_loc__(diag_t diag, source_location_t loc, const char 
 {
     fprintf(stderr,
             "%s:%d:%d: " CONSOLE_COLOR_MAGENTA "warning: " CONSOLE_COLOR_DEFAULT,
-            loc->filename,
+            loc->fn,
             loc->line,
             loc->column);
 

@@ -92,6 +92,8 @@ bool stream_try(stream_t stream, int ch);
 bool stream_test(stream_t stream, int ch);
 
 
+/* reader interface */
+
 #define reader_line(reader)         stream_line((reader)->last)
 #define reader_column(reader)       stream_column((reader)->last)
 #define reader_row(reader)          stream_row((reader)->last)

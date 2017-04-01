@@ -85,7 +85,7 @@ typedef struct dict_s {
     long              rehashidx;
     bool              dict_can_resize;
     unsigned long     iterators;
-}* dict_t;
+} *dict_t;
 
 
 /* If safe is set to 1 this is a safe iterator, that means, you can call
@@ -102,8 +102,8 @@ typedef struct dict_iterator_s {
 } dict_iterator_t;
 
 
-typedef void (dict_scan_function_pt)(void *privdata, const dict_entry_t *de);
-typedef void (dict_scan_bucket_function_pt)(void *privdata, dict_entry_t **bucketref);
+typedef void (*dict_scan_function_pt)(void *privdata, const dict_entry_t *de);
+typedef void (*dict_scan_bucket_function_pt)(void *privdata, dict_entry_t **bucketref);
 
 
 #define DICT_HASH_TABLE_INITIAL_SIZE        4
@@ -195,7 +195,7 @@ void dict_disable_resize(dict_t d);
 int dict_rehash(dict_t d, int n);
 void dict_set_hash_function_seed(uint8_t *seed);
 uint8_t *dict_get_hash_function_seed(void);
-unsigned long dict_scan(dict_t d, unsigned long v, dict_scan_function_pt *fn, dict_scan_bucket_function_pt *bucketfn, void *privdata);
+unsigned long dict_scan(dict_t d, unsigned long v, dict_scan_function_pt fn, dict_scan_bucket_function_pt bucketfn, void *privdata);
 unsigned int dict_get_hash(dict_t d, const void *key);
 dict_entry_t **dict_find_entry_ref_by_ptr_and_hash(dict_t d, const void *oldptr, unsigned int hash);
 

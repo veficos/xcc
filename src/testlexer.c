@@ -30,22 +30,13 @@ void test_lexer(void)
     //reader_push(reader, STREAM_TYPE_FILE, "unicodeobject.h");
 
     lexer = lexer_create(reader, &option, diag);
+
+    lexer_peek(lexer);
     while (tok = lexer_next(lexer)) {
         if (tok->type == TOKEN_END) {
             token_destroy(tok);
             break;
         }
-
-        // printf("current line: %s\n"
-        //        "filename: %s\n"
-        //        "line: %d\n"
-        //        "column: %d\n"
-        //        "token: %s\n", 
-        //        tok->location->current_line,
-        //        tok->location->filename, 
-        //        tok->location->line, 
-        //        tok->location->column,
-        //        tok->literals ? tok->literals : "unkown");
 
         p = token_type2str(tok);
 
