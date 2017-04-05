@@ -266,8 +266,8 @@ token_t lexer_next(lexer_t lexer)
     bool leading_space = false;
 
     tokens = __lexer_last_snapshot__(lexer);
-    if (array_size(tokens) > 0) {
-        tok = array_prototype(tokens, token_t)[array_size(tokens) - 1];
+    if (array_length(tokens) > 0) {
+        tok = array_prototype(tokens, token_t)[array_length(tokens) - 1];
         array_pop(tokens);
         return tok;
     }
@@ -302,10 +302,11 @@ bool lexer_untread(lexer_t lexer, token_t tok)
     array_t tail;
     token_t *item;
 
-    assert(array_size(lexer->snapshots) > 0);
+    assert(tok != NULL && tok->type != TOKEN_END);
+    assert(array_length(lexer->snapshots) > 0);
 
     snapshots = array_prototype(lexer->snapshots, array_t);
-    tail = snapshots[array_size(lexer->snapshots) - 1];
+    tail = snapshots[array_length(lexer->snapshots) - 1];
 
     item = array_push(tail);
     if (item == NULL) {
@@ -325,7 +326,7 @@ bool lexer_stash(lexer_t lexer)
 
 void lexer_unstash(lexer_t lexer)
 {
-    assert(array_size(lexer->snapshots) > 0);
+    assert(array_length(lexer->snapshots) > 0);
     array_pop(lexer->snapshots);
 }
 
@@ -678,11 +679,11 @@ array_t __lexer_last_snapshot__(lexer_t lexer)
 {
     array_t *snapshots;
 
-    assert(array_size(lexer->snapshots) > 0);
+    assert(array_length(lexer->snapshots) > 0);
 
     snapshots = array_prototype(lexer->snapshots, array_t);
 
-    return snapshots[array_size(lexer->snapshots) - 1];
+    return snapshots[array_length(lexer->snapshots) - 1];
 }
 
 

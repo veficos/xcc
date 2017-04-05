@@ -25,9 +25,7 @@ void test_lexer(void)
 
     reader = reader_create(&option, diag);
 
-    reader_push(reader, STREAM_TYPE_FILE, "6.h");
-    // reader_push(reader, STREAM_TYPE_FILE, "2.h");
-    //reader_push(reader, STREAM_TYPE_FILE, "unicodeobject.h");
+    reader_push(reader, STREAM_TYPE_FILE, "7.h");
 
     lexer = lexer_create(reader, &option, diag);
 

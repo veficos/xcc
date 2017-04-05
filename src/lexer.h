@@ -5,6 +5,7 @@
 
 
 #include "config.h"
+#include "cstring.h"
 
 
 typedef struct array_s*     array_t;

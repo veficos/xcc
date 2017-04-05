@@ -37,7 +37,7 @@ typedef struct array_s {
     ((type*)((array)->elts))
 
 
-#define array_size(array)                           \
+#define array_length(array)                           \
     ((array)->nelts)
 
 

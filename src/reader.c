@@ -46,6 +46,7 @@
 #define READER_STREAM_DEPTH         (8)
 #endif
 
+
 static inline sstream_t __sstream_create__(cstring_t text);
 static inline bool __sstream_stash__(sstream_t ss, int ch);
 static inline int __sstream_unstash__(sstream_t ss);
@@ -148,7 +149,8 @@ int sstream_peek(sstream_t sstream)
 
 bool sstream_untread(sstream_t ss, int ch)
 {
-    return ch == EOF ? false : __sstream_stash__(ss, ch);
+    assert(ch != EOF);
+    return __sstream_stash__(ss, ch);
 }
 
 
@@ -422,15 +424,15 @@ void reader_pop(reader_t reader)
 {
     stream_t streams;
 
-    assert(array_size(reader->streams) > 0);
+    assert(array_length(reader->streams) > 0);
 
     streams = array_prototype(reader->streams, struct stream_s);
     
-    stream_uninit(&(streams[array_size(reader->streams) - 1]));
+    stream_uninit(&(streams[array_length(reader->streams) - 1]));
 
     array_pop(reader->streams);
 
-    reader->last = &(streams[array_size(reader->streams) - 1]);
+    reader->last = &(streams[array_length(reader->streams) - 1]);
 }
 
 
@@ -441,7 +443,7 @@ int reader_next(reader_t reader)
 
         /* 	compatible with \nEOF */
         if (ch == EOF) {
-            if (array_size(reader->streams) == 1) {
+            if (array_length(reader->streams) == 1) {
                 ch = (__stream_last__(reader->last) == '\n' || 
                       __stream_last__(reader->last) == EOF) ? EOF : '\n';
                 return ch;
@@ -476,6 +478,7 @@ int reader_peek(reader_t reader)
 
 bool reader_untread(reader_t reader, int ch)
 {
+    assert(ch != EOF);
     return stream_untread(reader->last, ch);
 }
 
