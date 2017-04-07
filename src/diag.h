@@ -10,7 +10,8 @@
 #define MAX_COLUMN_HEAD  64
 
 
-typedef struct source_location_s* source_location_t;
+typedef struct token_s*             token_t;
+typedef struct source_location_s*   source_location_t;
 
 
 typedef struct diag_s {
@@ -41,6 +42,14 @@ void diag_errorf_with_loc(diag_t diag, source_location_t loc, const char *fmt, .
 void diag_warningf_with_loc(diag_t diag, source_location_t loc, const char *fmt, ...);
 void diag_warningvf_with_loc(diag_t diag, source_location_t loc, const char *fmt, va_list ap);
 
+
+void diag_errorvf_with_tok(diag_t diag, token_t tok, const char *fmt, va_list ap);
+void diag_errorf_with_tok(diag_t diag, token_t tok, const char *fmt, ...);
+
+void diag_warningvf_with_tok(diag_t diag, token_t tok, const char *fmt, va_list ap);
+void diag_warningf_with_tok(diag_t diag, token_t tok, const char *fmt, ...);
+
 void diag_panic(const char *fmt, ...);
+
 
 #endif

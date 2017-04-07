@@ -19,21 +19,29 @@ typedef struct reader_s*    reader_t;
 typedef enum macro_type_e {
     PP_MACRO_OBJECT,
     PP_MACRO_FUNCTION,
-    PP_MACRO_VARIADIC,
-    PP_MACRO_PREDEF,
+    PP_MACRO_NATIVE,
 } macro_type_t;
 
 
-typedef bool (*special_macro_pt) (token_t tok);
+typedef bool (*native_macro_pt) (token_t tok);
 
 
 typedef struct macro_s {
     macro_type_t type;
 
     union {
-        array_t object;
-        special_macro_pt special_macro;
+        struct {
+            array_t body;           /* macro body */
+        } object_like;
+
+        struct {
+            array_t body;
+            array_t params;         /* macro body */
+        } function_like;
+
+        native_macro_pt native;
     };
+
 } *macro_t;
 
 
@@ -44,9 +52,14 @@ typedef struct condition_directive_s {
 
 typedef struct preprocessor_s {
     array_t std_include_paths;
+    array_t condition_directive_stack;
+  
     array_t snapshot;
     lexer_t lexer;
+
     map_t macros;
+    set_t include_guard;
+    set_t once_guard;
 } *preprocessor_t;
 
 

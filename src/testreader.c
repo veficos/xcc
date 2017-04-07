@@ -13,7 +13,7 @@
 
 
 static 
-void test_screader_case1()
+void test_reader_case1()
 {
     diag_t diag;
     reader_t reader;
@@ -78,7 +78,7 @@ void test_screader_case1()
 
 
 static 
-void test_screader_case2()
+void test_reader_case2()
 {
     diag_t diag;
     struct option_s option;
@@ -119,10 +119,42 @@ void test_screader_case2()
 }
 
 
+static
+void test_reader_case3()
+{
+    diag_t diag;
+    struct option_s option;
+    reader_t reader;
+    int i;
+    cstring_t cs;
+    const char *s =" printf(\"HelloWorld\"); \\ f";
+
+    diag = diag_create();
+    cs = cstring_create_n(NULL, 24);
+    reader = reader_create(&option, diag);
+    reader_push(reader, STREAM_TYPE_STRING, s);
+
+    for (;;) {
+        int ch = reader_next(reader);
+        if (ch == EOF) {
+            break;
+        }
+
+        cstring_push_ch(cs, ch);
+    }
+
+    printf("%s\n", cs);
+
+    reader_destroy(reader);
+    diag_destroy(diag);
+    cstring_destroy(cs);
+}
+
 int main(void)
 {
-    test_screader_case1();
-    test_screader_case2();
+    //test_reader_case1();
+    //test_reader_case2();
+    test_reader_case3();
     TEST_REPORT();
     return 0;
 }
