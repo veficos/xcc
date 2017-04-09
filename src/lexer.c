@@ -42,21 +42,13 @@ lexer_t lexer_create(reader_t reader, option_t option, diag_t diag)
     token_t tok;
     array_t snapshots;
 
-    if ((snapshots = array_create_n(sizeof(array_t), 12)) == NULL) {
-        goto done;
-    }
+    snapshots = array_create_n(sizeof(array_t), 12);
 
-    if (!__lexer_make_stash__(snapshots)) {
-        goto done;
-    }
+    __lexer_make_stash__(snapshots);
 
-    if ((tok = token_create()) == NULL) {
-        goto clean_ss;
-    }
+    tok = token_create();
 
-    if ((lexer = pmalloc(sizeof(struct lexer_s))) == NULL) {
-        goto clean_tok;
-    }
+    lexer = pmalloc(sizeof(struct lexer_s));
 
     time_t timet = time(NULL);
     localtime_r(&timet, &lexer->tm);
@@ -67,15 +59,6 @@ lexer_t lexer_create(reader_t reader, option_t option, diag_t diag)
     lexer->tok = tok;
     lexer->snapshots = snapshots;
     return lexer;
-
-clean_tok:
-    token_destroy(tok);
-
-clean_ss:
-    array_destroy(snapshots);
-
-done:
-    return NULL;
 }
 
 

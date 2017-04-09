@@ -321,8 +321,8 @@ bool __preprocessor_parse_define__(preprocessor_t pp)
 static inline
 bool __preprocessor_parse_function_like__(preprocessor_t pp, cstring_t macro_name)
 {
-    array_t params;
-    array_t macro_body;
+    array_t params = NULL;
+    array_t macro_body = NULL;
 
     return __preprocessor_add_macro__(pp, macro_name,
         PP_MACRO_FUNCTION, params, macro_body, NULL);

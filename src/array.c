@@ -5,14 +5,14 @@
 #include "pmalloc.h"
 
 
-static int __array_resize__(array_t array, size_t n);
+static inline int __array_resize__(array_t array, size_t n);
 
 
 array_t array_create(size_t size)
 {
     array_t array;
 
-    if ((array = (array_t)pmalloc(sizeof(struct array_s))) == NULL) {
+    if ((array = (array_t) pmalloc(sizeof(struct array_s))) == NULL) {
         return NULL;
     }
 
@@ -20,7 +20,6 @@ array_t array_create(size_t size)
     array->nelts  = 0;
     array->nalloc = 0;
     array->size   = size;
-
     return array;
 }
 
@@ -29,11 +28,11 @@ array_t array_create_n(size_t size, size_t n)
 {
     array_t array;
 
-    if ((array = (array_t)pmalloc(sizeof(struct array_s))) == NULL) {
+    if ((array = (array_t) pmalloc(sizeof(struct array_s))) == NULL) {
         return NULL;
     }
 
-    if ((array->elts = (void *)pmalloc(size * n)) == NULL) {
+    if ((array->elts = (void *) pmalloc(size * n)) == NULL) {
         pfree(array);
         return NULL;
     }
@@ -100,7 +99,8 @@ void *array_push_n(array_t array, size_t n)
 }
 
 
-static int __array_resize__(array_t array, size_t n)
+static inline
+int __array_resize__(array_t array, size_t n)
 {
     size_t resize  = array->size * n;
     void *ptr;
