@@ -99,7 +99,7 @@ typedef struct dict_iterator_s {
     dict_entry_t *entry, *nextEntry;
     /* unsafe iterator fingerprint for misuse detection. */
     long long fingerprint;
-} dict_iterator_t;
+} *dict_iterator_t;
 
 
 typedef void (*dict_scan_function_pt)(void *privdata, const dict_entry_t *de);
@@ -181,10 +181,10 @@ void dict_free_unlinked_entry(dict_t d, dict_entry_t *he);
 dict_entry_t *dict_find(dict_t d, const void *key);
 void *dict_fetch_value(dict_t d, const void *key);
 int dict_resize(dict_t d);
-dict_iterator_t *dict_get_iterator(dict_t d);
-dict_iterator_t *dict_get_safe_iterator(dict_t d);
-dict_entry_t *dict_next(dict_iterator_t *iter);
-void dict_release_iterator(dict_iterator_t *iter);
+dict_iterator_t dict_get_iterator(dict_t d);
+dict_iterator_t dict_get_safe_iterator(dict_t d);
+dict_entry_t *dict_next(dict_iterator_t iter);
+void dict_release_iterator(dict_iterator_t iter);
 void dict_get_stats(char *buf, size_t bufsize, dict_t d);
 
 uint64_t dict_gen_hash_function(const void *key, int len);

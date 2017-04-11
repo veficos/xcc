@@ -122,8 +122,7 @@ cstring_t cstring_cat_vpf(cstring_t cs, const char *fmt, va_list ap)
 
 
     if (buflen > sizeof(staticbuf)) {
-        buf = pmalloc(buflen);
-        if (!buf) {
+        if ((buf = pmalloc(buflen)) == NULL) {
             return NULL;
         }
     } else {
@@ -324,7 +323,7 @@ cstring_t __cstring_make_space__(cstring_t cs, size_t size)
     }
 
     newhdr = (cstring_hdr_t *) prealloc(hdr, sizeof(cstring_hdr_t) + newsize);
-    if (!newhdr) {
+    if (newhdr == NULL) {
         return NULL;
     }
 

@@ -1,45 +1,43 @@
 
 
 #include "config.h"
-#include "diag.h"
+#include "vpfmt.h"
 #include "token.h"
-#include "cstring.h"
+#include "unittest.h"
 
 
 static 
-void test_diag(void)
+void test_vpfmt()
 {
     struct source_location_s loc;
-	diag_t diag;
 
-	diag = diag_create();
+    pfmt(stderr, "%s", "HelloWorld\n");
+    pfmt(stderr, "%d\n", 1024);
+    pfmt(stderr, "%c\n", 'H');
 
     loc.line = 8;
     loc.column = 220;
     loc.fn = cstring_create("<string>");
     loc.row = cstring_create("                                                                                                                                                                                                                            int val;xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 
-    diag_errorf_with_loc(diag, &loc, "unknown identifier");
-	cstring_destroy(loc.fn);
-	cstring_destroy(loc.row);
+    pfmt(stderr, "%S: error: out of memory\n", &loc);
+    cstring_destroy(loc.fn);
+    cstring_destroy(loc.row);
 
     loc.line = 8;
     loc.column = 5;
     loc.fn = cstring_create("<string>");
     loc.row = cstring_create("int val;");
-    
-    diag_errorf_with_loc(diag, &loc, "unknown identifier");
-	cstring_destroy(loc.fn);
-	cstring_destroy(loc.row);
 
-    diag_report(diag);
+    pfmt(stderr, "%S: error: out of memory\n", &loc);
 
-	diag_destroy(diag);
+    cstring_destroy(loc.fn);
+    cstring_destroy(loc.row);
 }
 
 
 int main(void)
 {
-    test_diag();
+    test_vpfmt();
     return 0;
 }

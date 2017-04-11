@@ -1,14 +1,15 @@
 
 
 #include "config.h"
+#include "color.h"
 #include "diag.h"
 #include "pmalloc.h"
 
 
 static inline
-void __default_alloc_oom_handler__(const char *fn, int line, void *ud)
+void __default_alloc_oom_handler__(const char *fn, long line, void *ud)
 {
-    printf("%s:%d, %p", fn, line, ud);
+    diag_panic("%s:%d: " BRUSH_RED("error: ") "out of memory.", fn, line);
 }
 
 
@@ -19,12 +20,12 @@ enum {
 
 
 void* palloc_oom_handler[2] = {
-    (void *)__default_alloc_oom_handler__,
+    (void *) __default_alloc_oom_handler__,
     NULL
 };
 
 
-static void __oom_handler__(const char *fn, int line)
+static void __oom_handler__(const char *fn, long line)
 {
     palloc_oom_handler_pt alloc_oom_handler = (palloc_oom_handler_pt) palloc_oom_handler[idx_alloc_oom_handler];
     void *ud = palloc_oom_handler[idx_user_data];
@@ -34,7 +35,7 @@ static void __oom_handler__(const char *fn, int line)
 }
 
 
-void* p_malloc(const char *fn, int line, size_t size)
+void* p_malloc(const char *fn, long line, size_t size)
 {
     void *ptr;
     
@@ -47,7 +48,7 @@ void* p_malloc(const char *fn, int line, size_t size)
 }
 
 
-void* p_calloc(const char *fn, int line, size_t nmemb, size_t size)
+void* p_calloc(const char *fn, long line, size_t nmemb, size_t size)
 {
     void *ptr;
 
@@ -60,7 +61,7 @@ void* p_calloc(const char *fn, int line, size_t nmemb, size_t size)
 }
 
 
-void* p_realloc(const char *fn, int line, void *ptr, size_t size)
+void* p_realloc(const char *fn, long line, void *ptr, size_t size)
 {
     if ((ptr = realloc(ptr, size)) == NULL) {
         __oom_handler__(fn, line);
@@ -70,7 +71,7 @@ void* p_realloc(const char *fn, int line, void *ptr, size_t size)
 }
 
 
-void p_free(const char *fn, int line, void *ptr)
+void p_free(const char *fn, long line, void *ptr)
 {
     assert(ptr != NULL);
     free(ptr);

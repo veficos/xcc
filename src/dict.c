@@ -574,9 +574,9 @@ long long dict_finger_print(dict_t d) {
 }
 
 
-dict_iterator_t *dict_get_iterator(dict_t d)
+dict_iterator_t dict_get_iterator(dict_t d)
 {
-    dict_iterator_t *iter = pmalloc(sizeof(*iter));
+    dict_iterator_t iter = pmalloc(sizeof(*iter));
 
     iter->d = d;
     iter->table = 0;
@@ -588,15 +588,15 @@ dict_iterator_t *dict_get_iterator(dict_t d)
 }
 
 
-dict_iterator_t *dict_get_safe_iterator(dict_t d) {
-    dict_iterator_t *i = dict_get_iterator(d);
+dict_iterator_t dict_get_safe_iterator(dict_t d) {
+    dict_iterator_t i = dict_get_iterator(d);
 
     i->safe = 1;
     return i;
 }
 
 
-dict_entry_t *dict_next(dict_iterator_t *iter)
+dict_entry_t *dict_next(dict_iterator_t iter)
 {
     while (true) {
         if (iter->entry == NULL) {
@@ -637,7 +637,7 @@ dict_entry_t *dict_next(dict_iterator_t *iter)
 }
 
 
-void dict_release_iterator(dict_iterator_t *iter)
+void dict_release_iterator(dict_iterator_t iter)
 {
     if (!(iter->index == -1 && iter->table == 0)) {
         if (iter->safe) {

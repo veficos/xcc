@@ -258,9 +258,7 @@ array_t __preprocessor_substitute__(preprocessor_t pp, macro_t macro, array_t ar
     array_t macro_body;
 
     tokens = array_create_n(sizeof(struct token_s), TOKEN_EXPAND_NUMBER);
-    if (tokens == NULL) {
-        return NULL;
-    }
+
 
     return tokens;
 }
@@ -310,7 +308,7 @@ bool __preprocessor_parse_define__(preprocessor_t pp)
 
     /* if get the (, parse function like */
     tok = lexer_peek(pp->lexer);
-    if (tok->type == TOKEN_L_PAREN && tok->leading_space == false) {
+    if (tok->type == TOKEN_L_PAREN && tok->leading_space == 0) {
         return __preprocessor_parse_function_like__(pp, macro_name);
     }
 

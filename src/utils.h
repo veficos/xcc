@@ -1,14 +1,14 @@
 
 
-#ifndef __CHAROP__H__
-#define __CHAROP__H__
+#ifndef __UTILS__H__
+#define __UTILS__H__
 
 
 #include "config.h"
 
 
 static inline
-int chtodigit(int ch)
+int TODIGIT(int ch)
 {
     if (ch >= '0' && ch <= '9') {
         return ch - '0';
@@ -23,49 +23,49 @@ int chtodigit(int ch)
 
 
 static inline
-int chisoct(int ch)
+int ISOCT(int ch)
 {
     return '0' <= ch && ch <= '7';
 }
 
 
 static inline
-int chishex(int ch)
+int ISHEX(int ch)
 {
     return isxdigit(ch);
 }
 
 
 static inline
-int chisalnum(int ch)
+int ISALNUM(int ch)
 {
     return isalnum(ch);
 }
 
 
 static inline
-int chisalpha(int ch)
+int ISALPHA(int ch)
 {
     return isalpha(ch);
 }
 
 
 static inline
-int chisspace(int ch)
+int ISSPACE(int ch)
 {
     return isspace(ch);
 }
 
 
 static inline
-int chisdigit(int ch)
+int ISDIGIT(int ch)
 {
     return isdigit(ch);
 }
 
 
 static inline
-int chisidnum(int ch)
+int ISIDNUM(int ch)
 {
     return isalnum(ch) || ch == '_';
 }

@@ -103,15 +103,11 @@ static inline
 int __array_resize__(array_t array, size_t n)
 {
     size_t resize  = array->size * n;
-    void *ptr;
 
     if (resize) {
-        if ((ptr = pmalloc(resize)) == NULL) {
+        if ((array->elts = prealloc(array->elts, resize)) == NULL) {
             return 0;
         }
-        
-        pfree(array->elts);
-        array->elts = ptr;
     }
     
     array->nalloc = n;

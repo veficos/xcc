@@ -37,7 +37,6 @@ int __compare_fn__(void *privdata, const void *key1, const void *key2)
 }
 
 
-
 static inline
 void __free_fn__(void *privdata, void *val) {
     DICT_NOTUSED(privdata);

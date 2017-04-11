@@ -82,7 +82,7 @@ bool set_has(set_t set, cstring_t cs)
 set_t set_union(set_t a, set_t b)
 {
     set_t r;
-    dict_iterator_t *iter;
+    dict_iterator_t iter;
     dict_entry_t *entry;
 
     if ((r = set_create()) == NULL) { 
@@ -126,7 +126,7 @@ done:
 set_t set_intersection(set_t a, set_t b)
 {
     set_t r;
-    dict_iterator_t *iter;
+    dict_iterator_t iter;
     dict_entry_t *entry;
     
     if (dict_size(a) > dict_size(b)) {

@@ -25,7 +25,7 @@ void test_lexer(void)
 
     reader = reader_create(&option, diag);
 
-    reader_push(reader, STREAM_TYPE_FILE, "7.h");
+    reader_push(reader, STREAM_TYPE_FILE, "5.h");
 
     lexer = lexer_create(reader, &option, diag);
 

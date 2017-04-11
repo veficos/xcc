@@ -17,6 +17,7 @@ static
 void test_pmalloc(void)
 {
     void *ptr;
+    pmalloc(INT_MAX);
     set_alloc_oom_handler(__handler__, (void*) 1);
     pmalloc(INT_MAX);
 }

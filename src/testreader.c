@@ -11,7 +11,7 @@
 #include <string.h>
 #include <assert.h>
 
-
+/*
 static 
 void test_reader_case1()
 {
@@ -87,10 +87,10 @@ void test_reader_case2()
     const char *s = "#in\\\r"
         "clude<stdio.h>\r"
         "int main(void) { \n"
-        " printf(\"HelloWorld\"); \\ \n"    /* except warning */
-        "\\  \r "                           /* except warning */
+        " printf(\"HelloWorld\"); \\ \n"    
+        "\\  \r "                           
         "\n"
-        "} \\   ";                          /* except warning */
+        "} \\   ";                          
 
     const char *d = "#include<stdio.h>\n"
         "int main(void) { \n"
@@ -149,12 +149,13 @@ void test_reader_case3()
     diag_destroy(diag);
     cstring_destroy(cs);
 }
+*/
 
 int main(void)
 {
     //test_reader_case1();
     //test_reader_case2();
-    test_reader_case3();
+    //test_reader_case3();
     TEST_REPORT();
     return 0;
 }

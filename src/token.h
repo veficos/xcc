@@ -185,7 +185,7 @@ typedef struct token_s {
     cstring_t literals;
     source_location_t loc;
     bool begin_of_line;     /* true if the token is at the beginning of a line */
-    bool leading_space;     /* true if the token has a leading space */
+    size_t leading_space;   /* >0 if the token has a leading space */
 } *token_t;
 
 

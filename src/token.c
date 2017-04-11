@@ -69,32 +69,15 @@ token_t token_create(void)
     cstring_t cs;
     source_location_t loc;
 
-    if ((cs = cstring_create_n(NULL, DEFUALT_LITERALS_LENGTH)) == NULL) {
-        goto done;
-    }
-    
-    if ((loc = source_location_create()) == NULL) {
-        goto clean_cs;
-    }
-
-    if ((tok = (token_t) pmalloc(sizeof(struct token_s))) == NULL) {
-        goto clean_loc;
-    }
+    cs = cstring_create_n(NULL, DEFUALT_LITERALS_LENGTH);
+    loc = source_location_create();
+    tok = (token_t) pmalloc(sizeof(struct token_s));
 
     tok->type = TOKEN_UNKNOWN;
     tok->literals = cs;
     tok->loc = loc;
     tok->hideset = NULL;
     return tok;
-
-clean_loc:
-    source_location_destroy(loc);
-
-clean_cs:
-    cstring_destroy(cs);
-
-done:
-    return NULL;
 }
 
 
@@ -125,36 +108,21 @@ void token_init(token_t token)
 token_t token_dup(token_t tok)
 {
     token_t ret;
+    cstring_t cs = NULL;
 
-    if ((ret = pmalloc(sizeof(struct token_s))) == NULL) {
-        goto done;
+    if ((tok->literals != NULL && cstring_length(tok->literals) != 0)) {
+        cs = cstring_dup(tok->literals);
     }
-    
+
+    ret = pmalloc(sizeof(struct token_s));
+
     ret->type = tok->type;
     ret->hideset = tok->hideset;
     ret->begin_of_line = tok->begin_of_line;
     ret->leading_space = tok->leading_space;
-    ret->literals = NULL;
-
-    if ((tok->literals != NULL && cstring_length(tok->literals) != 0) &&
-        ((ret->literals = cstring_dup(tok->literals)) == NULL)) {
-        goto clean_tok;
-    }
-
-    if ((ret->loc = source_location_dup(tok->loc)) == NULL) {
-        goto clean_literals;
-    }
-
+    ret->literals = cs;
+    ret->loc = source_location_dup(tok->loc);
     return ret;
-
-clean_literals:
-    cstring_destroy(ret->literals);
-
-clean_tok:
-    pfree(ret);
-
-done:
-    return NULL;
 }
 
 
@@ -175,11 +143,7 @@ const char *token_type2str(token_t tok)
 
 source_location_t source_location_create(void)
 {
-    source_location_t loc;
-    if ((loc = (source_location_t) pmalloc(sizeof(struct source_location_s))) == NULL) {
-        return NULL;
-    }
-
+    source_location_t loc = pmalloc(sizeof(struct source_location_s));
     loc->row = NULL;
     loc->fn = NULL;
     loc->line = 0;
@@ -206,11 +170,7 @@ void source_location_destroy(source_location_t loc)
 
 source_location_t source_location_dup(source_location_t loc)
 {
-    source_location_t ret;
-
-    if ((ret = (source_location_t) pmalloc(sizeof(struct source_location_s))) == NULL) {
-        return NULL;
-    }
+    source_location_t ret = pmalloc(sizeof(struct source_location_s));
 
     ret->row = loc->row;
     ret->fn = loc->fn;
@@ -218,4 +178,3 @@ source_location_t source_location_dup(source_location_t loc)
     ret->column = loc->column;
     return ret;
 }
-

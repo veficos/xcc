@@ -7,7 +7,7 @@
 #include "config.h"
 
 
-typedef void(*palloc_oom_handler_pt)(const char *fn, int line, void *ud);
+typedef void(*palloc_oom_handler_pt)(const char *fn, long line, void *ud);
 
 
 #if defined(USE_MALLOC)
@@ -25,10 +25,10 @@ typedef void(*palloc_oom_handler_pt)(const char *fn, int line, void *ud);
 #   define prealloc(ptr, size)              p_realloc(__FILE__, __LINE__, (ptr), (size))
 #   define pfree(ptr)                       p_free(__FILE__, __LINE__, (ptr))
 
-void* p_malloc(const char *fn, int line, size_t size);
-void* p_calloc(const char *fn, int line, size_t nmemb, size_t size);
-void* p_realloc(const char *fn, int line, void *ptr, size_t size);
-void p_free(const char *fn, int line, void *ptr);
+void* p_malloc(const char *fn, long line, size_t size);
+void* p_calloc(const char *fn, long line, size_t nmemb, size_t size);
+void* p_realloc(const char *fn, long line, void *ptr, size_t size);
+void p_free(const char *fn, long line, void *ptr);
 void set_alloc_oom_handler(palloc_oom_handler_pt handler, void *ud);
 
 #endif
