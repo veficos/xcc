@@ -6,6 +6,7 @@
 
 #define     DEBUG
 //#define     USE_MALLOC
+//#define USE_CONSOLE_COLOR
 
 #if defined(WIN32) || defined(_WIN32)
 #define _CRT_SECURE_NO_WARNINGS     1

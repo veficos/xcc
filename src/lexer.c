@@ -7,7 +7,7 @@
 #include "diag.h"
 #include "lexer.h"
 #include "array.h"
-#include "charop.h"
+#include "utils.h"
 #include "encoding.h"
 
 

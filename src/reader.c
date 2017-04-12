@@ -70,8 +70,19 @@ struct stream_s {
 };
 
 
+#define STREAM_LINE_ADVANCE(stream) \
+    do {                            \
+        (stream)->line++;           \
+        (stream)->column = 1;       \
+    } while (false)
+
+
 static inline bool __stream_init__(stream_t stream, stream_type_t type, const char *s);
 static inline void __stream_uninit__(stream_t stream);
+static inline void __stream_stash__(stream_t stream, int ch);
+static inline int __stream_unstash__(stream_t stream);
+static inline int __stream_next__(stream_t stream);
+static inline int __stream_peek__(stream_t stream);
 
 
 reader_t reader_create(diag_t diag, option_t option)
@@ -136,15 +147,41 @@ void reader_pop(reader_t reader)
 
 int reader_next(reader_t reader)
 {
+    for (;;) {
+        int ch = __stream_next__(reader->last);
+
+        if (ch == EOF) {
+            if (array_length(reader->streams) == 1) {
+                return ch;
+            }
+            reader_pop(reader);
+            continue;
+        }
+
+        return ch;
+    }
+
     return EOF;
 }
 
 
 int reader_peek(reader_t reader)
 {
-    int ch = reader_next(reader);
-    if (ch != EOF) reader_untread(reader, ch);
-    return ch;
+    for (;;) {
+        int ch = __stream_peek__(reader->last);
+
+        if (ch == EOF) {
+            if (array_length(reader->streams) == 1) {
+                return ch;
+            }
+            reader_pop(reader);
+            continue;
+        }
+
+        return ch;
+    }
+
+    return EOF;
 }
 
 
@@ -170,6 +207,48 @@ bool reader_test(reader_t reader, int ch)
     return reader_peek(reader) == ch;
 }
 
+
+const char *reader_row(reader_t reader)
+{
+    return reader->last->row;
+}
+
+
+size_t reader_line(reader_t reader)
+{
+    return reader->last->line;
+}
+
+
+size_t reader_column(reader_t reader)
+{
+    return reader->last->column;
+}
+
+
+bool reader_is_empty(reader_t reader)
+{
+    return reader_peek(reader) == EOF;
+}
+
+
+cstring_t reader_name(reader_t reader)
+{
+    return reader->last->fn;
+}
+
+
+cstring_t row2line(const char *row)
+{
+    const char *begin = row;
+    for (;*row;) {
+        if (*row == '\r' || *row == '\n') {
+            break;
+        }
+        row++;
+    }
+    return cstring_create_n(begin, row - begin);
+}
 
 
 static inline 
@@ -255,6 +334,7 @@ int __stream_unstash__(stream_t stream)
 }
 
 
+static inline
 int __stream_next__(stream_t stream)
 {
     int ch;
@@ -268,52 +348,63 @@ int __stream_next__(stream_t stream)
     }
     
 nextch:
-
     if (stream->pc >= stream->pe || (ch = *stream->pc) == '\0') {
-        ch = EOF;
+        ch = stream->lastch == '\n' || 
+            stream->lastch == EOF ? EOF : '\n';
         goto done;
     }
 
     stream->pc++;
 
     if (ch == '\r') {
-        /* "\r\n" or "\r" are canonicalized to "\n" */
+        /* 
+         * "\r\n" or "\r" are canonicalized to "\n" 
+         */
 
         if (*stream->pc == '\n') {
             stream->pc++;
         }
 
         ch = '\n';
-        stream->line++;
-        stream->column = 1;
+        STREAM_LINE_ADVANCE(stream);
+
+    } else if (ch == '\n') {
+        STREAM_LINE_ADVANCE(stream);
 
     } else if (ch == '\\') {
         /*
-        *   Each instance of a backslash character(\) immediately
-        *   followed by a newline character is deleted, splicing physical
-        *   source lines to form logical source lines
+        * Each instance of a backslash character(\) immediately
+        * followed by a newline character is deleted, splicing 
+        * physical source lines to form logical source lines
         */
 
-        char *pc = stream->pc + 1;
-        while (pc < stream->pe) {
-            if (*pc == '\r') {
-                if (*++pc == '\n') {
+        char *pc = stream->pc;
+        while (pc < stream->pe && ISSPACE(*pc)) {
+            switch (*pc) {
+            case '\r':
+                if (*(pc+1) == '\n') {
                     pc++;
                 }
-                stream->pc = pc;
-                goto nextch;
-            } else if (*pc == '\n') {
+            case '\n':
                 stream->pc = pc + 1;
+                STREAM_LINE_ADVANCE(stream);
                 goto nextch;
-            } else if (!ISSPACE(*pc)) {
-                break;
             }
-            stream->column++;
+            pc++;
         }
 
         if (pc == stream->pe) {
-            /* error... */
-            ch = EOF;
+            /* warn... */
+            ch = '\n';
+            stream->pc = pc;
+
+            /*
+                diag_fmt("%s:%d:%d: %s", 
+                    stream->fn, 
+                    stream->line, 
+                    stream->column, 
+                    "backslash and newline separated by space");
+            */
         }
 
     } else {
@@ -326,40 +417,47 @@ done:
 }
 
 
+static inline
 int __stream_peek__(stream_t stream)
 {
     int ch;
+    char *pc;
 
-    ch = stream->stashed == NULL || cstring_length(stream->stashed) <= 0 ? 
-        EOF : cstring_pop_ch(stream->stashed);
-}
+    if (stream->stashed != NULL &&
+        cstring_length(stream->stashed) > 0) {
+        return stream->stashed[cstring_length(stream->stashed) - 1];
+    }
 
+    pc = stream->pc;
+nextch:
+    if (pc >= stream->pe || (ch = *pc) == '\0') {
+        return stream->lastch == '\n' ||
+            stream->lastch == EOF ? EOF : '\n';
+    }
 
-static inline
-void __stream__(stream_t stream)
-{
-    assert(stream->backup == NULL);
-    stream->backup = stream->pc;
-}
+    pc++;
 
-
-static inline
-void __stream_recover__(stream_t stream)
-{
-    assert(stream->backup != NULL);
-    stream->pc = stream->backup;
-    stream->backup = NULL;
-}
-
-
-static inline
-cstring_t __stream_commit__(stream_t stream)
-{
-    cstring_t cs;
-
-    assert(stream->backup != NULL);
-
-    cs = cstring_create_n(stream->backup, (size_t)((char*)stream->pc - (char*)stream->backup));
-    stream->backup = NULL;
-    return cs;
+    switch (ch) {
+    case '\r':
+    case '\n':
+        return '\n';
+    case '\\':
+        while (pc < stream->pe && ISSPACE(*pc)) {
+            switch (*pc) {
+            case '\r':
+                if (*(pc + 1) == '\n') {
+                    pc++;
+                }
+            case '\n':
+                pc++;
+                goto nextch;
+            }
+            pc++;
+        }
+        if (pc == stream->pe) {
+            return '\n';
+        }
+    }
+    
+    return ch;
 }
