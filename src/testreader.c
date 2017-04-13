@@ -17,6 +17,7 @@ void test_reader_case1()
 {
     diag_t diag;
     reader_t reader;
+    cstring_t cs;
     struct option_s option;
 
     const char *s = "Hello World\r"
@@ -29,44 +30,45 @@ void test_reader_case1()
     reader_push(reader, STREAM_TYPE_STRING, s);
 
     TEST_COND("reader_create()", reader != NULL);
-
     TEST_COND("reader_column()", reader_column(reader) == 1);
-    TEST_COND("reader_next()", reader_next(reader) == 'H');
+    TEST_COND("reader_next()", reader_get(reader) == 'H');
     TEST_COND("reader_column()", reader_column(reader) == 2);
-    TEST_COND("reader_next()", reader_next(reader) == 'e');
+    TEST_COND("reader_next()", reader_get(reader) == 'e');
     TEST_COND("reader_column()", reader_column(reader) == 3);
-    TEST_COND("reader_next()", reader_next(reader) == 'l');
+    TEST_COND("reader_next()", reader_get(reader) == 'l');
     TEST_COND("reader_column()", reader_column(reader) == 4);
-    TEST_COND("reader_next()", reader_next(reader) == 'l');
+    TEST_COND("reader_next()", reader_get(reader) == 'l');
     TEST_COND("reader_column()", reader_column(reader) == 5);
-    TEST_COND("reader_row()", cstring_cmp(row2line(reader_row(reader)), "Hello World") == 0);
-    TEST_COND("reader_next()", reader_next(reader) == 'o');
+    cs = linenode2cs(reader_get_linenote(reader));
+    TEST_COND("line_note", cstring_cmp(cs, "Hello World") == 0);
+    TEST_COND("reader_next()", reader_get(reader) == 'o');
     TEST_COND("reader_column()", reader_column(reader) == 6);
-    TEST_COND("reader_next()", reader_next(reader) == ' ');
+    TEST_COND("reader_next()", reader_get(reader) == ' ');
     TEST_COND("reader_column()", reader_column(reader) == 7);
-    TEST_COND("reader_next()", reader_next(reader) == 'W');
+    TEST_COND("reader_next()", reader_get(reader) == 'W');
     TEST_COND("reader_column()", reader_column(reader) == 8);
-    TEST_COND("reader_next()", reader_next(reader) == 'o');
+    TEST_COND("reader_next()", reader_get(reader) == 'o');
     TEST_COND("reader_column()", reader_column(reader) == 9);
-    TEST_COND("reader_next()", reader_next(reader) == 'r');
+    TEST_COND("reader_next()", reader_get(reader) == 'r');
     TEST_COND("reader_column()", reader_column(reader) == 10);
-    TEST_COND("reader_next()", reader_next(reader) == 'l');
+    TEST_COND("reader_next()", reader_get(reader) == 'l');
     TEST_COND("reader_column()", reader_column(reader) == 11);
-    TEST_COND("reader_next()", reader_next(reader) == 'd');
+    TEST_COND("reader_next()", reader_get(reader) == 'd');
     TEST_COND("reader_column()", reader_column(reader) == 12);
-    TEST_COND("reader_next()", reader_next(reader) == '\n');
+    TEST_COND("reader_next()", reader_get(reader) == '\n');
     TEST_COND("reader_column()", reader_column(reader) == 1);
-    TEST_COND("reader_next()", reader_next(reader) == ' ');
+    TEST_COND("reader_next()", reader_get(reader) == ' ');
     TEST_COND("reader_column()", reader_column(reader) == 2);
-    TEST_COND("reader_next()", reader_next(reader) == '\n');
+    TEST_COND("reader_next()", reader_get(reader) == '\n');
     TEST_COND("reader_line()", reader_line(reader) == 3);
     TEST_COND("reader_column()", reader_column(reader) == 1);
-    TEST_COND("reader_next()", reader_next(reader) == '\n');
+    TEST_COND("reader_next()", reader_get(reader) == '\n');
     TEST_COND("reader_line()", reader_line(reader) == 4);
     TEST_COND("reader_column()", reader_column(reader) == 1);
-    TEST_COND("reader_next()", reader_next(reader) == EOF);
+    TEST_COND("reader_next()", reader_get(reader) == EOF);
     TEST_COND("reader_column()", reader_column(reader) == 1);
 
+    cstring_destroy(cs);
     reader_destroy(reader);
     diag_destroy(diag);
 }
@@ -82,17 +84,18 @@ void test_reader_case2()
     const char *s = "#in\\\r"
         "clude<stdio.h>\r"
         "int main(void) \\ { \n"
-        " printf(\"HelloWorld\"); \r\n"
+        " printf(\"HelloWorld\"); \\\r\n"
+        "\n"
         " \\ \n"    
         "\\  \r "                           
         "\n"
-        "} \\   ";                          
+        "} Œ“\\   ";                          
 
     const char *t = "#include<stdio.h>\n"
         "int main(void) \\ { \n"
         " printf(\"HelloWorld\"); \n"
         "  \n"
-        "} \n\xff";
+        "} Œ“\n\xff";
 
     int i;
 
@@ -103,7 +106,7 @@ void test_reader_case2()
 
     for (i = 0; ; i++) {
         int ch1 = reader_peek(reader);
-        int ch2 = reader_next(reader);
+        int ch2 = reader_get(reader);
         TEST_COND("reader_peek()", ch1 == ch2);
         TEST_COND("reader_next()", ch2 == t[i]);
         if (ch2 == EOF) {
@@ -134,12 +137,11 @@ void test_reader_case3()
     reader_push(reader, STREAM_TYPE_STRING, s);
 
     for (;;) {
-        int ch = reader_next(reader);
+        int ch = reader_get(reader);
         if (ch == EOF) {
             break;
         }
-
-        cstring_push_ch(cs, ch);
+        cs = cstring_push_ch(cs, ch);
     }
 
     printf("%s", cs);
@@ -152,6 +154,10 @@ void test_reader_case3()
 
 int main(void)
 {
+#ifdef WIN32
+    _CrtSetDbgFlag(_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG) | _CRTDBG_LEAK_CHECK_DF);
+#endif
+
     test_reader_case1();
     test_reader_case2();
     test_reader_case3();

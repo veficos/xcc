@@ -5,16 +5,15 @@
 #include "reader.h"
 #include "pmalloc.h"
 #include "cstring.h"
+#include "cspool.h"
 #include "utils.h"
 #include "diag.h"
 
 
 /*
-*
-* Notice
+* Notices
 *
 * 1. C11 5.1.1: "\r\n" or "\r" are canonicalized to "\n". 
-*    [sstream]
 *
 * 2. C11 5.1.1: Each instance of a backslash character (\) immediately
 *       followed by a new-line character is deleted, splicing physical
@@ -27,13 +26,11 @@
 *     example:
 *         |#inc\
 *         |lude <stdio.h>
-*    [reader]
 *
 * 3. C11 5.1.1: EOF not immediately following a newline is converted to
 *       a sequence of newline and EOF. (The C spec requires source
 *       files end in a newline character (5.1.1.2p2). Thus, if all
 *       source files are conforming, this step wouldn't be needed.
-*    [reader]
 */
 
 
@@ -50,16 +47,14 @@
 struct stream_s {
     stream_type_t type;
 
-    cstring_t text; 
     cstring_t fn;
 
     cstring_t stashed;
 
-    char *row;
+    linenote_t line_note;
 
     char *pc;
     char *pe;
-    char *backup;
 
     size_t line;
     size_t column;
@@ -70,6 +65,11 @@ struct stream_s {
 };
 
 
+#define __WARNINGF__(fmt, ...)                                                      \
+    diag_warningf_with_line(reader->diag, stream->fn, stream->line, stream->column, \
+        stream->line_note, stream->column, 1, __VA_ARGS__);
+
+
 #define STREAM_LINE_ADVANCE(stream) \
     do {                            \
         (stream)->line++;           \
@@ -77,11 +77,11 @@ struct stream_s {
     } while (false)
 
 
-static inline bool __stream_init__(stream_t stream, stream_type_t type, const char *s);
+static inline bool __stream_init__(reader_t reader, stream_t stream, stream_type_t type, const char *s);
 static inline void __stream_uninit__(stream_t stream);
 static inline void __stream_stash__(stream_t stream, int ch);
 static inline int __stream_unstash__(stream_t stream);
-static inline int __stream_next__(stream_t stream);
+static inline int __stream_next__(reader_t reader, stream_t stream);
 static inline int __stream_peek__(stream_t stream);
 
 
@@ -91,6 +91,7 @@ reader_t reader_create(diag_t diag, option_t option)
     reader = (reader_t)pmalloc(sizeof(struct reader_s));
     reader->diag = diag;
     reader->option = option;
+    reader->pool = cspool_create();
     reader->streams = array_create_n(sizeof(struct reader_s), READER_STREAM_DEPTH);
     reader->last = NULL;
     return reader;
@@ -110,6 +111,8 @@ void reader_destroy(reader_t reader)
 
     array_destroy(reader->streams);
 
+    cspool_destroy(reader->pool);
+
     pfree(reader);
 }
 
@@ -120,7 +123,7 @@ bool reader_push(reader_t reader, stream_type_t type, const char *s)
 
     stream = array_push(reader->streams);
 
-    if (!__stream_init__(stream, type, s)) {
+    if (!__stream_init__(reader, stream, type, s)) {
         return false;
     }
 
@@ -145,10 +148,10 @@ void reader_pop(reader_t reader)
 }
 
 
-int reader_next(reader_t reader)
+int reader_get(reader_t reader)
 {
     for (;;) {
-        int ch = __stream_next__(reader->last);
+        int ch = __stream_next__(reader, reader->last);
 
         if (ch == EOF) {
             if (array_length(reader->streams) == 1) {
@@ -185,7 +188,7 @@ int reader_peek(reader_t reader)
 }
 
 
-bool reader_untread(reader_t reader, int ch)
+bool reader_unget(reader_t reader, int ch)
 {
     assert(ch != EOF);
     return false;
@@ -195,7 +198,7 @@ bool reader_untread(reader_t reader, int ch)
 bool reader_try(reader_t reader, int ch)
 {
     if (reader_peek(reader) == ch) {
-        reader_next(reader);
+        reader_get(reader);
         return true;
     }
     return false;
@@ -208,9 +211,9 @@ bool reader_test(reader_t reader, int ch)
 }
 
 
-const char *reader_row(reader_t reader)
+linenote_t reader_get_linenote(reader_t reader)
 {
-    return reader->last->row;
+    return reader->last->line_note;
 }
 
 
@@ -238,22 +241,26 @@ cstring_t reader_name(reader_t reader)
 }
 
 
-cstring_t row2line(const char *row)
+cstring_t linenode2cs(linenote_t linenote)
 {
-    const char *begin = row;
-    for (;*row;) {
-        if (*row == '\r' || *row == '\n') {
+    const char *p = (const char *)linenote;
+
+    for (;*p;) {
+        if (*p == '\r' || *p == '\n') {
             break;
         }
-        row++;
+        p++;
     }
-    return cstring_create_n(begin, row - begin);
+
+    return cstring_create_n((const char*)linenote, p - (const char *)linenote);
 }
 
 
 static inline 
-bool __stream_init__(stream_t stream, stream_type_t type, const char *s)
+bool __stream_init__(reader_t reader, stream_t stream, stream_type_t type, const char *s)
 {
+    cstring_t text;
+
     switch (type) {
     case STREAM_TYPE_FILE: {
         void *buf;
@@ -274,18 +281,18 @@ bool __stream_init__(stream_t stream, stream_type_t type, const char *s)
         }
 
         fclose(fp);
-        stream->fn = cstring_create(s);
+        stream->fn = cspool_push_cs(reader->pool, cstring_create(s));
         stream->mt = st.st_mtime;
-        stream->text = cstring_create_n(buf, st.st_size);
+        text = cspool_push_cs(reader->pool, cstring_create_n(buf, st.st_size));
         break;
     failure:
         fclose(fp);
         return false;
     }
     case STREAM_TYPE_STRING: {
-        stream->fn = cstring_create("<string>");
+        stream->fn = cspool_push(reader->pool, "<string>");
         stream->mt = 0;
-        stream->text = cstring_create_n(s, strlen(s));
+        text = cspool_push(reader->pool, s);
         break;
     }
     default:
@@ -294,9 +301,8 @@ bool __stream_init__(stream_t stream, stream_type_t type, const char *s)
 
     stream->type = type;
     stream->stashed = NULL;
-    stream->pc = stream->row = (char *) stream->text;
-    stream->pe = (char *) &stream->text[cstring_length(stream->text)];
-    stream->backup = NULL;
+    stream->line_note = stream->pc = (char *)text;
+    stream->pe = (char *)&text[cstring_length(text)];
     stream->line = 1;
     stream->column = 1;
     stream->lastch = EOF;
@@ -307,8 +313,6 @@ bool __stream_init__(stream_t stream, stream_type_t type, const char *s)
 static inline
 void __stream_uninit__(stream_t stream)
 {
-    cstring_destroy(stream->fn);
-    cstring_destroy(stream->text);
     if (stream->stashed != NULL) {
         cstring_destroy(stream->stashed);
     }
@@ -335,7 +339,7 @@ int __stream_unstash__(stream_t stream)
 
 
 static inline
-int __stream_next__(stream_t stream)
+int __stream_next__(reader_t reader, stream_t stream)
 {
     int ch;
 
@@ -344,7 +348,7 @@ int __stream_next__(stream_t stream)
     }
 
     if (stream->lastch == '\n') {
-        stream->row = stream->pc;
+        stream->line_note = stream->pc;
     }
     
 nextch:
@@ -379,14 +383,21 @@ nextch:
         */
 
         char *pc = stream->pc;
+        uintptr_t step = 0;
         while (pc < stream->pe && ISSPACE(*pc)) {
             switch (*pc) {
             case '\r':
-                if (*(pc+1) == '\n') {
+                if (*(pc + 1) == '\n') {
                     pc++;
+                    step++;
                 }
             case '\n':
+                if (pc > stream->pc + step) {
+                    __WARNINGF__("backslash and newline separated by space");
+                }
+
                 stream->pc = pc + 1;
+                stream->line_note = stream->pc;
                 STREAM_LINE_ADVANCE(stream);
                 goto nextch;
             }
@@ -394,17 +405,10 @@ nextch:
         }
 
         if (pc == stream->pe) {
-            /* warn... */
+            __WARNINGF__("backslash-newline at end of file");
+
             ch = '\n';
             stream->pc = pc;
-
-            /*
-                diag_fmt("%s:%d:%d: %s", 
-                    stream->fn, 
-                    stream->line, 
-                    stream->column, 
-                    "backslash and newline separated by space");
-            */
         }
 
     } else {

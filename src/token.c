@@ -77,6 +77,7 @@ token_t token_create(void)
     tok->literals = cs;
     tok->loc = loc;
     tok->hideset = NULL;
+    tok->spaces = 0;
     return tok;
 }
 
@@ -119,7 +120,7 @@ token_t token_dup(token_t tok)
     ret->type = tok->type;
     ret->hideset = tok->hideset;
     ret->begin_of_line = tok->begin_of_line;
-    ret->leading_space = tok->leading_space;
+    ret->spaces = tok->spaces;
     ret->literals = cs;
     ret->loc = source_location_dup(tok->loc);
     return ret;
@@ -144,7 +145,7 @@ const char *token_type2str(token_t tok)
 source_location_t source_location_create(void)
 {
     source_location_t loc = pmalloc(sizeof(struct source_location_s));
-    loc->row = NULL;
+    loc->line_note = NULL;
     loc->fn = NULL;
     loc->line = 0;
     loc->column = 0;
@@ -159,11 +160,7 @@ void source_location_destroy(source_location_t loc)
     if (loc->fn != NULL) {
         cstring_destroy(loc->fn);
     }
-
-    if (loc->row != NULL) {
-        cstring_destroy(loc->row);
-    }
-
+    
     pfree(loc);
 }
 
@@ -172,7 +169,7 @@ source_location_t source_location_dup(source_location_t loc)
 {
     source_location_t ret = pmalloc(sizeof(struct source_location_s));
 
-    ret->row = loc->row;
+    ret->line_note = loc->line_note;
     ret->fn = loc->fn;
     ret->line = loc->line;
     ret->column = loc->column;

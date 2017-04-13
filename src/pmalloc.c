@@ -73,7 +73,6 @@ void* p_realloc(const char *fn, long line, void *ptr, size_t size)
 
 void p_free(const char *fn, long line, void *ptr)
 {
-    assert(ptr != NULL);
     free(ptr);
 }
 

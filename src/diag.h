@@ -6,11 +6,6 @@
 
 #include "config.h"
 #include "color.h"
-#include "vpfmt.h"
-
-
-typedef struct token_s*             token_t;
-typedef struct source_location_s*   source_location_t;
 
 
 typedef struct diag_s {
@@ -28,46 +23,47 @@ void diag_report(diag_t diag);
 void diag_errorvf(diag_t diag, const char *fmt, va_list ap);
 void diag_errorf(diag_t diag, const char *fmt, ...);
 
+void debug_linenote(const char* linenote, size_t start, size_t tilde);
 
 #define diag_nerrors(diag)      ((diag)->nerrors)
 
 #define diag_nwarnings(diag)    ((diag)->nwarnings)
 
-#define diag_errorf_with_line(diag, fn, line, column, fmt, ...)                                         \
+
+#define diag_errorf_with_line(diag, fn, line, column, linenote, start, tilde, fmt, ...)                 \
     do {                                                                                                \
-         pfmt(stderr, "%s:%u:%u " BRUSH_PURPLE("error: ") fmt "\n", fn, line, column, __VA_ARGS__);     \
-         (diag)->nerrors++;                                                                             \
+        fprintf(stderr, "%s:%u:%u " BRUSH_RED("error: ") fmt "\n", fn, line, column, __VA_ARGS__);      \
+        if ((linenote) != NULL) debug_linenote((linenote), (start), (tilde));                           \
+        (diag)->nerrors++;                                                                              \
     } while (false)
 
-#define diag_warningf_with_line(diag, fn, line, column, fmt, ...)                                       \
+
+#define diag_warningf_with_line(diag, fn, line, column, linenote, start, tilde, fmt, ...)               \
     do {                                                                                                \
-         pfmt(stderr, "%s:%u:%u " BRUSH_PURPLE("warning: ") fmt "\n", fn, line, column, __VA_ARGS__);   \
-         (diag)->nerrors++;                                                                             \
+        fprintf(stderr, "%s:%u:%u " BRUSH_PURPLE("warning: ") fmt "\n", fn, line, column, __VA_ARGS__); \
+        if ((linenote) != NULL) debug_linenote((linenote), (start), (tilde));                           \
+        (diag)->nerrors++;                                                                              \
     } while (false)
+
 
 #define diag_errorf_with_loc(diag, loc, fmt, ...)                                                       \
-    do {                                                                                                \
-         pfmt(stderr, "%S: " BRUSH_PURPLE("error: ") fmt "\n", loc, __VA_ARGS__);                       \
-         (diag)->nerrors++;                                                                             \
-    } while (false)
+    diag_errorf_with_line((diag), (loc)->fn, (loc)->line, (loc)->column,                                \
+        (loc)->line_note, (loc)->column, 1, fmt, __VA_ARGS__)
+    
 
 #define diag_warningf_with_loc(diag, loc, fmt, ...)                                                     \
-    do {                                                                                                \
-         pfmt(stderr, "%S: " BRUSH_PURPLE("warning: ") fmt "\n", loc, __VA_ARGS__);                     \
-         (diag)->nwarnings++;                                                                           \
-    } while (false)
+    diag_warningf_with_line((diag), (loc)->fn, (loc)->line, (loc)->column,                              \
+        (loc)->line_note, (loc)->column, 1, fmt, __VA_ARGS__)
+
 
 #define diag_errorf_with_tok(diag, tok, fmt, ...)                                                       \
-    do {                                                                                                \
-         pfmt(stderr, "%T: " BRUSH_PURPLE("error: ") fmt "\n", tok, __VA_ARGS__);                       \
-         (diag)->nerrors++;                                                                             \
-    } while (false)
+    diag_errorf_with_line((diag), (tok)->loc->fn, (tok)->loc->line, (tok)->loc->column,                 \
+        (tok)->loc->line_note, (tok)->loc->column, 1, fmt, __VA_ARGS__)
+
 
 #define diag_warningf_with_tok(diag, tok, fmt, ...)                                                     \
-    do {                                                                                                \
-         pfmt(stderr, "%T: " BRUSH_PURPLE("warning: ") fmt "\n", tok, __VA_ARGS__);                     \
-         (diag)->nwarnings++;                                                                           \
-    } while (false)
+     diag_warningf_with_line((diag), (tok)->loc->fn, (tok)->loc->line, (tok)->loc->column,              \
+        (tok)->loc->line_note, (tok)->loc->column, 1, fmt, __VA_ARGS__)
 
 
 #endif
