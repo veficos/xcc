@@ -63,19 +63,13 @@ struct token_dictionary_s {
     { TOKEN_COMMENT,             "TOKEN_COMMENT",             "comment"  },
 };
 
+
 token_t token_create(void)
 {
-    token_t tok;
-    cstring_t cs;
-    source_location_t loc;
-
-    cs = cstring_create_n(NULL, DEFUALT_LITERALS_LENGTH);
-    loc = source_location_create();
-    tok = (token_t) pmalloc(sizeof(struct token_s));
-
+    token_t tok = (token_t) pmalloc(sizeof(struct token_s));
     tok->type = TOKEN_UNKNOWN;
-    tok->literals = cs;
-    tok->loc = loc;
+    tok->cs = cstring_create_n(NULL, DEFUALT_LITERALS_LENGTH);
+    tok->loc = source_location_create();
     tok->hideset = NULL;
     tok->spaces = 0;
     return tok;
@@ -86,8 +80,8 @@ void token_destroy(token_t tok)
 {
     assert(tok);
 
-    if (tok->literals != NULL) {
-        cstring_destroy(tok->literals);
+    if (tok->cs != NULL) {
+        cstring_destroy(tok->cs);
     }
 
     source_location_destroy(tok->loc);
@@ -100,7 +94,11 @@ void token_init(token_t token)
 {
     token->type = TOKEN_UNKNOWN;
 
-    cstring_clear(token->literals);
+    cstring_clear(token->cs);
+
+    token->hideset = NULL;
+    token->spaces = 0;
+    token->begin_of_line = false;
 
     source_location_mark(token->loc, 0, 0, NULL, NULL);
 }
@@ -111,8 +109,8 @@ token_t token_dup(token_t tok)
     token_t ret;
     cstring_t cs = NULL;
 
-    if ((tok->literals != NULL && cstring_length(tok->literals) != 0)) {
-        cs = cstring_dup(tok->literals);
+    if (tok->cs != NULL && cstring_length(tok->cs) != 0) {
+        cs = cstring_dup(tok->cs);
     }
 
     ret = pmalloc(sizeof(struct token_s));
@@ -121,13 +119,13 @@ token_t token_dup(token_t tok)
     ret->hideset = tok->hideset;
     ret->begin_of_line = tok->begin_of_line;
     ret->spaces = tok->spaces;
-    ret->literals = cs;
+    ret->cs = cs;
     ret->loc = source_location_dup(tok->loc);
     return ret;
 }
 
 
-const char *token_type2str(token_t tok)
+const char *tok2id(token_t tok)
 {
     size_t i, length;
     length = sizeof(token_dictionary) / sizeof(struct token_dictionary_s);
@@ -145,7 +143,7 @@ const char *token_type2str(token_t tok)
 source_location_t source_location_create(void)
 {
     source_location_t loc = pmalloc(sizeof(struct source_location_s));
-    loc->line_note = NULL;
+    loc->linenote = NULL;
     loc->fn = NULL;
     loc->line = 0;
     loc->column = 0;
@@ -156,11 +154,6 @@ source_location_t source_location_create(void)
 void source_location_destroy(source_location_t loc)
 {
     assert(loc != NULL);
-
-    if (loc->fn != NULL) {
-        cstring_destroy(loc->fn);
-    }
-    
     pfree(loc);
 }
 
@@ -168,8 +161,7 @@ void source_location_destroy(source_location_t loc)
 source_location_t source_location_dup(source_location_t loc)
 {
     source_location_t ret = pmalloc(sizeof(struct source_location_s));
-
-    ret->line_note = loc->line_note;
+    ret->linenote = loc->linenote;
     ret->fn = loc->fn;
     ret->line = loc->line;
     ret->column = loc->column;

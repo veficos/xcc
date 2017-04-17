@@ -11,16 +11,19 @@
 #include "encoding.h"
 
 
-#define __lexer_errorf__(fmt, ...)                                  \
-        diag_errorf_with_tok((lexer)->diag, (lexer)->tok, fmt, __VA_ARGS__);
+#undef  ERRORF
+#define ERRORF(fmt, ...) \
+    diag_errorf_with_tok((lexer)->diag, (lexer)->tok, fmt, __VA_ARGS__)
 
-#define __lexer_warningf__(fmt, ...)                                \
-        diag_warningf_with_tok((lexer)->diag, (lexer)->tok, fmt, __VA_ARGS__);
+
+#undef  WARNINGF
+#define WARNINGF(fmt, ...) \
+    diag_warningf_with_tok((lexer)->diag, (lexer)->tok, fmt, __VA_ARGS__)
 
 
 static inline token_t __lexer_make_token__(lexer_t lexer, token_type_t type);
-static inline void __lexer_token_mark_loc__(lexer_t lexer);
-static inline void __lexer_token_remark_loc__(lexer_t lexer);
+static inline void __lexer_mark_loc__(lexer_t lexer);
+static inline void __lexer_remark_loc__(lexer_t lexer);
 
 static inline bool __lexer_skip_white_space__(lexer_t lexer);
 static inline void __lexer_skip_comment__(lexer_t lexer);
@@ -93,7 +96,7 @@ token_t lexer_scan(lexer_t lexer)
 {
     int ch;
 
-    __lexer_token_mark_loc__(lexer);
+    __lexer_mark_loc__(lexer);
 
     if (__lexer_skip_white_space__(lexer)) {
         return __lexer_make_token__(lexer, TOKEN_SPACE);
@@ -353,7 +356,7 @@ token_t __lexer_parse_number__(lexer_t lexer)
         if (!(ISIDNUM(ch) || ch == '.' || VALID_SIGN(ch, prev) || ch == '\'')) {
             break;
         }
-        if ((lexer->tok->literals = cstring_cat_ch(lexer->tok->literals, ch)) == NULL) {
+        if ((lexer->tok->cs = cstring_cat_ch(lexer->tok->cs, ch)) == NULL) {
             return NULL;
         }
         prev = ch;
@@ -387,7 +390,7 @@ token_t __lexer_parse_character__(lexer_t lexer, encoding_type_t ent)
             bool isunc = __lexer_is_unc__(lexer, ch);
             ch = __lexer_parse_escaped__(lexer);
             if (isunc) {
-                if ((lexer->tok->literals = cstring_append_utf8(lexer->tok->literals, ch)) == NULL) {
+                if ((lexer->tok->cs = cstring_append_utf8(lexer->tok->cs, ch)) == NULL) {
                     return NULL;
                 }
                 parsed = true;
@@ -395,7 +398,7 @@ token_t __lexer_parse_character__(lexer_t lexer, encoding_type_t ent)
             }
         }
 
-        if ((lexer->tok->literals = cstring_cat_ch(lexer->tok->literals, ch)) == NULL) {
+        if ((lexer->tok->cs = cstring_cat_ch(lexer->tok->cs, ch)) == NULL) {
             return NULL;
         }
 
@@ -403,11 +406,11 @@ token_t __lexer_parse_character__(lexer_t lexer, encoding_type_t ent)
     }
 
     if (ch != '\'') {
-        __lexer_errorf__("missing terminating ' character");
+        ERRORF("missing terminating ' character");
     }
 
     if (parsed == false) {
-        __lexer_errorf__("empty character constant");
+        ERRORF("empty character constant");
     }
 
     return __lexer_make_token__(lexer, ent == ENCODING_CHAR16 ? TOKEN_CONSTANT_CHAR16 :
@@ -432,20 +435,20 @@ token_t __lexer_parse_string__(lexer_t lexer, encoding_type_t ent)
             bool isunc = __lexer_is_unc__(lexer, ch);
             ch = __lexer_parse_escaped__(lexer);
             if (isunc) {
-                if ((lexer->tok->literals = cstring_append_utf8(lexer->tok->literals, ch)) == NULL) {
+                if ((lexer->tok->cs = cstring_append_utf8(lexer->tok->cs, ch)) == NULL) {
                     return NULL;
                 }
                 continue;
             }
         }
 
-        if ((lexer->tok->literals = cstring_cat_ch(lexer->tok->literals, ch)) == NULL) {
+        if ((lexer->tok->cs = cstring_cat_ch(lexer->tok->cs, ch)) == NULL) {
             return NULL;
         }
     }
 
     if (ch != '\"') {
-        __lexer_errorf__("unterminated string literal");
+        ERRORF("unterminated string literal");
     }
 
     return __lexer_make_token__(lexer, ent == ENCODING_CHAR16 ? TOKEN_CONSTANT_STRING16 :
@@ -460,7 +463,7 @@ int __lexer_parse_escaped__(lexer_t lexer)
 {
     int ch;
 
-    __lexer_token_remark_loc__(lexer);
+    __lexer_remark_loc__(lexer);
 
     ch = reader_get(lexer->reader);
     switch (ch) {
@@ -484,7 +487,7 @@ int __lexer_parse_escaped__(lexer_t lexer)
         return __lexer_parse_oct_escaped__(lexer, ch);
     }
 
-    __lexer_warningf__("unknown escape character: \'%c\'", ch);
+    WARNINGF("unknown escape character: \'%c\'", ch);
     return ch;
 }
 
@@ -495,7 +498,7 @@ int __lexer_parse_hex_escaped__(lexer_t lexer)
     int hex = 0, ch = reader_peek(lexer->reader);
 
     if (!ISHEX(ch)) {
-        __lexer_errorf__("\\x used with no following hex digits");
+        ERRORF("\\x used with no following hex digits");
     }
 
     while (ISHEX(ch)) {
@@ -540,12 +543,12 @@ int __lexer_parse_unc__(lexer_t lexer, int len)
 
     assert(len == 4 || len == 8);
     
-    __lexer_token_remark_loc__(lexer);
+    __lexer_remark_loc__(lexer);
 
     for (; i < len; ++i) {
         ch = reader_get(lexer->reader);
         if (!ISHEX(ch)) {
-            __lexer_errorf__("invalid universal character");
+            ERRORF("invalid universal character");
         }
         u = (u << 4) + TODIGIT(ch);
     }
@@ -562,14 +565,14 @@ token_t __lexer_parse_identifier__(lexer_t lexer)
     for (;;) {
         ch = reader_get(lexer->reader);
         if (ISIDNUM(ch) || ch == '$' || (0x80 <= ch && ch <= 0xfd)) {
-            if ((lexer->tok->literals = cstring_cat_ch(lexer->tok->literals, ch)) == NULL) {
+            if ((lexer->tok->cs = cstring_cat_ch(lexer->tok->cs, ch)) == NULL) {
                 return NULL;
             }
             continue;
         }
 
         if (__lexer_is_unc__(lexer, ch)) {
-            if ((lexer->tok->literals = cstring_append_utf8(lexer->tok->literals,
+            if ((lexer->tok->cs = cstring_append_utf8(lexer->tok->cs,
                     __lexer_parse_escaped__(lexer))) == NULL) {
                 return NULL;
             }
@@ -604,18 +607,17 @@ static inline
 bool __lexer_skip_white_space__(lexer_t lexer)
 {
     int ch;
-    bool ret = false;
 
     for (;;) {
         ch = reader_peek(lexer->reader);
-        if (!ISSPACE(ch) || ch == '\n' || ch == EOF) {
+        if (!ISSPACE(ch) || reader_is_empty(lexer->reader) || ch == '\n') {
             break;
         }
         reader_get(lexer->reader);
-        ret = true;
+        lexer->tok->spaces++;
     }
 
-    return ret;
+    return lexer->tok->spaces > 0;
 }
 
 
@@ -637,7 +639,7 @@ void __lexer_skip_comment__(lexer_t lexer)
                 return;
             }
         }
-        __lexer_errorf__("unknown identifier");
+        ERRORF("unknown identifier");
         return;
     }
 
@@ -682,19 +684,23 @@ bool __lexer_is_unc__(lexer_t lexer, int ch)
 
 
 static inline
-void __lexer_token_mark_loc__(lexer_t lexer)
+void __lexer_mark_loc__(lexer_t lexer)
 {
     token_mark_loc(lexer->tok,
-        reader_line(lexer->reader), reader_column(lexer->reader),
-        reader_get_linenote(lexer->reader), cstring_create(reader_name(lexer->reader)));
+                   reader_line(lexer->reader), 
+                   reader_column(lexer->reader),
+                   reader_linenote(lexer->reader), 
+                   reader_name(lexer->reader));
 }
 
 
 static inline
-void __lexer_token_remark_loc__(lexer_t lexer)
+void __lexer_remark_loc__(lexer_t lexer)
 {
-    token_remark_loc(lexer->tok, reader_line(lexer->reader),
-        reader_column(lexer->reader));
+    token_remark_loc(lexer->tok, 
+                     reader_line(lexer->reader),
+                     reader_column(lexer->reader), 
+                     reader_linenote(lexer->reader));
 }
 
 
@@ -705,9 +711,7 @@ token_t __lexer_make_token__(lexer_t lexer, token_type_t type)
 
     lexer->tok->type = type;
 
-    if ((tok = token_dup(lexer->tok)) == NULL) {
-        return NULL;
-    }
+    tok = token_dup(lexer->tok);
 
     token_init(lexer->tok);
 

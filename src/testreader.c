@@ -39,7 +39,7 @@ void test_reader_case1()
     TEST_COND("reader_column()", reader_column(reader) == 4);
     TEST_COND("reader_next()", reader_get(reader) == 'l');
     TEST_COND("reader_column()", reader_column(reader) == 5);
-    cs = linenode2cs(reader_get_linenote(reader));
+    cs = linenode2cs(reader_linenote(reader));
     TEST_COND("line_note", cstring_cmp(cs, "Hello World") == 0);
     TEST_COND("reader_next()", reader_get(reader) == 'o');
     TEST_COND("reader_column()", reader_column(reader) == 6);

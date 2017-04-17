@@ -23,7 +23,7 @@ void test_lexer(void)
 
     diag = diag_create();
 
-    reader = reader_create(&option, diag);
+    reader = reader_create(diag, &option);
 
     reader_push(reader, STREAM_TYPE_FILE, "5.h");
 
@@ -36,12 +36,12 @@ void test_lexer(void)
             break;
         }
 
-        p = token_type2str(tok);
+        p = tok2id(tok);
 
         printf("token: %s\n"
                "line: %d\n"
                "column: %d\n",
-               p ? p : tok->literals, tok->loc->line, tok->loc->column);
+               p ? p : tok->cs, tok->loc->line, tok->loc->column);
         
         token_destroy(tok);
     }

@@ -141,11 +141,6 @@ typedef enum token_type_e {
     TOKEN_FCONSTANT,
     TOKEN_LITERAL,
 
-    TOKEN_POSTFIX_INC,
-    TOKEN_POSTFIX_DEC,
-    TOKEN_PREFIX_INC,
-    TOKEN_PREFIX_DEC,
-    
     TOKEN_DEREF,
     TOKEN_CAST,
 
@@ -175,32 +170,34 @@ typedef enum token_type_e {
 typedef struct source_location_s {
     size_t line;
     size_t column;
-    linenote_t line_note;               /* Shallow Copy */
-    cstring_t fn;                       /* Shallow Copy */
+    linenote_t linenote;
+    cstring_t fn;
 } *source_location_t;
 
 
 typedef struct token_s {
     token_type_t type;
-    set_t hideset;          /* used by the preprocessor for macro expansion */
-    cstring_t literals;
+    cstring_t cs;
     source_location_t loc;
+    set_t hideset;          /* used by the preprocessor for macro expansion */
     bool begin_of_line;     /* true if the token is at the beginning of a line */
-    size_t spaces;   /* >0 if the token has a leading space */
+    size_t spaces;          /* >0 if the token has a leading space */
 } *token_t;
+
+
+#define token_mark_loc(tok, line, column, linenote, fn) \
+    source_location_mark((tok)->loc, line, column, linenote, fn)
+
+#define token_remark_loc(tok, line, column, linenote) \
+    source_location_remark((tok)->loc, line, column, linenote)
 
 
 token_t token_create(void);
 void token_init(token_t token);
 void token_destroy(token_t tok);
 token_t token_dup(token_t tok);
+const char *tok2id(token_t tok);
 
-const char *token_type2str(token_t tok);
-
-#define token_mark_loc(tok, line, column, current_line, filename) \
-    source_location_mark((tok)->loc, line, column, current_line, filename)
-#define token_remark_loc(tok, line, column) \
-    source_location_remark((tok)->loc, line, column)
 
 source_location_t source_location_create(void);
 void source_location_destroy(source_location_t loc);
@@ -213,20 +210,23 @@ void source_location_mark(source_location_t loc,
 {
     loc->line = line;
     loc->column = column;
-    loc->line_note = linenote;
+    loc->linenote = linenote;
     loc->fn = fn;
 }
 
+
 static inline
 void source_location_remark(source_location_t loc, 
-    size_t line, size_t column)
+    size_t line, size_t column, linenote_t linenote)
 {
     loc->line = line;
     loc->column = column;
+    loc->linenote = linenote;
 }
 
+
 static inline
-token_type_t encoding_to_token_type(encoding_type_t ent)
+token_type_t ent2toktype(encoding_type_t ent)
 {
     return ent == ENCODING_CHAR16 ? TOKEN_CONSTANT_STRING16 :
            ent == ENCODING_CHAR32 ? TOKEN_CONSTANT_STRING32 :

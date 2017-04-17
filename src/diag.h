@@ -48,22 +48,22 @@ void debug_linenote(const char* linenote, size_t start, size_t tilde);
 
 #define diag_errorf_with_loc(diag, loc, fmt, ...)                                                       \
     diag_errorf_with_line((diag), (loc)->fn, (loc)->line, (loc)->column,                                \
-        (loc)->line_note, (loc)->column, 1, fmt, __VA_ARGS__)
+        (loc)->linenote, (loc)->column, 1, fmt, __VA_ARGS__)
     
 
 #define diag_warningf_with_loc(diag, loc, fmt, ...)                                                     \
     diag_warningf_with_line((diag), (loc)->fn, (loc)->line, (loc)->column,                              \
-        (loc)->line_note, (loc)->column, 1, fmt, __VA_ARGS__)
+        (loc)->linenote, (loc)->column, 1, fmt, __VA_ARGS__)
 
 
 #define diag_errorf_with_tok(diag, tok, fmt, ...)                                                       \
     diag_errorf_with_line((diag), (tok)->loc->fn, (tok)->loc->line, (tok)->loc->column,                 \
-        (tok)->loc->line_note, (tok)->loc->column, 1, fmt, __VA_ARGS__)
+        (tok)->loc->linenote, (tok)->loc->column, 1, fmt, __VA_ARGS__)
 
 
 #define diag_warningf_with_tok(diag, tok, fmt, ...)                                                     \
      diag_warningf_with_line((diag), (tok)->loc->fn, (tok)->loc->line, (tok)->loc->column,              \
-        (tok)->loc->line_note, (tok)->loc->column, 1, fmt, __VA_ARGS__)
+        (tok)->loc->linenote, (tok)->loc->column, 1, fmt, __VA_ARGS__)
 
 
 #endif

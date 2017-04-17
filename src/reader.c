@@ -211,7 +211,7 @@ bool reader_test(reader_t reader, int ch)
 }
 
 
-linenote_t reader_get_linenote(reader_t reader)
+linenote_t reader_linenote(reader_t reader)
 {
     return reader->last->line_note;
 }

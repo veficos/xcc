@@ -41,7 +41,7 @@ int reader_peek(reader_t reader);
 bool reader_unget(reader_t reader, int ch);
 bool reader_try(reader_t reader, int ch);
 bool reader_test(reader_t reader, int ch);
-linenote_t reader_get_linenote(reader_t reader);
+linenote_t reader_linenote(reader_t reader);
 size_t reader_line(reader_t reader);
 size_t reader_column(reader_t reader);
 bool reader_is_empty(reader_t reader);
