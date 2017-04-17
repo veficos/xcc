@@ -308,7 +308,7 @@ bool __preprocessor_parse_define__(preprocessor_t pp)
 
     /* if get the (, parse function like */
     tok = lexer_peek(pp->lexer);
-    if (tok->type == TOKEN_L_PAREN && tok->leading_space == 0) {
+    if (tok->type == TOKEN_L_PAREN && tok->spaces == 0) {
         return __preprocessor_parse_function_like__(pp, macro_name);
     }
 

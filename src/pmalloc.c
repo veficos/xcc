@@ -6,6 +6,8 @@
 #include "pmalloc.h"
 
 
+#ifndef USE_MALLOC
+
 static inline
 void __default_alloc_oom_handler__(const char *fn, long line, void *ud)
 {
@@ -82,3 +84,5 @@ void set_alloc_oom_handler(palloc_oom_handler_pt handler, void *ud)
     palloc_oom_handler[idx_alloc_oom_handler] = (void*) handler;
     palloc_oom_handler[idx_user_data] = ud;
 }
+
+#endif

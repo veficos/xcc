@@ -59,9 +59,9 @@ static number_property_t
 __interpret_float_suffix__(option_t option, const unsigned char *p, size_t len);
 static number_property_t
 __interpret_int_suffix__(option_t option, const unsigned char *p, size_t len);
+static bool __to_number__(diag_t diag, cstring_t cs, int radix, number_property_t property, token_t tok);
 
-
-bool parse_number(diag_t diag, option_t option, number_t *number, token_t tok)
+bool parse_number(diag_t diag, option_t option, token_t tok)
 {
     unsigned int max_digit, radix;
     bool seen_digit;
@@ -77,7 +77,8 @@ bool parse_number(diag_t diag, option_t option, number_t *number, token_t tok)
 
     const unsigned char *p = (unsigned char*)tok->cs;
     const unsigned char *q = (unsigned char*)tok->cs + cstring_length(tok->cs);
-    
+    cstring_t cs = cstring_create_n(NULL, 128);
+
     assert(tok->type == TOKEN_NUMBER);
      
     radix = 10;
@@ -95,13 +96,16 @@ bool parse_number(diag_t diag, option_t option, number_t *number, token_t tok)
                 p++;
             } else if (DIGIT_SEPARATOR(p[1], option)) {
                 ERRORF(diag, tok, "digit separator after base indicator");
+                goto syntax_error;
             }
+            cs = cstring_cat_n(cs, "0x", 2);
         } else if (*p == 'b' || *p == 'B') {
             if (p[1] == '0' || p[1] == '1') {
                 radix = 2;
                 p++;
             } else if (DIGIT_SEPARATOR(p[1], option)) {
                 ERRORF(diag, tok, "digit separator after base indicator");
+                goto syntax_error;
             }
         }
     }
@@ -109,6 +113,7 @@ bool parse_number(diag_t diag, option_t option, number_t *number, token_t tok)
     for (;;) {
         unsigned int ch = *p++;
 
+        cs = cstring_cat_ch(cs, (unsigned char)ch);
         if (ISDIGIT(ch) || (ISHEX(ch) && radix == 16)) {
             seen_digit_sep = false;
             seen_digit = true;
@@ -116,9 +121,17 @@ bool parse_number(diag_t diag, option_t option, number_t *number, token_t tok)
             if (ch > max_digit) {
                 max_digit = ch;
             }
+        } else if (DIGIT_SEPARATOR(ch, option)) {
+            if (seen_digit_sep) {
+                ERRORF(diag, tok, "adjacent digit separators");
+                goto syntax_error;
+            }
+            seen_digit_sep = true;
+            cstring_pop_ch(cs);
         } else if (ch == '.') {
             if (seen_digit_sep) {
                 ERRORF(diag, tok, "adjacent digit separators");
+                goto syntax_error;
             }
 
             seen_digit_sep = false;
@@ -127,22 +140,26 @@ bool parse_number(diag_t diag, option_t option, number_t *number, token_t tok)
                 float_flag = AFTER_POINT;
             } else {
                 ERRORF(diag, tok, "too many decimal points in number");
+                goto syntax_error;
             }
         } else if ((radix <= 10 && (ch == 'e' || ch == 'E')) || 
                    (radix == 16 && (ch == 'p' || ch == 'P'))) {
             if (seen_digit_sep || DIGIT_SEPARATOR(*p, option)) {
                 ERRORF(diag, tok, "digit separator adjacent to exponent");
+                goto syntax_error;
             }
             float_flag = AFTER_EXPON;
             break;
         } else {
             p--;
+            cstring_pop_ch(cs);
             break;
         }
     }
 
     if (seen_digit_sep && float_flag != AFTER_EXPON) {
         ERRORF(diag, tok, "digit separator outside digit sequence");
+        goto syntax_error;
     }
 
     if (radix != 16 && float_flag == NOT_FLOAT) {
@@ -173,19 +190,22 @@ bool parse_number(diag_t diag, option_t option, number_t *number, token_t tok)
     if (max_digit >= radix) {
         if (radix == 2) {
             ERRORF(diag, tok, "invalid digit \"%c\" in binary constant", '0' + max_digit);
+            goto syntax_error;
         } else {
             ERRORF(diag, tok, "invalid digit \"%c\" in octal constant", '0' + max_digit);
+            goto syntax_error;
         }
     }
 
     if (float_flag != NOT_FLOAT) {
         if (radix == 2) {
             ERRORF(diag, tok, "invalid prefix \"0b\" for floating constant");
-            return NUMBER_INVALID;
+            goto syntax_error;
         }
 
         if (radix == 16 && !seen_digit) {
             ERRORF(diag, tok, "no digits in hexadecimal floating constant");
+            goto syntax_error;
         }
 
         if (radix == 16 && CONFIG_PEDANTIC(option) && 
@@ -206,8 +226,10 @@ bool parse_number(diag_t diag, option_t option, number_t *number, token_t tok)
             if (!ISDIGIT(*p)) {
                 if (DIGIT_SEPARATOR(*p, option)) {
                     ERRORF(diag, tok, "digit separator adjacent to exponent");
+                    goto syntax_error;
                 } else {
                     ERRORF(diag, tok, "exponent has no digits");
+                    goto syntax_error;
                 }
             }
 
@@ -217,20 +239,23 @@ bool parse_number(diag_t diag, option_t option, number_t *number, token_t tok)
             } while (ISDIGIT(*p) || DIGIT_SEPARATOR(*p, option));
         } else if (radix == 16) {
             ERRORF(diag, tok, "hexadecimal floating constants require an exponent");
+            goto syntax_error;
         }
 
         if (seen_digit_sep) {
             ERRORF(diag, tok, "digit separator outside digit sequence");
+            goto syntax_error;
         }
 
         property = __interpret_float_suffix__(option, p, q - p);
         if (property == NUMBER_INVALID) {
             ERRORF(diag, tok, "invalid suffix \"%.*s\" on floating constant", (intptr_t)(p-q), p);
+            goto syntax_error;
         }
 
         /* Traditional C didn't accept any floating suffixes. */
         if (q != p && CONFIG_WTRADITIONAL(option)) {
-            ERRORF(diag, tok, "traditional C rejects the \"%.*s\" suffix", (intptr_t)(p - q), p);
+            WARNINGF(diag, tok, "traditional C rejects the \"%.*s\" suffix", (intptr_t)(p - q), p);
         }
 
         /* 
@@ -247,7 +272,7 @@ bool parse_number(diag_t diag, option_t option, number_t *number, token_t tok)
             ERRORF(diag, tok, 
                 "invalid suffix \"%.*s\" with hexadecimal floating constant", 
                 (intptr_t)(p - q), p);
-            return NUMBER_INVALID;
+            goto syntax_error;
         }
 
         if ((property & (NUMBER_FRACT | NUMBER_ACCUM)) && CONFIG_PEDANTIC(option)) {
@@ -263,7 +288,7 @@ bool parse_number(diag_t diag, option_t option, number_t *number, token_t tok)
         property = __interpret_int_suffix__(option, p, q - p);
         if (property == NUMBER_INVALID) {
             ERRORF(diag, tok, "invalid suffix \"%.*s\" on integer constant", (intptr_t)(p - q), p);
-            return NUMBER_INVALID;
+            goto syntax_error;
         }
 
         /* 
@@ -311,12 +336,13 @@ syntax_ok:
     } else {
         assert(false);
     }
-
-    number->radix = radix;
-    number->property = property;
+    
+    __to_number__(diag, cs, radix, property, tok);
+    cstring_destroy(cs);
     return true;
 
 syntax_error:
+    cstring_destroy(cs);
     return false;
 }
     
@@ -517,4 +543,33 @@ __interpret_int_suffix__(option_t option, const unsigned char *p, size_t len)
 
     return ((i ? NUMBER_IMAGINARY : 0) | (u ? NUMBER_UNSIGNED : 0) | ((l == 0) ? NUMBER_SMALL
         : (l == 1) ? NUMBER_MEDIUM : NUMBER_LARGE));
+}
+
+
+static bool 
+__to_number__(diag_t diag, cstring_t cs, int radix, number_property_t property, token_t tok)
+{
+    char *end;
+
+    if (property & NUMBER_INTEGER) {
+        tok->number.ul = strtoull(cs, &end, radix);
+        if (*end != '\0') {
+            ERRORF(diag, tok, "invalid character \"%c\": %s", *end, cs);
+            return false;
+        }
+    } else if (property & NUMBER_FLOATING) {
+        tok->number.ld = strtold(cs, &end);
+        if (*end != '\0') {
+            ERRORF(diag, tok, "invalid character \"%c\": %s", *end, cs);
+            return false;
+        }
+    } else {
+        assert(false);
+        return false;
+    }
+
+    tok->number.radix = radix;
+    tok->number.property = property;
+
+    return true;
 }

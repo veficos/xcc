@@ -55,6 +55,6 @@ typedef struct diag_s*      diag_t;
 typedef struct option_s*    option_t;
 typedef struct token_s*     token_t;
 
-bool parse_number(diag_t diag, option_t option, number_t *number, token_t tok);
+bool parse_number(diag_t diag, option_t option, token_t tok);
 
 #endif

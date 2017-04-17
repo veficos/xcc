@@ -259,7 +259,7 @@ cstring_t linenode2cs(linenote_t linenote)
 static inline 
 bool __stream_init__(reader_t reader, stream_t stream, stream_type_t type, const char *s)
 {
-    cstring_t text;
+    cstring_t text = NULL;
 
     switch (type) {
     case STREAM_TYPE_FILE: {

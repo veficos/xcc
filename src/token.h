@@ -10,7 +10,7 @@
 #include "reader.h"
 #include "cstring.h"
 #include "encoding.h"
-
+#include "number.h"
 
 typedef enum token_type_e {
     TOKEN_UNKNOWN = -1,
@@ -178,6 +178,7 @@ typedef struct source_location_s {
 typedef struct token_s {
     token_type_t type;
     cstring_t cs;
+    number_t number;
     source_location_t loc;
     set_t hideset;          /* used by the preprocessor for macro expansion */
     bool begin_of_line;     /* true if the token is at the beginning of a line */
