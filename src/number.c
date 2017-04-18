@@ -47,8 +47,10 @@
 #undef  CONFIG_WARNLONGLONG
 #define CONFIG_WARNLONGLONG(option) true
 
+
 #undef  CONFIG_BINARY_CONSTANT
 #define CONFIG_BINARY_CONSTANT(option) true
+
 
 #undef  DIGIT_SEPARATOR
 #define DIGIT_SEPARATOR(ch, option) \
@@ -59,9 +61,11 @@ static number_property_t
 __interpret_float_suffix__(option_t option, const unsigned char *p, size_t len);
 static number_property_t
 __interpret_int_suffix__(option_t option, const unsigned char *p, size_t len);
+static void __init_number__(number_t *number);
 static bool __to_number__(diag_t diag, cstring_t cs, int radix, number_property_t property, token_t tok);
 
-bool parse_number(diag_t diag, option_t option, token_t tok)
+
+bool parse_number(diag_t diag, option_t option, token_t tok, number_t *number)
 {
     unsigned int max_digit, radix;
     bool seen_digit;
@@ -86,6 +90,8 @@ bool parse_number(diag_t diag, option_t option, token_t tok)
     seen_digit = false;
     seen_digit_sep = false;
     max_digit = 0;
+    
+    __init_number__(number);
 
     if (*p == '0') {
         radix = 8;
@@ -546,30 +552,30 @@ __interpret_int_suffix__(option_t option, const unsigned char *p, size_t len)
 }
 
 
+static
+void __init_number__(number_t *number)
+{
+    number->property = NUMBER_INVALID;
+    number->radix = 0;
+    number->ul = 0;
+}
+
+
 static bool 
-__to_number__(diag_t diag, cstring_t cs, int radix, number_property_t property, token_t tok)
+__to_number__(diag_t diag, cstring_t cs, int radix, number_property_t property, token_t tok, number_t *number)
 {
     char *end;
 
     if (property & NUMBER_INTEGER) {
-        tok->number.ul = strtoull(cs, &end, radix);
-        if (*end != '\0') {
-            ERRORF(diag, tok, "invalid character \"%c\": %s", *end, cs);
-            return false;
-        }
+        number->ul = strtoull(cs, &end, radix);
     } else if (property & NUMBER_FLOATING) {
-        tok->number.ld = strtold(cs, &end);
-        if (*end != '\0') {
-            ERRORF(diag, tok, "invalid character \"%c\": %s", *end, cs);
-            return false;
-        }
+        number->ld = strtold(cs, &end);
     } else {
         assert(false);
         return false;
     }
 
-    tok->number.radix = radix;
-    tok->number.property = property;
-
+    number->radix = radix;
+    number->property = property;
     return true;
 }

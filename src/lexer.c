@@ -344,6 +344,7 @@ token_t __lexer_parse_number__(lexer_t lexer)
 
     int ch;
     int prev = -1;
+    token_t tok;
 
 #undef  VALID_SIGN
 #define VALID_SIGN(c, prevc) \
@@ -356,14 +357,13 @@ token_t __lexer_parse_number__(lexer_t lexer)
         if (!(ISIDNUM(ch) || ch == '.' || VALID_SIGN(ch, prev) || ch == '\'')) {
             break;
         }
-        if ((lexer->tok->cs = cstring_cat_ch(lexer->tok->cs, ch)) == NULL) {
-            return NULL;
-        }
+
+        lexer->tok->cs = cstring_cat_ch(lexer->tok->cs, ch);
+
         prev = ch;
     }
 
     reader_unget(lexer->reader, ch);
-
 #undef  VALID_SIGN
 
     return __lexer_make_token__(lexer, TOKEN_NUMBER);

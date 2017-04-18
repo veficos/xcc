@@ -8,6 +8,11 @@
 #include "cstring.h"
 
 
+typedef struct diag_s*      diag_t;
+typedef struct option_s*    option_t;
+typedef struct token_s*     token_t;
+
+
 typedef enum number_property_e {
     NUMBER_CATEGORY = 0x000F,
     NUMBER_INVALID  = 0x0000,
@@ -34,10 +39,10 @@ typedef enum number_property_e {
     NUMBER_DFLOAT       = 0x4000,
     NUMBER_DEFAULT      = 0x8000,
 
-    NUMBER_FRACT    = 0x100000,         /* Fract types. */
-    NUMBER_ACCUM    = 0x200000,         /* Accum types. */
+    NUMBER_FRACT        = 0x100000,         /* Fract types. */
+    NUMBER_ACCUM        = 0x200000,         /* Accum types. */
 
-    NUMBER_USERDEF  = 0x1000000,        /* C++0x user-defined literal. */
+    NUMBER_USERDEF      = 0x1000000,        /* C++0x user-defined literal. */
 } number_property_t;
 
 
@@ -46,15 +51,16 @@ typedef struct number_s {
     int radix;
     union {
         long double ld;
-        long long ll;
         unsigned long long ul;
     };
 } number_t;
 
-typedef struct diag_s*      diag_t;
-typedef struct option_s*    option_t;
-typedef struct token_s*     token_t;
 
-bool parse_number(diag_t diag, option_t option, token_t tok);
+#define NUMBER_CAST(type, number)   \
+    ((type)number.ul)
+
+
+bool parse_number(diag_t diag, option_t option, token_t tok, number_t *number);
+
 
 #endif

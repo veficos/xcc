@@ -11,3 +11,5 @@ D: __COUNTER__
 // CHECK: B: foo1;
 // CHECK: C: foo2;
 // CHECK: D: 3
+
+printf("%llu\n", 0xFFFFFFFFFFFFFFFFFull);
