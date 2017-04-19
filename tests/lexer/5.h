@@ -13,3 +13,5 @@ D: __COUNTER__
 // CHECK: D: 3
 
 printf("%llu\n", 0xFFFFFFFFFFFFFFFFFull);
+
+0.123+0.134

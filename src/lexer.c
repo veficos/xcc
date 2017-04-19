@@ -27,7 +27,7 @@ static inline void __lexer_remark_loc__(lexer_t lexer);
 
 static inline bool __lexer_skip_white_space__(lexer_t lexer);
 static inline void __lexer_skip_comment__(lexer_t lexer);
-static inline token_t __lexer_parse_number__(lexer_t lexer);
+static inline token_t __lexer_parse_number__(lexer_t lexer, int ch);
 static inline token_t __lexer_parse_character__(lexer_t lexer, encoding_type_t ent);
 static inline token_t __lexer_parse_string__(lexer_t lexer, encoding_type_t ent);
 static inline int __lexer_parse_escaped__(lexer_t lexer);
@@ -120,8 +120,7 @@ token_t lexer_scan(lexer_t lexer)
         return __lexer_make_token__(lexer, TOKEN_R_BRACE);
     case '.':
         if (ISDIGIT(reader_peek(lexer->reader))) {
-            reader_unget(lexer->reader, ch);
-            return __lexer_parse_number__(lexer);
+            return __lexer_parse_number__(lexer, ch);
         }
         if (reader_try(lexer->reader, '.')) {
             if (reader_try(lexer->reader, '.')) {
@@ -209,8 +208,7 @@ token_t lexer_scan(lexer_t lexer)
         return __lexer_make_token__(lexer, reader_try(lexer->reader, '#') ? TOKEN_HASHHASH : TOKEN_HASH);
     case '0': case '1': case '2': case '3': case '4': 
     case '5': case '6': case '7': case '8': case '9':
-        reader_unget(lexer->reader, ch);
-        return __lexer_parse_number__(lexer);
+        return __lexer_parse_number__(lexer, ch);
     case 'u': case 'U': case 'L': {
         encoding_type_t ent = __lexer_parse_encoding__(lexer, ch);
 
@@ -338,13 +336,10 @@ cstring_t lexer_time(lexer_t lexer)
 
 
 static inline 
-token_t __lexer_parse_number__(lexer_t lexer)
+token_t __lexer_parse_number__(lexer_t lexer, int ch)
 {
     /* lexer's grammar on numbers is not strict. */
-
-    int ch;
     int prev = -1;
-    token_t tok;
 
 #undef  VALID_SIGN
 #define VALID_SIGN(c, prevc) \
@@ -352,8 +347,10 @@ token_t __lexer_parse_number__(lexer_t lexer)
    ((prevc) == 'e' || (prevc) == 'E' \
     || (((prevc) == 'p' || (prevc) == 'P') )))
 
+    lexer->tok->cs = cstring_cat_ch(lexer->tok->cs, ch);
+
     for (;;) {
-        ch = reader_get(lexer->reader);
+        ch = reader_peek(lexer->reader);
         if (!(ISIDNUM(ch) || ch == '.' || VALID_SIGN(ch, prev) || ch == '\'')) {
             break;
         }
@@ -361,9 +358,10 @@ token_t __lexer_parse_number__(lexer_t lexer)
         lexer->tok->cs = cstring_cat_ch(lexer->tok->cs, ch);
 
         prev = ch;
+
+        reader_get(lexer->reader);
     }
 
-    reader_unget(lexer->reader, ch);
 #undef  VALID_SIGN
 
     return __lexer_make_token__(lexer, TOKEN_NUMBER);

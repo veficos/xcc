@@ -38,7 +38,7 @@ void reader_destroy(reader_t reader);
 bool reader_push(reader_t reader, stream_type_t type, const char *s);
 int reader_get(reader_t reader);
 int reader_peek(reader_t reader);
-bool reader_unget(reader_t reader, int ch);
+void reader_unget(reader_t reader, int ch);
 bool reader_try(reader_t reader, int ch);
 bool reader_test(reader_t reader, int ch);
 linenote_t reader_linenote(reader_t reader);

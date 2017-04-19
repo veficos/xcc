@@ -70,10 +70,11 @@ struct stream_s {
         stream->line_note, stream->column, 1, __VA_ARGS__);
 
 
-#define STREAM_LINE_ADVANCE(stream) \
-    do {                            \
-        (stream)->line++;           \
-        (stream)->column = 1;       \
+#define STREAM_LINE_ADVANCE(stream)         \
+    do {                                    \
+        (stream)->line++;                   \
+        (stream)->column = 1;               \
+        (stream)->line_note = (stream)->pc; \
     } while (false)
 
 
@@ -188,10 +189,10 @@ int reader_peek(reader_t reader)
 }
 
 
-bool reader_unget(reader_t reader, int ch)
+void reader_unget(reader_t reader, int ch)
 {
     assert(ch != EOF);
-    return false;
+    __stream_stash__(reader->last, ch);
 }
 
 
@@ -347,10 +348,6 @@ int __stream_next__(reader_t reader, stream_t stream)
         goto done;
     }
 
-    if (stream->lastch == '\n') {
-        stream->line_note = stream->pc;
-    }
-    
 nextch:
     if (stream->pc >= stream->pe || (ch = *stream->pc) == '\0') {
         ch = stream->lastch == '\n' || 
