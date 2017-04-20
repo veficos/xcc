@@ -226,14 +226,11 @@ void source_location_remark(source_location_t loc,
 }
 
 
-static inline
-token_type_t ent2toktype(encoding_type_t ent)
-{
-    return ent == ENCODING_CHAR16 ? TOKEN_CONSTANT_STRING16 :
-           ent == ENCODING_CHAR32 ? TOKEN_CONSTANT_STRING32 :
-           ent == ENCODING_UTF8   ? TOKEN_CONSTANT_UTF8STRING :
-           ent == ENCODING_WCHAR  ? TOKEN_CONSTANT_WSTRING : TOKEN_CONSTANT_STRING;
-}
+#define ent2tokt(ent, t)                                    \
+    ((ent) == ENCODING_CHAR16 ? TOKEN_CONSTANT_##t##16 :    \
+     (ent) == ENCODING_CHAR32 ? TOKEN_CONSTANT_##t##32 :    \
+     (ent) == ENCODING_UTF8 ? TOKEN_CONSTANT_UTF8##t :      \
+     (ent) == ENCODING_WCHAR ? TOKEN_CONSTANT_W##t : TOKEN_CONSTANT_##t)
 
 
 #endif

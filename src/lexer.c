@@ -405,16 +405,11 @@ token_t __lexer_parse_character__(lexer_t lexer, encoding_type_t ent)
 
     if (ch != '\'') {
         ERRORF("missing terminating ' character");
-    }
-
-    if (parsed == false) {
+    } else if (parsed == false) {
         ERRORF("empty character constant");
     }
 
-    return __lexer_make_token__(lexer, ent == ENCODING_CHAR16 ? TOKEN_CONSTANT_CHAR16 :
-                                       ent == ENCODING_CHAR32 ? TOKEN_CONSTANT_CHAR32 :
-                                       ent == ENCODING_UTF8 ? TOKEN_CONSTANT_UTF8CHAR :
-                                       ent == ENCODING_WCHAR ? TOKEN_CONSTANT_WCHAR : TOKEN_CONSTANT_CHAR);
+    return __lexer_make_token__(lexer, ent2tokt(ent, CHAR));
 }
 
 
@@ -449,10 +444,7 @@ token_t __lexer_parse_string__(lexer_t lexer, encoding_type_t ent)
         ERRORF("unterminated string literal");
     }
 
-    return __lexer_make_token__(lexer, ent == ENCODING_CHAR16 ? TOKEN_CONSTANT_STRING16 :
-                                       ent == ENCODING_CHAR32 ? TOKEN_CONSTANT_STRING32 :
-                                       ent == ENCODING_UTF8 ? TOKEN_CONSTANT_UTF8STRING :
-                                       ent == ENCODING_WCHAR ? TOKEN_CONSTANT_WSTRING : TOKEN_CONSTANT_STRING);
+    return __lexer_make_token__(lexer, ent2tokt(ent, STRING));
 }
 
 

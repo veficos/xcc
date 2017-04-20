@@ -35,7 +35,7 @@ typedef struct reader_s {
 
 reader_t reader_create(diag_t diag, option_t op);
 void reader_destroy(reader_t reader);
-bool reader_push(reader_t reader, stream_type_t type, const char *s);
+bool reader_push(reader_t reader, stream_type_t type, const unsigned char *s);
 int reader_get(reader_t reader);
 int reader_peek(reader_t reader);
 void reader_unget(reader_t reader, int ch);

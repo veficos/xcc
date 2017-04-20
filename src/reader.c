@@ -53,8 +53,8 @@ struct stream_s {
 
     linenote_t line_note;
 
-    char *pc;
-    char *pe;
+    unsigned char *pc;
+    unsigned char *pe;
 
     size_t line;
     size_t column;
@@ -78,7 +78,7 @@ struct stream_s {
     } while (false)
 
 
-static inline bool __stream_init__(reader_t reader, stream_t stream, stream_type_t type, const char *s);
+static inline bool __stream_init__(reader_t reader, stream_t stream, stream_type_t type, const unsigned char *s);
 static inline void __stream_uninit__(stream_t stream);
 static inline void __stream_stash__(stream_t stream, int ch);
 static inline int __stream_unstash__(stream_t stream);
@@ -118,7 +118,7 @@ void reader_destroy(reader_t reader)
 }
 
 
-bool reader_push(reader_t reader, stream_type_t type, const char *s)
+bool reader_push(reader_t reader, stream_type_t type, const unsigned char *s)
 {
     stream_t stream;
 
@@ -244,7 +244,7 @@ cstring_t reader_name(reader_t reader)
 
 cstring_t linenode2cs(linenote_t linenote)
 {
-    const char *p = (const char *)linenote;
+    const unsigned char *p = (const unsigned char *)linenote;
 
     for (;*p;) {
         if (*p == '\r' || *p == '\n') {
@@ -253,12 +253,12 @@ cstring_t linenode2cs(linenote_t linenote)
         p++;
     }
 
-    return cstring_create_n((const char*)linenote, p - (const char *)linenote);
+    return cstring_create_n((const unsigned char*)linenote, p - (const unsigned char *)linenote);
 }
 
 
 static inline 
-bool __stream_init__(reader_t reader, stream_t stream, stream_type_t type, const char *s)
+bool __stream_init__(reader_t reader, stream_t stream, stream_type_t type, const unsigned char *s)
 {
     cstring_t text = NULL;
 
@@ -280,11 +280,13 @@ bool __stream_init__(reader_t reader, stream_t stream, stream_type_t type, const
         if (fread(buf, sizeof(unsigned char), st.st_size, fp) != st.st_size) {
             goto failure;
         }
-
-        fclose(fp);
+       
         stream->fn = cspool_push_cs(reader->pool, cstring_create(s));
         stream->mt = st.st_mtime;
         text = cspool_push_cs(reader->pool, cstring_create_n(buf, st.st_size));
+
+        pfree(buf);
+        fclose(fp);
         break;
     failure:
         fclose(fp);
@@ -302,8 +304,8 @@ bool __stream_init__(reader_t reader, stream_t stream, stream_type_t type, const
 
     stream->type = type;
     stream->stashed = NULL;
-    stream->line_note = stream->pc = (char *)text;
-    stream->pe = (char *)&text[cstring_length(text)];
+    stream->line_note = stream->pc = (unsigned char *)text;
+    stream->pe = (unsigned char *)&text[cstring_length(text)];
     stream->line = 1;
     stream->column = 1;
     stream->lastch = EOF;
@@ -379,7 +381,7 @@ nextch:
         * physical source lines to form logical source lines
         */
 
-        char *pc = stream->pc;
+        unsigned char *pc = stream->pc;
         uintptr_t step = 0;
         while (pc < stream->pe && ISSPACE(*pc)) {
             switch (*pc) {
@@ -422,7 +424,7 @@ static inline
 int __stream_peek__(stream_t stream)
 {
     int ch;
-    char *pc;
+    unsigned char *pc;
 
     if (stream->stashed != NULL &&
         cstring_length(stream->stashed) > 0) {

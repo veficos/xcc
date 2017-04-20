@@ -15,3 +15,12 @@ D: __COUNTER__
 printf("%llu\n", 0xFFFFFFFFFFFFFFFFFull);
 
 0.123+0.134
+
+
+"XXXX"
+'\u8F8F'
+
+ó
+'
+
+'

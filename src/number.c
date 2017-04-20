@@ -62,7 +62,7 @@ __interpret_float_suffix__(option_t option, const unsigned char *p, size_t len);
 static number_property_t
 __interpret_int_suffix__(option_t option, const unsigned char *p, size_t len);
 static void __init_number__(number_t *number);
-static bool __to_number__(diag_t diag, cstring_t cs, int radix, number_property_t property, token_t tok);
+static bool __to_number__(diag_t diag, cstring_t cs, int radix, number_property_t property, token_t tok, number_t *number);
 
 
 bool parse_number(diag_t diag, option_t option, token_t tok, number_t *number)
@@ -343,7 +343,7 @@ syntax_ok:
         assert(false);
     }
     
-    __to_number__(diag, cs, radix, property, tok);
+    __to_number__(diag, cs, radix, property, tok, number);
     cstring_destroy(cs);
     return true;
 
