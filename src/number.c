@@ -353,6 +353,56 @@ syntax_error:
 }
     
 
+bool parse_char(diag_t diag, option_t option, token_t tok, number_t *number)
+{
+    cstring_t utf;
+    uint32_t ch;
+
+    assert(tok->type == TOKEN_CONSTANT_CHAR ||
+           tok->type == TOKEN_CONSTANT_WCHAR ||
+           tok->type == TOKEN_CONSTANT_CHAR16 ||
+           tok->type == TOKEN_CONSTANT_CHAR32);
+    
+    __init_number__(number);
+
+    if (cstring_length(tok->cs) <= 0) {
+        return false;
+    }
+
+    switch(tok->type) {
+    case TOKEN_CONSTANT_CHAR:
+        ch = (uint32_t)tok->cs[0];
+        if (cstring_length(tok->cs) > sizeof(uint8_t)) {
+            WARNINGF(diag, tok, "multi-character character constant");
+        }
+        break;
+    case TOKEN_CONSTANT_CHAR16:
+        utf = cstring_cast_to_utf16(tok->cs);
+        ch = *(uint16_t*)utf;
+        if (cstring_length(utf) > sizeof(uint16_t)) {
+            WARNINGF(diag, tok, "multi-character character constant");
+        }
+        break;
+    case TOKEN_CONSTANT_CHAR32:
+    case TOKEN_CONSTANT_WCHAR:
+        utf = cstring_cast_to_utf32(tok->cs);
+        ch = *(uint32_t*)utf;
+        if (cstring_length(utf) > sizeof(uint32_t)) {
+            WARNINGF(diag, tok, "multi-character character constant");
+        }
+        break;
+    default:
+        assert(false);
+        return false;
+    }
+
+    number->radix = 10;
+    number->property = NUMBER_INTEGER | NUMBER_MEDIUM | NUMBER_DECIMAL | NUMBER_UNSIGNED;
+    number->ul = ch;
+    return true;
+}
+
+
 static number_property_t
 __interpret_float_suffix__(option_t option, const unsigned char *p, size_t len)
 {

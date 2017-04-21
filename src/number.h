@@ -61,6 +61,6 @@ typedef struct number_s {
 
 
 bool parse_number(diag_t diag, option_t option, token_t tok, number_t *number);
-
+bool parse_char(diag_t diag, option_t option, token_t tok, number_t *number);
 
 #endif

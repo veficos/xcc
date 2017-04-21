@@ -127,7 +127,7 @@ void debug_linenote(const char* linenote, size_t start, size_t tilde)
 
         fprintf(stderr, BRUSH_RED("^"));
 
-        while (--tilde) {
+        while (tilde && --tilde) {
             fprintf(stderr, BRUSH_GREEN("~"));
         }
 
