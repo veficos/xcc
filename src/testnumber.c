@@ -15,14 +15,16 @@
 
 #define EXCEPT_INTEGER_EQ(tok, expect, num)                                                 \
     do {                                                                                    \
+        number_t n;                                                                         \
         (tok)->cs = cstring_cpy_n((tok)->cs, num, strlen(num));                             \
-        TEST_COND(num, parse_number(diag, &option, tok)== true && tok->number.ul == expect);\
+        TEST_COND(num, parse_number(diag, &option, tok, &n)== true && n.ul == expect);      \
     } while(0)
 
 #define EXCEPT_INTEGER_NEQ(tok, expect, num)                                                \
     do {                                                                                    \
+        number_t n;                                                                         \
         (tok)->cs = cstring_cpy_n((tok)->cs, num, strlen(num));                             \
-        TEST_COND(num, !parse_number(diag, &option, tok));                                  \
+        TEST_COND(num, !parse_number(diag, &option, tok, &n));                              \
     } while(0)
 
 #define EXCEPT_HEX_CONST(except)    \
@@ -586,6 +588,7 @@ void test_number2()
     diag_t diag;
     struct option_s option;
     token_t tok;
+    number_t n;
 
     diag = diag_create();
     tok = token_create();
@@ -597,8 +600,8 @@ void test_number2()
     CHECK_HEX_CONST(ffllu);
     
     tok->cs = cstring_cpy_n(tok->cs, "0xFFFFFFFFFFFFFFFFFFFFull", strlen("0xFFFFFFFFFFFFFFFFFFFFull"));
-    parse_number(diag, &option, tok);
-    printf("%llu\n", tok->number.ul);
+    parse_number(diag, &option, tok, &n);
+    printf("%llu\n", n.ul);
     CHECK_DEP_CONST(123456, "12'3'4'56");
     CHECK_DEP_CONST(123456, "12'3'4'56'");
 
