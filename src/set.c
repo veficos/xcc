@@ -159,3 +159,35 @@ clean_set:
 done:
     return NULL;
 }
+
+
+set_t set_dup(set_t set)
+{
+    set_t r;
+    dict_iterator_t iter;
+    dict_entry_t *entry;
+
+    if ((r = set_create()) == NULL) {
+        goto done;
+    }
+
+    if ((iter = dict_get_iterator((dict_t)set)) == NULL) {
+        goto clean_set;
+    }
+
+    while (entry = dict_next(iter)) {
+        if (!set_add(r, entry->key)) {
+            goto clean_iter;
+        }
+    }
+
+    dict_release_iterator(iter);
+    return r;
+
+clean_iter:
+    dict_release_iterator(iter);
+clean_set:
+    set_destroy(r);
+done:
+    return NULL;
+}

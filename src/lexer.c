@@ -109,7 +109,7 @@ token_t lexer_scan(lexer_t lexer)
     ch = reader_get(lexer->reader);
     switch (ch) {
     case '\n':
-        return __lexer_make_token__(lexer, TOKEN_NEW_LINE);
+        return __lexer_make_token__(lexer, TOKEN_NEWLINE);
     case '[':
         return __lexer_make_token__(lexer, TOKEN_L_SQUARE);
     case ']':
@@ -272,14 +272,14 @@ token_t lexer_next(lexer_t lexer)
         return tok;
     }
     
-    begin_of_line = reader_line(lexer->reader) == 1 ? true : false;
+    begin_of_line = reader_column(lexer->reader) == 1 ? true : false;
 
     tok = lexer_scan(lexer);
     while (tok->type == TOKEN_SPACE || 
            tok->type == TOKEN_COMMENT) {
+        leading_space += tok->spaces;
         token_destroy(tok);
         tok = lexer_scan(lexer);
-        leading_space++;
     }
 
     tok->begin_of_line = begin_of_line;
@@ -539,10 +539,6 @@ token_t __lexer_parse_character__(lexer_t lexer, encoding_type_t ent)
         ERRORF("empty character constant");
     }
    
-    number_t num;
-    token_t tok = __lexer_make_token__(lexer, ent2tokt(ent, CHAR));
-
-    parse_char(lexer->diag, lexer->option, tok, &num);
     return __lexer_make_token__(lexer, ent2tokt(ent, CHAR));
 }
 
@@ -651,13 +647,8 @@ static inline
 bool __lexer_make_stash__(array_t a)
 {
     array_t *item = array_push(a);
-    if (item == NULL) {
-        return false;
-    }
 
-    if ((*item = array_create_n(sizeof(struct token_s), 12)) == NULL) {
-        return false;
-    }
+    *item = array_create_n(sizeof(struct token_s), 12);
 
     return true;
 }

@@ -58,7 +58,7 @@ struct token_dictionary_s {
     { TOKEN_HASH,                "TOKEN_HASH",                "#"        },
     { TOKEN_HASHHASH,            "TOKEN_HASHHASH",            "##"       },
     { TOKEN_BACKSLASH,           "TOKEN_BACKSLASH",           "\\"       },
-    { TOKEN_NEW_LINE,            "TOKEN_NEW_LINE",            "\\n"      },
+    { TOKEN_NEWLINE,             "TOKEN_NEWLINE",             "\\n"      },
     { TOKEN_SPACE,               "TOKEN_SPACE",               "spaces"   },
     { TOKEN_COMMENT,             "TOKEN_COMMENT",             "comment"  },
 };
@@ -116,7 +116,7 @@ token_t token_dup(token_t tok)
     ret = pmalloc(sizeof(struct token_s));
 
     ret->type = tok->type;
-    ret->hideset = tok->hideset;
+    ret->hideset = tok->hideset ? set_dup(tok->hideset) : tok->hideset;
     ret->begin_of_line = tok->begin_of_line;
     ret->spaces = tok->spaces;
     ret->cs = cs;
@@ -137,6 +137,20 @@ const char *tok2id(token_t tok)
     }
 
     return NULL;
+}
+
+
+const char *tok2s(token_t tok)
+{
+    size_t i, length;
+    length = sizeof(token_dictionary) / sizeof(struct token_dictionary_s);
+
+    for (i = 0; i < length; i++) {
+        if (token_dictionary[i].type == tok->type) {
+            return token_dictionary[i].original;
+        }
+    }
+    return tok->cs;
 }
 
 

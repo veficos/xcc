@@ -6,6 +6,7 @@
 
 #include "config.h"
 #include "map.h"
+#include "set.h"
 
 
 typedef struct array_s*     array_t;
@@ -31,12 +32,12 @@ typedef struct macro_s {
 
     union {
         struct {
-            array_t body;           /* macro body */
+            array_t body;
         } object_like;
 
         struct {
             array_t body;
-            array_t params;         /* macro body */
+            map_t params;
         } function_like;
 
         native_macro_pt native;
@@ -52,6 +53,7 @@ typedef struct condition_directive_s {
 
 typedef struct preprocessor_s {
     array_t std_include_paths;
+   
     array_t condition_directive_stack;
   
     array_t snapshot;
@@ -65,7 +67,7 @@ typedef struct preprocessor_s {
 
 preprocessor_t preprocessor_create(lexer_t lexer, option_t option, diag_t diag);
 void preprocessor_destroy(preprocessor_t pp);
-bool preprocessor_add_include_path(preprocessor_t pp, const char *path);
+void preprocessor_add_include_path(preprocessor_t pp, const char *path);
 token_t preprocessor_peek(preprocessor_t pp);
 token_t preprocessor_next(preprocessor_t pp);
 bool preprocessor_untread(preprocessor_t pp, token_t tok);

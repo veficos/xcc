@@ -5,8 +5,33 @@
 #include "diag.h"
 #include "lexer.h"
 #include "option.h"
+#include "token.h"
 #include "reader.h"
 #include "preprocessor.h"
+
+
+static 
+void print_pp(preprocessor_t pp)
+{
+    for (;;) {
+        token_t tok = preprocessor_next(pp);
+        if (tok->type == TOKEN_END)
+            break;
+
+        if (tok->type == TOKEN_NEWLINE) {
+            printf("\n");
+            continue;
+        }
+        
+        if (tok->spaces)
+            while (tok->spaces--)
+                printf(" ");
+
+        printf("%s", tok2s(tok));
+    }
+
+    printf("\n");
+}
 
 
 static
@@ -20,9 +45,9 @@ void test_preprocessor(void)
 
     diag = diag_create();
 
-    reader = reader_create(&option, diag);
+    reader = reader_create(diag, &option);
 
-    reader_push(reader, STREAM_TYPE_FILE, "6.h");
+    reader_push(reader, STREAM_TYPE_FILE, "1.c");
 
 
     lexer = lexer_create(reader, &option, diag);
@@ -31,10 +56,15 @@ void test_preprocessor(void)
 
     preprocessor_add_include_path(pp, "/usr/include");
 
+    print_pp(pp);
+
     preprocessor_destroy(pp);
 
     lexer_destroy(lexer);
 }
+
+
+
 
 int main(void)
 {

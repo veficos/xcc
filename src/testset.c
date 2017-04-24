@@ -10,7 +10,7 @@
 static
 void test_set(void)
 {
-    set_t a, b, c;
+    set_t a, b, c, d;
     cstring_t cs;
     int i;
 
@@ -47,8 +47,21 @@ void test_set(void)
         }
         cstring_destroy(cs);
     }
-    set_destroy(c);
 
+    d = set_dup(c);
+    for (i = 0; i < 20; i++) {
+        cs = cstring_from_ll(i);
+        if (i >= 5 && i < 10) {
+            TEST_COND("set", set_has(d, cs));
+        }
+        else {
+            TEST_COND("set", !set_has(d, cs));
+        }
+        cstring_destroy(cs);
+    }
+
+    set_destroy(d);
+    set_destroy(c);
     set_destroy(a);
     set_destroy(b);
 }

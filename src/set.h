@@ -17,6 +17,7 @@ bool set_add(set_t set, cstring_t cs);
 bool set_has(set_t set, cstring_t cs);
 set_t set_union(set_t a, set_t b);
 set_t set_intersection(set_t a, set_t b);
+set_t set_dup(set_t set);
 
 
 #endif

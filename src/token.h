@@ -65,7 +65,7 @@ typedef enum token_type_e {
     TOKEN_HASH,                             /* # */
     TOKEN_HASHHASH,                         /* ## */
     TOKEN_BACKSLASH,                        /* \ */
-    TOKEN_NEW_LINE,                         /* \n */
+    TOKEN_NEWLINE,                         /* \n */
     TOKEN_SPACE,                            /* spaces */
     TOKEN_COMMENT,                          /* comment */
 
@@ -198,6 +198,7 @@ void token_init(token_t token);
 void token_destroy(token_t tok);
 token_t token_dup(token_t tok);
 const char *tok2id(token_t tok);
+const char *tok2s(token_t tok);
 
 
 source_location_t source_location_create(void);
