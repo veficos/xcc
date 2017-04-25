@@ -13,21 +13,26 @@
 static 
 void print_pp(preprocessor_t pp)
 {
+    unsigned int spaces;
     for (;;) {
         token_t tok = preprocessor_next(pp);
-        if (tok->type == TOKEN_END)
+        if (tok->type == TOKEN_END) {
+            token_destroy(tok);
             break;
+        }
 
         if (tok->type == TOKEN_NEWLINE) {
+            token_destroy(tok);
             printf("\n");
             continue;
         }
-        
-        if (tok->spaces)
-            while (tok->spaces--)
-                printf(" ");
+
+        spaces = tok->spaces;
+        while (spaces--)
+            printf(" ");
 
         printf("%s", tok2s(tok));
+        token_destroy(tok);
     }
 
     printf("\n");
@@ -61,6 +66,8 @@ void test_preprocessor(void)
     preprocessor_destroy(pp);
 
     lexer_destroy(lexer);
+    reader_destroy(reader);
+    diag_destroy(diag);
 }
 
 

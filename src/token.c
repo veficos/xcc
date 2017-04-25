@@ -78,13 +78,17 @@ token_t token_create(void)
 
 void token_destroy(token_t tok)
 {
-    assert(tok);
+    assert(tok != NULL);
 
     if (tok->cs != NULL) {
         cstring_destroy(tok->cs);
     }
 
     source_location_destroy(tok->loc);
+
+    if (tok->hideset != NULL) {
+        set_destroy(tok->hideset);
+    }
 
     pfree(tok);
 }

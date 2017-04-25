@@ -377,8 +377,7 @@ bool __preprocessor_unget_tokens__(preprocessor_t pp, array_t tokens)
     token_t *toks;
     size_t i;
 
-    toks = array_prototype(tokens, token_t);
-    for (i = 0; i < array_length(tokens); i++) {
+    array_foreach(tokens, toks, i) {
         if (!lexer_untread(pp->lexer, toks[i])) {
             return false;
         }
