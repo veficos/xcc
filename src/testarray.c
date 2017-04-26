@@ -21,6 +21,10 @@ void test_array(void)
         a = array_push(array);
         *a = i;
     }
+
+    for (i = 0; i < 10; i++) {
+        TEST_COND("array_at()", array_at(int, array, i) == i);
+    }
     
     TEST_COND("array_empty()", !array_empty(array));
     TEST_COND("array_length()", array_length(array) == 10);

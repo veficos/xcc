@@ -70,7 +70,7 @@ void preprocessor_destroy(preprocessor_t pp);
 void preprocessor_add_include_path(preprocessor_t pp, const char *path);
 token_t preprocessor_peek(preprocessor_t pp);
 token_t preprocessor_next(preprocessor_t pp);
-bool preprocessor_untread(preprocessor_t pp, token_t tok);
+bool preprocessor_unget(preprocessor_t pp, token_t tok);
 
 
 #endif

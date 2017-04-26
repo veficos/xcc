@@ -21,13 +21,17 @@
 #define MACRO_BODY              64
 #endif
 
+#define NATIVE_MACRO_VARIADIC   "__VA_ARGS__"
+#define NATIVE_MACRO_COUNTER    "__COUNTER__"
+#define NATIVE_MACRO_DATE       "__DATE__"
+
 
 static inline token_t __preprocessor_expand__(preprocessor_t pp);
 static inline array_t __preprocessor_substitute__(preprocessor_t pp, macro_t macro, array_t args, set_t hideset);
 static inline array_t __preprocessor_substitute_function_like__(preprocessor_t pp, macro_t macro, array_t args, set_t hideset);
 static inline array_t __preprocessor_substitute_object_like__(preprocessor_t pp, macro_t macro, array_t args, set_t hideset);
 static inline token_t __preprocessor_except_identifier__(preprocessor_t pp);
-static inline bool __preprocessor_unget_tokens__(preprocessor_t pp, array_t tokens);
+static inline void __preprocessor_unget_tokens__(preprocessor_t pp, array_t tokens);
 static inline bool __preprocessor_parse_directive__(preprocessor_t pp, token_t hash);
 static inline bool __preprocessor_parse_define__(preprocessor_t pp);
 static inline bool __preprocessor_parse_function_like__(preprocessor_t pp, cstring_t macro_name);
@@ -55,6 +59,24 @@ preprocessor_t preprocessor_create(lexer_t lexer, option_t option, diag_t diag)
 }
 
 
+void map_scan_fn(void *privdata, const void *key, const void *value)
+{
+    macro_t macro = (macro_t)value;
+    
+    if (macro->type == PP_MACRO_OBJECT) {
+        token_t *tokens;
+        size_t i;
+        array_foreach(macro->object_like.body, tokens, i) {
+            token_destroy(tokens[i]);
+        }
+        array_destroy(macro->object_like.body);
+    }
+
+    pfree(macro);
+    printf("privdata: %p, key: %s, value: %p\n", privdata, (const char*)key, value);
+}
+
+
 void preprocessor_destroy(preprocessor_t pp)
 {
     cstring_t *std_include_paths;
@@ -63,6 +85,8 @@ void preprocessor_destroy(preprocessor_t pp)
     array_foreach(pp->std_include_paths, std_include_paths, i) {
         cstring_destroy(std_include_paths[i]);
     }
+    
+    map_scan(pp->macros, map_scan_fn, NULL);
 
     map_destroy(pp->macros);
 
@@ -84,7 +108,7 @@ void preprocessor_add_include_path(preprocessor_t pp, const char *path)
 token_t preprocessor_peek(preprocessor_t pp)
 {
     token_t tok = preprocessor_next(pp);
-    if (tok->type != TOKEN_END) preprocessor_untread(pp, tok);
+    if (tok->type != TOKEN_END) preprocessor_unget(pp, tok);
     return tok;
 }
 
@@ -104,7 +128,7 @@ token_t preprocessor_next(preprocessor_t pp)
 }
 
 
-bool preprocessor_untread(preprocessor_t pp, token_t tok)
+bool preprocessor_unget(preprocessor_t pp, token_t tok)
 {
     assert(tok && tok->type != TOKEN_END);
     lexer_untread(pp->lexer, tok);
@@ -134,11 +158,24 @@ bool __preprocessor_predefined_std_include_paths__(preprocessor_t pp)
 }
 
 
+static inline
+void __propagate_space__(array_t expand_tokens, token_t token)
+{
+    if ((expand_tokens != NULL) && (array_length(expand_tokens) > 0)) {
+        token_t t = array_at(token_t, expand_tokens, 0);
+        t->spaces = token->spaces;
+    }
+}
+
+
 static inline 
 token_t __preprocessor_expand__(preprocessor_t pp)
 {
     token_t tok;
     macro_t macro;
+    array_t expand_tokens = NULL;
+    set_t hideset = NULL;
+
 
     for (;;) {
         tok = lexer_next(pp->lexer);
@@ -155,29 +192,36 @@ token_t __preprocessor_expand__(preprocessor_t pp)
             return tok;
         }
 
-        switch (macro->type) {
-        case PP_MACRO_OBJECT: {
-            array_t expand_tokens;
+        if (macro->type == PP_MACRO_OBJECT) {
 
-            tok->hideset = tok->hideset ? tok->hideset : set_create();
+            hideset = tok->hideset ? set_dup(tok->hideset) : set_create();
 
-            set_add(tok->hideset, tok->cs);
+            set_add(hideset, tok->cs);
 
-            expand_tokens = __preprocessor_substitute__(pp, macro, NULL, tok->hideset);
+            expand_tokens = __preprocessor_substitute__(pp, macro, NULL, hideset);
+
+            __propagate_space__(expand_tokens, tok);
 
             __preprocessor_unget_tokens__(pp, expand_tokens);
+
             break;
-        }
-        case PP_MACRO_FUNCTION: {
+        } else if (macro->type == PP_MACRO_FUNCTION) {
 
-        }
-        case PP_MACRO_NATIVE: {
+            __propagate_space__(expand_tokens, tok);
 
-        }
-        default:
+            __preprocessor_unget_tokens__(pp, expand_tokens);
+
+            break;
+        } else if (macro->type == PP_MACRO_NATIVE) {
+            macro->native(tok);
+
+            break;
+        } else {
             assert(false);
         }
     }
+
+    return __preprocessor_expand__(pp);
 }
 
 
@@ -216,7 +260,6 @@ array_t __preprocessor_substitute__(preprocessor_t pp, macro_t macro, array_t ar
         break;
     }
     case PP_MACRO_FUNCTION: {
-    
         break;
     }
     default:
@@ -250,6 +293,8 @@ bool __preprocessor_parse_directive__(preprocessor_t pp, token_t hash)
 
         if (cstring_cmp(cs, "define") == 0) {
             __preprocessor_parse_define__(pp);
+            token_destroy(hash);
+            token_destroy(tok);
         }
 
         return true;
@@ -283,10 +328,59 @@ bool __preprocessor_parse_define__(preprocessor_t pp)
 
 
 static inline
+array_t __preprocessor_parse_function_like_params__(preprocessor_t pp)
+{
+    array_t params = NULL;
+
+#undef  ADD_PARAM
+#define ADD_PARAM
+
+    for (;;) {
+        token_t token = lexer_next(pp->lexer);
+
+        if (token->type == TOKEN_R_PAREN) {
+            return params;
+        }
+
+        if (token->type == TOKEN_NEWLINE) {
+            /* TODO: report error */
+            return params;
+        }
+
+        if (token->type == TOKEN_ELLIPSIS) {
+            if (!lexer_try(pp->lexer, TOKEN_R_PAREN)) {
+                /* TODO: report error */
+            }
+            return params;
+        }
+
+        if (token->type != TOKEN_IDENTIFIER) {
+            /* the token may not appear in macro parameter list */
+        }
+
+        if (!lexer_try(pp->lexer, TOKEN_COMMA)) {
+            if (!lexer_try(pp->lexer, TOKEN_R_PAREN)) {
+
+            }
+        }
+    }
+
+#undef  MAP_PUT
+
+    return params;
+}
+
+
+static inline
 bool __preprocessor_parse_function_like__(preprocessor_t pp, cstring_t macro_name)
 {
     map_t params = NULL;
     array_t macro_body = NULL;
+
+    /* eat ( */
+    lexer_next(pp->lexer);
+    
+    params = __preprocessor_parse_function_like_params__(pp);
 
     return __preprocessor_add_macro__(pp, macro_name,
         PP_MACRO_FUNCTION, params, macro_body, NULL);
@@ -308,7 +402,7 @@ bool __preprocessor_parse_object_like__(preprocessor_t pp, cstring_t macro_name)
 
         if (tok->type == TOKEN_HASHHASH) {
             /* TODO: '##' cannot appear at either end of a macro expansion */
-            /* TODO: clear macro_body items */
+            /* TODO: cleanup macro_body items */
 
             array_destroy(macro_body);
             return false;
@@ -372,16 +466,14 @@ token_t __preprocessor_except_identifier__(preprocessor_t pp)
 
 
 static inline 
-bool __preprocessor_unget_tokens__(preprocessor_t pp, array_t tokens)
+void __preprocessor_unget_tokens__(preprocessor_t pp, array_t tokens)
 {
     token_t *toks;
     size_t i;
 
-    array_foreach(tokens, toks, i) {
-        if (!lexer_untread(pp->lexer, toks[i])) {
-            return false;
+    if (tokens != NULL) {
+        array_foreach(tokens, toks, i) {
+            lexer_untread(pp->lexer, toks[i]);
         }
     }
-
-    return true;
 }

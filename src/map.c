@@ -49,7 +49,7 @@ dict_type_t __map_dict_type__ = {
     NULL,
     NULL,
     __compare_fn__,
-    NULL,
+    __free_fn__,
     NULL,
 };
 
@@ -92,4 +92,25 @@ void *map_find(map_t map, cstring_t cs)
         return NULL;
     }
     return entry->v.val;
+}
+
+
+static
+void dict_scan_fn(void *privdata[], const dict_entry_t *de)
+{
+    map_scan_pt map_scan_fn = (map_scan_pt) privdata[0];
+    void *data = privdata[1];
+    map_scan_fn(data, de->key, de->v.val);
+}
+
+
+unsigned long map_scan(map_t map, map_scan_pt map_fn, void *privdata)
+{
+    void *p[2] = { map_fn, privdata };
+    unsigned long v = 0;
+
+    do {
+        v = dict_scan((dict_t)map, v, dict_scan_fn, NULL, p);
+    } while (v);
+    return v;
 }

@@ -58,6 +58,9 @@ typedef struct array_s {
          (size_t)(index) < (array)->nelts;          \
          (index)++)
 
+#define array_at(type, array, index)                \
+    (*((type*)(((unsigned char*)(array)->elts) + (((array)->size) * (index)))))
+
 
 array_t array_create(size_t size);
 array_t array_create_n(size_t size, size_t n);

@@ -296,6 +296,17 @@ token_t lexer_peek(lexer_t lexer)
 }
 
 
+bool lexer_try(lexer_t lexer, token_type_t tt)
+{
+    token_t tok = lexer_peek(lexer);
+    if (tok->type == tt) {
+        lexer_next(lexer);
+        return true;
+    }
+    return false;
+}
+
+
 bool lexer_untread(lexer_t lexer, token_t tok)
 {
     array_t *snapshots;
