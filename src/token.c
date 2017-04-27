@@ -11,8 +11,8 @@ struct token_dictionary_s {
 } token_dictionary[] = {
     { TOKEN_L_SQUARE,            "TOKEN_L_SQUARE",            "["        },
     { TOKEN_R_SQUARE,            "TOKEN_R_SQUARE",            "]"        },
-    { TOKEN_L_PAREN,             "TOKEN_L_PAREN",             ")"        },
-    { TOKEN_R_PAREN,             "TOKEN_R_PAREN",             "("        },
+    { TOKEN_L_PAREN,             "TOKEN_L_PAREN",             "("        },
+    { TOKEN_R_PAREN,             "TOKEN_R_PAREN",             ")"        },
     { TOKEN_L_BRACE,             "TOKEN_L_BRACE",             "{"        },
     { TOKEN_R_BRACE,             "TOKEN_R_BRACE",             "}"        },
     { TOKEN_PERIOD,              "TOKEN_PERIOD",              "."        },

@@ -33,6 +33,7 @@ token_t lexer_next(lexer_t lexer);
 token_t lexer_peek(lexer_t lexer);
 bool lexer_try(lexer_t lexer, token_type_t tt);
 bool lexer_untread(lexer_t lexer, token_t tok);
+bool lexer_is_empty(lexer_t lexer);
 
 bool lexer_stash(lexer_t lexer);
 void lexer_unstash(lexer_t lexer);

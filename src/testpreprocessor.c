@@ -32,10 +32,8 @@ void print_pp(preprocessor_t pp)
             printf(" ");
 
         printf("%s", tok2s(tok));
-        token_destroy(tok);
+        //token_destroy(tok);
     }
-
-    printf("\n");
 }
 
 
@@ -54,7 +52,6 @@ void test_preprocessor(void)
 
     reader_push(reader, STREAM_TYPE_FILE, "1.c");
 
-
     lexer = lexer_create(reader, &option, diag);
 
     pp = preprocessor_create(lexer, &option, diag);
@@ -69,8 +66,6 @@ void test_preprocessor(void)
     reader_destroy(reader);
     diag_destroy(diag);
 }
-
-
 
 
 int main(void)

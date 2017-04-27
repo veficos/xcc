@@ -34,7 +34,7 @@ typedef struct array_s {
 
 
 #define array_prototype(array, type)                \
-    ((type*)((array)->elts))
+    (array ? ((type*)((array)->elts)) : NULL)
 
 
 #define array_length(array)                         \
@@ -67,6 +67,7 @@ array_t array_create_n(size_t size, size_t n);
 void array_destroy(array_t array);
 void *array_push(array_t array);
 void *array_push_n(array_t array, size_t n);
+bool array_append(array_t a, array_t b);
 
 
 #endif

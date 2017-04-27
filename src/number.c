@@ -9,12 +9,12 @@
 
 
 #undef  ERRORF
-#define ERRORF(diag, tok, fmt, ...) \
+#define ERRORF_WITH_TOKEN(diag, tok, fmt, ...) \
     diag_errorf_with_tok((diag), (tok), fmt, __VA_ARGS__)
 
 
 #undef  WARNINGF
-#define WARNINGF(diag, tok, fmt, ...) \
+#define WARNINGF_WITH_TOKEN(diag, tok, fmt, ...) \
     diag_warningf_with_tok((diag), (tok), fmt, __VA_ARGS__)
 
 
@@ -101,7 +101,7 @@ bool parse_number(diag_t diag, option_t option, token_t tok, number_t *number)
                 radix = 16;
                 p++;
             } else if (DIGIT_SEPARATOR(p[1], option)) {
-                ERRORF(diag, tok, "digit separator after base indicator");
+                ERRORF_WITH_TOKEN(diag, tok, "digit separator after base indicator");
                 goto syntax_error;
             }
             cs = cstring_cat_n(cs, "0x", 2);
@@ -110,7 +110,7 @@ bool parse_number(diag_t diag, option_t option, token_t tok, number_t *number)
                 radix = 2;
                 p++;
             } else if (DIGIT_SEPARATOR(p[1], option)) {
-                ERRORF(diag, tok, "digit separator after base indicator");
+                ERRORF_WITH_TOKEN(diag, tok, "digit separator after base indicator");
                 goto syntax_error;
             }
         }
@@ -129,14 +129,14 @@ bool parse_number(diag_t diag, option_t option, token_t tok, number_t *number)
             }
         } else if (DIGIT_SEPARATOR(ch, option)) {
             if (seen_digit_sep) {
-                ERRORF(diag, tok, "adjacent digit separators");
+                ERRORF_WITH_TOKEN(diag, tok, "adjacent digit separators");
                 goto syntax_error;
             }
             seen_digit_sep = true;
             cstring_pop_ch(cs);
         } else if (ch == '.') {
             if (seen_digit_sep) {
-                ERRORF(diag, tok, "adjacent digit separators");
+                ERRORF_WITH_TOKEN(diag, tok, "adjacent digit separators");
                 goto syntax_error;
             }
 
@@ -145,13 +145,13 @@ bool parse_number(diag_t diag, option_t option, token_t tok, number_t *number)
             if (float_flag == NOT_FLOAT) {
                 float_flag = AFTER_POINT;
             } else {
-                ERRORF(diag, tok, "too many decimal points in number");
+                ERRORF_WITH_TOKEN(diag, tok, "too many decimal points in number");
                 goto syntax_error;
             }
         } else if ((radix <= 10 && (ch == 'e' || ch == 'E')) || 
                    (radix == 16 && (ch == 'p' || ch == 'P'))) {
             if (seen_digit_sep || DIGIT_SEPARATOR(*p, option)) {
-                ERRORF(diag, tok, "digit separator adjacent to exponent");
+                ERRORF_WITH_TOKEN(diag, tok, "digit separator adjacent to exponent");
                 goto syntax_error;
             }
             float_flag = AFTER_EXPON;
@@ -164,7 +164,7 @@ bool parse_number(diag_t diag, option_t option, token_t tok, number_t *number)
     }
 
     if (seen_digit_sep && float_flag != AFTER_EXPON) {
-        ERRORF(diag, tok, "digit separator outside digit sequence");
+        ERRORF_WITH_TOKEN(diag, tok, "digit separator outside digit sequence");
         goto syntax_error;
     }
 
@@ -180,7 +180,7 @@ bool parse_number(diag_t diag, option_t option, token_t tok, number_t *number)
             }
 
             if (CONFIG_PEDANTIC(option)) {
-                ERRORF(diag, tok, "fixed-point constants are a GCC extension");
+                ERRORF_WITH_TOKEN(diag, tok, "fixed-point constants are a GCC extension");
             }
 
             goto syntax_ok;
@@ -195,31 +195,31 @@ bool parse_number(diag_t diag, option_t option, token_t tok, number_t *number)
 
     if (max_digit >= radix) {
         if (radix == 2) {
-            ERRORF(diag, tok, "invalid digit \"%c\" in binary constant", '0' + max_digit);
+            ERRORF_WITH_TOKEN(diag, tok, "invalid digit \"%c\" in binary constant", '0' + max_digit);
             goto syntax_error;
         } else {
-            ERRORF(diag, tok, "invalid digit \"%c\" in octal constant", '0' + max_digit);
+            ERRORF_WITH_TOKEN(diag, tok, "invalid digit \"%c\" in octal constant", '0' + max_digit);
             goto syntax_error;
         }
     }
 
     if (float_flag != NOT_FLOAT) {
         if (radix == 2) {
-            ERRORF(diag, tok, "invalid prefix \"0b\" for floating constant");
+            ERRORF_WITH_TOKEN(diag, tok, "invalid prefix \"0b\" for floating constant");
             goto syntax_error;
         }
 
         if (radix == 16 && !seen_digit) {
-            ERRORF(diag, tok, "no digits in hexadecimal floating constant");
+            ERRORF_WITH_TOKEN(diag, tok, "no digits in hexadecimal floating constant");
             goto syntax_error;
         }
 
         if (radix == 16 && CONFIG_PEDANTIC(option) && 
             !CONFIG_EXTENDED_NUMBERS(option)) {
             if (CONFIG_CPLUSPLUS(option)) {
-                ERRORF(diag, tok, "use of C++1z hexadecimal floating constant");
+                ERRORF_WITH_TOKEN(diag, tok, "use of C++1z hexadecimal floating constant");
             } else {
-                ERRORF(diag, tok, "use of C99 hexadecimal floating constant");
+                ERRORF_WITH_TOKEN(diag, tok, "use of C99 hexadecimal floating constant");
             }
         }
 
@@ -231,10 +231,10 @@ bool parse_number(diag_t diag, option_t option, token_t tok, number_t *number)
             /* Exponent is decimal, even if string is a hex float.  */
             if (!ISDIGIT(*p)) {
                 if (DIGIT_SEPARATOR(*p, option)) {
-                    ERRORF(diag, tok, "digit separator adjacent to exponent");
+                    ERRORF_WITH_TOKEN(diag, tok, "digit separator adjacent to exponent");
                     goto syntax_error;
                 } else {
-                    ERRORF(diag, tok, "exponent has no digits");
+                    ERRORF_WITH_TOKEN(diag, tok, "exponent has no digits");
                     goto syntax_error;
                 }
             }
@@ -244,24 +244,24 @@ bool parse_number(diag_t diag, option_t option, token_t tok, number_t *number)
                 p++;
             } while (ISDIGIT(*p) || DIGIT_SEPARATOR(*p, option));
         } else if (radix == 16) {
-            ERRORF(diag, tok, "hexadecimal floating constants require an exponent");
+            ERRORF_WITH_TOKEN(diag, tok, "hexadecimal floating constants require an exponent");
             goto syntax_error;
         }
 
         if (seen_digit_sep) {
-            ERRORF(diag, tok, "digit separator outside digit sequence");
+            ERRORF_WITH_TOKEN(diag, tok, "digit separator outside digit sequence");
             goto syntax_error;
         }
 
         property = __interpret_float_suffix__(option, p, q - p);
         if (property == NUMBER_INVALID) {
-            ERRORF(diag, tok, "invalid suffix \"%.*s\" on floating constant", (intptr_t)(p-q), p);
+            ERRORF_WITH_TOKEN(diag, tok, "invalid suffix \"%.*s\" on floating constant", (intptr_t)(p-q), p);
             goto syntax_error;
         }
 
         /* Traditional C didn't accept any floating suffixes. */
         if (q != p && CONFIG_WTRADITIONAL(option)) {
-            WARNINGF(diag, tok, "traditional C rejects the \"%.*s\" suffix", (intptr_t)(p - q), p);
+            WARNINGF_WITH_TOKEN(diag, tok, "traditional C rejects the \"%.*s\" suffix", (intptr_t)(p - q), p);
         }
 
         /* 
@@ -270,30 +270,30 @@ bool parse_number(diag_t diag, option_t option, token_t tok, number_t *number)
          * later.  
          */
         if ((property == NUMBER_MEDIUM) && CONFIG_PEDANTIC(option)) {
-            ERRORF(diag, tok, "suffix for double constant is a GCC extension");
+            ERRORF_WITH_TOKEN(diag, tok, "suffix for double constant is a GCC extension");
         }
 
         /* Radix must be 10 for decimal floats.  */
         if ((property & NUMBER_DFLOAT) && radix != 10) {
-            ERRORF(diag, tok, 
+            ERRORF_WITH_TOKEN(diag, tok, 
                 "invalid suffix \"%.*s\" with hexadecimal floating constant", 
                 (intptr_t)(p - q), p);
             goto syntax_error;
         }
 
         if ((property & (NUMBER_FRACT | NUMBER_ACCUM)) && CONFIG_PEDANTIC(option)) {
-            ERRORF(diag, tok, "fixed-point constants are a GCC extension");
+            ERRORF_WITH_TOKEN(diag, tok, "fixed-point constants are a GCC extension");
         }
 
         if ((property & NUMBER_DFLOAT) && CONFIG_PEDANTIC(option)) {
-            ERRORF(diag, tok, "decimal float constants are a GCC extension");
+            ERRORF_WITH_TOKEN(diag, tok, "decimal float constants are a GCC extension");
         }
 
         property |= NUMBER_FLOATING;
     } else {
         property = __interpret_int_suffix__(option, p, q - p);
         if (property == NUMBER_INVALID) {
-            ERRORF(diag, tok, "invalid suffix \"%.*s\" on integer constant", (intptr_t)(p - q), p);
+            ERRORF_WITH_TOKEN(diag, tok, "invalid suffix \"%.*s\" on integer constant", (intptr_t)(p - q), p);
             goto syntax_error;
         }
 
@@ -307,15 +307,15 @@ bool parse_number(diag_t diag, option_t option, token_t tok, number_t *number)
             int large = (property & NUMBER_WIDTH) == NUMBER_LARGE && CONFIG_WARNLONGLONG(option);
 
             if (u_or_i || large) {
-                WARNINGF(diag, tok, "traditional C rejects the \"%.*s\" suffix", (intptr_t)(p - q), p);
+                WARNINGF_WITH_TOKEN(diag, tok, "traditional C rejects the \"%.*s\" suffix", (intptr_t)(p - q), p);
             }
         }
 
         if ((property & NUMBER_WIDTH) == NUMBER_LARGE && CONFIG_WARNLONGLONG(option)) {
             if (CONFIG_C99(option)) {
-                WARNINGF(diag, tok, "use of C99 long long integer constant");
+                WARNINGF_WITH_TOKEN(diag, tok, "use of C99 long long integer constant");
             } else {
-                WARNINGF(diag, tok, "use of C++11 long long integer constant");
+                WARNINGF_WITH_TOKEN(diag, tok, "use of C++11 long long integer constant");
             }
         }
 
@@ -324,11 +324,11 @@ bool parse_number(diag_t diag, option_t option, token_t tok, number_t *number)
 
 syntax_ok:
     if ((property & NUMBER_IMAGINARY) && CONFIG_PEDANTIC(option)) {
-        ERRORF(diag, tok, "imaginary constants are a GCC extension");
+        ERRORF_WITH_TOKEN(diag, tok, "imaginary constants are a GCC extension");
     }
   
     if (radix == 2 && !CONFIG_BINARY_CONSTANT(option) && CONFIG_PEDANTIC(pfile)) {
-        ERRORF(diag, tok, "binary constants are a C++14 feature or GCC extension");
+        ERRORF_WITH_TOKEN(diag, tok, "binary constants are a C++14 feature or GCC extension");
     }
 
     if (radix == 10) {
@@ -373,14 +373,14 @@ bool parse_char(diag_t diag, option_t option, token_t tok, number_t *number)
     case TOKEN_CONSTANT_CHAR:
         ch = (uint32_t)tok->cs[0];
         if (cstring_length(tok->cs) > sizeof(uint8_t)) {
-            WARNINGF(diag, tok, "multi-character character constant");
+            WARNINGF_WITH_TOKEN(diag, tok, "multi-character character constant");
         }
         break;
     case TOKEN_CONSTANT_CHAR16:
         utf = cstring_cast_to_utf16(tok->cs);
         ch = *(uint16_t*)utf;
         if (cstring_length(utf) > sizeof(uint16_t)) {
-            WARNINGF(diag, tok, "multi-character character constant");
+            WARNINGF_WITH_TOKEN(diag, tok, "multi-character character constant");
         }
         break;
     case TOKEN_CONSTANT_CHAR32:
@@ -388,7 +388,7 @@ bool parse_char(diag_t diag, option_t option, token_t tok, number_t *number)
         utf = cstring_cast_to_utf32(tok->cs);
         ch = *(uint32_t*)utf;
         if (cstring_length(utf) > sizeof(uint32_t)) {
-            WARNINGF(diag, tok, "multi-character character constant");
+            WARNINGF_WITH_TOKEN(diag, tok, "multi-character character constant");
         }
         break;
     default:

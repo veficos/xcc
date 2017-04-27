@@ -58,12 +58,12 @@ void debug_linenote(const char* linenote, size_t start, size_t tilde);
 
 #define diag_errorf_with_tok(diag, tok, fmt, ...)                                                       \
     diag_errorf_with_line((diag), (tok)->loc->fn, (tok)->loc->line, (tok)->loc->column,                 \
-        (tok)->loc->linenote, (tok)->loc->column, cstring_length((tok)->cs), fmt, __VA_ARGS__)
+        (tok)->loc->linenote, (tok)->loc->column, (tok)->cs ? cstring_length((tok)->cs) : 0, fmt, __VA_ARGS__)
 
 
 #define diag_warningf_with_tok(diag, tok, fmt, ...)                                                     \
      diag_warningf_with_line((diag), (tok)->loc->fn, (tok)->loc->line, (tok)->loc->column,              \
-        (tok)->loc->linenote, (tok)->loc->column, cstring_length((tok)->cs), fmt, __VA_ARGS__)
+        (tok)->loc->linenote, (tok)->loc->column, (tok)->cs ? cstring_length((tok)->cs) : 0, fmt, __VA_ARGS__)
 
 
 #endif

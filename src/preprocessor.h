@@ -37,10 +37,11 @@ typedef struct macro_s {
 
         struct {
             array_t body;
-            map_t params;
+            array_t params;
+            bool is_variadic;
         } function_like;
 
-        native_macro_pt native;
+        native_macro_pt native_macro_fn;
     };
 
 } *macro_t;
@@ -62,6 +63,8 @@ typedef struct preprocessor_s {
     map_t macros;
     set_t include_guard;
     set_t once_guard;
+
+    diag_t diag;
 } *preprocessor_t;
 
 

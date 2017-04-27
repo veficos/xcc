@@ -11,13 +11,13 @@
 #include "encoding.h"
 
 
-#undef  ERRORF
-#define ERRORF(fmt, ...) \
+#undef  ERRORF_WITH_TOKEN
+#define ERRORF_WITH_TOKEN(fmt, ...) \
     diag_errorf_with_tok((lexer)->diag, (lexer)->tok, fmt, __VA_ARGS__)
 
 
-#undef  WARNINGF
-#define WARNINGF(fmt, ...) \
+#undef  WARNINGF_WITH_TOKEN
+#define WARNINGF_WITH_TOKEN(fmt, ...) \
     diag_warningf_with_tok((lexer)->diag, (lexer)->tok, fmt, __VA_ARGS__)
 
 
@@ -267,7 +267,7 @@ token_t lexer_next(lexer_t lexer)
 
     tokens = __lexer_last_snapshot__(lexer);
     if (array_length(tokens) > 0) {
-        tok = array_prototype(tokens, token_t)[array_length(tokens) - 1];
+        tok = array_at(token_t, tokens, array_length(tokens) - 1);
         array_pop(tokens);
         return tok;
     }
@@ -309,15 +309,13 @@ bool lexer_try(lexer_t lexer, token_type_t tt)
 
 bool lexer_untread(lexer_t lexer, token_t tok)
 {
-    array_t *snapshots;
     array_t tail;
     token_t *item;
 
     assert(tok != NULL && tok->type != TOKEN_END);
     assert(array_length(lexer->snapshots) > 0);
 
-    snapshots = array_prototype(lexer->snapshots, array_t);
-    tail = snapshots[array_length(lexer->snapshots) - 1];
+    tail = array_at(array_t, lexer->snapshots, (array_length(lexer->snapshots) - 1));
 
     item = array_push(tail);
     if (item == NULL) {
@@ -326,6 +324,14 @@ bool lexer_untread(lexer_t lexer, token_t tok)
 
     *item = tok;
     return true;
+}
+
+
+bool lexer_is_empty(lexer_t lexer)
+{
+    token_t token = lexer_peek(lexer);
+    if (token->type == TOKEN_END) return true;
+    return false;
 }
 
 
@@ -397,7 +403,7 @@ int __lexer_parse_hex_escaped__(lexer_t lexer)
     int hex = 0, ch = reader_peek(lexer->reader);
 
     if (!ISHEX(ch)) {
-        ERRORF("\\x used with no following hex digits");
+        ERRORF_WITH_TOKEN("\\x used with no following hex digits");
     }
 
     while (ISHEX(ch)) {
@@ -545,9 +551,9 @@ token_t __lexer_parse_character__(lexer_t lexer, encoding_type_t ent)
     }
 
     if (ch != '\'') {
-        ERRORF("missing terminating ' character");
+        ERRORF_WITH_TOKEN("missing terminating ' character");
     } else if (cstring_length(lexer->tok->cs) == 0) {
-        ERRORF("empty character constant");
+        ERRORF_WITH_TOKEN("empty character constant");
     }
    
     return __lexer_make_token__(lexer, ent2tokt(ent, CHAR));
@@ -578,7 +584,7 @@ token_t __lexer_parse_string__(lexer_t lexer, encoding_type_t ent)
     }
 
     if (ch != '\"') {
-        ERRORF("unterminated string literal");
+        ERRORF_WITH_TOKEN("unterminated string literal");
     }
 
     return __lexer_make_token__(lexer, ent2tokt(ent, STRING));
@@ -646,7 +652,7 @@ void __lexer_parse_comment__(lexer_t lexer)
                 return;
             }
         }
-        ERRORF("unterminated comment");
+        ERRORF_WITH_TOKEN("unterminated comment");
         return;
     }
 
@@ -659,7 +665,7 @@ bool __lexer_make_stash__(array_t a)
 {
     array_t *item = array_push(a);
 
-    *item = array_create_n(sizeof(struct token_s), 12);
+    *item = array_create_n(sizeof(token_t), 12);
 
     return true;
 }
@@ -668,13 +674,8 @@ bool __lexer_make_stash__(array_t a)
 static inline 
 array_t __lexer_last_snapshot__(lexer_t lexer)
 {
-    array_t *snapshots;
-
     assert(array_length(lexer->snapshots) > 0);
-
-    snapshots = array_prototype(lexer->snapshots, array_t);
-
-    return snapshots[array_length(lexer->snapshots) - 1];
+    return array_at(array_t, lexer->snapshots, array_length(lexer->snapshots) - 1);
 }
 
 

@@ -99,6 +99,22 @@ void *array_push_n(array_t array, size_t n)
 }
 
 
+bool array_append(array_t a, array_t b)
+{
+    void *chunk;
+
+    if (a->size != b->size) {
+        return false;
+    }
+
+    chunk = array_push_n(a, b->nelts);
+
+    memcpy(chunk, b->elts, b->size * b->nelts);
+
+    return true;
+}
+
+
 static inline
 int __array_resize__(array_t array, size_t n)
 {
