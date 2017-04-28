@@ -122,7 +122,7 @@ bool reader_push(reader_t reader, stream_type_t type, const unsigned char *s)
 {
     stream_t stream;
 
-    stream = array_push(reader->streams);
+    stream = array_push_back(reader->streams);
 
     if (!__stream_init__(reader, stream, type, s)) {
         return false;
@@ -143,7 +143,7 @@ void reader_pop(reader_t reader)
     
     __stream_uninit__(&(streams[array_length(reader->streams) - 1]));
 
-    array_pop(reader->streams);
+    array_pop_back(reader->streams);
 
     reader->last = &(streams[array_length(reader->streams) - 1]);
 }

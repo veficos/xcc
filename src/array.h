@@ -15,7 +15,7 @@ typedef struct array_s {
 } *array_t;
 
 
-#define array_pop(array)                            \
+#define array_pop_back(array)                       \
     do {                                            \
         if ((array)->nelts > 0) {                   \
             (array)->nelts--;                       \
@@ -23,7 +23,7 @@ typedef struct array_s {
     } while(0)
 
 
-#define array_pop_n(array, n)                       \
+#define array_pop_back_n(array, n)                  \
     do {                                            \
         if ((n) > (array)->nelts) {                 \
             (array)->nelts = 0;                     \
@@ -58,16 +58,55 @@ typedef struct array_s {
          (size_t)(index) < (array)->nelts;          \
          (index)++)
 
-#define array_at(type, array, index)                \
-    (*((type*)(((unsigned char*)(array)->elts) + (((array)->size) * (index)))))
+
+#define array_cast_at(type, a, index)               \
+    (*((type*)__array_at(a, index)))
+
+
+#define array_cast_front(type, a)                   \
+    (*((type*)__array_front(a)))
+    
+
+#define array_cast_back(type, a)                    \
+    (*((type*)__array_back(a)))
+
+
+#define array_cast_append(type, a, element)         \
+    do {                                            \
+        (*(type*)array_push_back((a))) = element;   \
+    } while (false)
 
 
 array_t array_create(size_t size);
 array_t array_create_n(size_t size, size_t n);
-void array_destroy(array_t array);
-void *array_push(array_t array);
-void *array_push_n(array_t array, size_t n);
-bool array_append(array_t a, array_t b);
+void array_destroy(array_t a);
+void *array_push_back(array_t a);
+void *array_push_back_n(array_t a, size_t n);
+bool array_extend(array_t a, array_t b);
+
+
+static inline
+void *__array_at(array_t a, size_t i)
+{
+    assert(a->nelts > i);
+    return (((unsigned char *)a->elts) + (a->size * i));
+}
+
+
+static inline
+void *__array_front(array_t a)
+{
+    assert(a->nelts > 0);
+    return a->elts;
+}
+
+
+static inline
+void *__array_back(array_t a)
+{
+    assert(a->nelts > 0);
+    return (((unsigned char *)a->elts) + (a->size * (a->nelts - 1)));
+}
 
 
 #endif

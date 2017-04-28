@@ -79,6 +79,12 @@ bool set_has(set_t set, cstring_t cs)
 }
 
 
+bool set_is_empty(set_t set)
+{
+    return dict_size((dict_t)set) == 0;
+}
+
+
 set_t set_union(set_t a, set_t b)
 {
     set_t r;
@@ -190,4 +196,10 @@ clean_set:
     set_destroy(r);
 done:
     return NULL;
+}
+
+
+void set_clear(set_t set)
+{
+    dict_empty((dict_t)set, NULL);
 }

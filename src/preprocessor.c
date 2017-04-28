@@ -48,9 +48,6 @@
 
 static inline token_t __preprocessor_expand__(preprocessor_t pp);
 static inline array_t __preprocessor_substitute__(preprocessor_t pp, macro_t macro, map_t args, set_t hideset);
-static inline array_t __preprocessor_substitute_function_like__(preprocessor_t pp, macro_t macro, array_t args, set_t hideset);
-static inline array_t __preprocessor_substitute_object_like__(preprocessor_t pp, macro_t macro, array_t args, set_t hideset);
-static inline token_t __preprocessor_except_identifier__(preprocessor_t pp);
 static inline void __preprocessor_unget_tokens__(preprocessor_t pp, array_t tokens);
 static inline bool __preprocessor_parse_directive__(preprocessor_t pp, token_t hash);
 static inline bool __preprocessor_parse_define__(preprocessor_t pp);
@@ -122,7 +119,7 @@ void preprocessor_add_include_path(preprocessor_t pp, const char *path)
 {
     cstring_t *item;
     
-    item = array_push(pp->std_include_paths);
+    item = array_push_back(pp->std_include_paths);
     *item = cstring_create(path);
 }
 
@@ -152,7 +149,7 @@ token_t preprocessor_next(preprocessor_t pp)
 bool preprocessor_unget(preprocessor_t pp, token_t tok)
 {
     assert(tok && tok->type != TOKEN_END);
-    lexer_untread(pp->lexer, tok);
+    lexer_unget(pp->lexer, tok);
     return true;
 }
 
@@ -183,28 +180,16 @@ static inline
 void __propagate_space__(array_t expand_tokens, token_t token)
 {
     if ((expand_tokens != NULL) && (array_length(expand_tokens) > 0)) {
-        token_t t = array_at(token_t, expand_tokens, 0);
+        token_t t = array_cast_front(token_t, expand_tokens);
         t->spaces = token->spaces;
     }
 }
 
 
 static inline 
-void __add_token__(array_t *a, token_t token)
-{
-    token_t *item;
-    if (*a == NULL) {
-        *a = array_create_n(sizeof(token_t), 8);
-    }
-
-    item = array_push(*a);
-    *item = token;
-}
-
-static inline 
 array_t __preprocessor_parse_function_like_argument__(preprocessor_t pp)
 {
-    array_t arg = NULL;
+    array_t arg = array_create_n(sizeof(token_t), 2);
 
     int level = 0;
 
@@ -222,7 +207,7 @@ array_t __preprocessor_parse_function_like_argument__(preprocessor_t pp)
             }
         }
 
-        __add_token__(&arg, token);
+        array_cast_append(token_t, arg, token);
 
         lexer_next(pp->lexer);
     }
@@ -231,20 +216,8 @@ array_t __preprocessor_parse_function_like_argument__(preprocessor_t pp)
 }
 
 
-static inline
-void __preprocessor_add_function_like_argument__(preprocessor_t pp, map_t *args, 
-    cstring_t arg_name, array_t arg)
-{
-    if (*args == NULL) {
-        *args = map_create();
-    }
-
-    map_add(*args, arg_name, arg);
-}
-
-
 static inline 
-token_t __preprocessor_parse_function_like_arguments__(preprocessor_t pp, macro_t macro, map_t *args)
+token_t __preprocessor_parse_function_like_arguments__(preprocessor_t pp, macro_t macro, map_t args)
 {
     token_t token, r_paren_token;
     size_t argc;
@@ -256,9 +229,7 @@ token_t __preprocessor_parse_function_like_arguments__(preprocessor_t pp, macro_
 
     argc = params ? array_length(params) : 0;
 
-
     array_t va_args = array_create_n(sizeof(token_t), 8);
-
     
     for (i = 0; ; i++) {
         array_t arg;
@@ -269,9 +240,9 @@ token_t __preprocessor_parse_function_like_arguments__(preprocessor_t pp, macro_
         }
         
         if (i >= argc) {
-            array_append(va_args, arg);
+            array_extend(va_args, arg);
         } else {
-            __preprocessor_add_function_like_argument__(pp, args, param_names[i]->cs, arg);
+            map_add(args, param_names[i]->cs, arg);
         }
 
         token = lexer_peek(pp->lexer);
@@ -285,14 +256,14 @@ token_t __preprocessor_parse_function_like_arguments__(preprocessor_t pp, macro_
         }
 
         if (i >= argc) {
-            (*(token_t*)array_push(va_args)) = token;
+            array_cast_append(token_t, va_args, token);
         }
 
         lexer_next(pp->lexer);
     }
 
-    __preprocessor_add_function_like_argument__(pp, args, cstring_create("__VA_ARGS__"), va_args);
-    
+    map_add(args, cstring_create("__VA_ARGS__"), va_args);
+
     r_paren_token = lexer_peek(pp->lexer);
     if (r_paren_token->type != TOKEN_R_PAREN) {
 
@@ -328,7 +299,7 @@ token_t __preprocessor_expand__(preprocessor_t pp)
 
         if (macro->type == PP_MACRO_OBJECT) {
 
-            hideset = tok->hideset ? set_dup(tok->hideset) : set_create();
+            hideset = set_dup(tok->hideset);
 
             set_add(hideset, tok->cs);
 
@@ -340,17 +311,17 @@ token_t __preprocessor_expand__(preprocessor_t pp)
 
             break;
         } else if (macro->type == PP_MACRO_FUNCTION) {
-            map_t args = NULL;
+            map_t args = map_create();
             token_t r_paren;
 
             if (!lexer_try(pp->lexer, TOKEN_L_PAREN)) {
                 return tok;
             }
 
-            r_paren = __preprocessor_parse_function_like_arguments__(pp, macro, &args);
+            r_paren = __preprocessor_parse_function_like_arguments__(pp, macro, args);
             
-            hideset = tok->hideset ? set_dup(tok->hideset) : set_create();
-            r_paren_hideset = r_paren->hideset ? set_dup(r_paren->hideset) : set_create();
+            hideset = set_dup(tok->hideset);
+            r_paren_hideset = set_dup(r_paren->hideset);
 
             hideset = set_intersection(hideset, r_paren_hideset);
 
@@ -393,44 +364,106 @@ bool __add_hide_set__(set_t hideset, array_t expand_tokens)
 
 
 static inline 
+array_t __preprocessor_substitute_object_like__(preprocessor_t pp, array_t macro_body)
+{
+    array_t expand_tokens;
+    size_t i, n;
+    
+    expand_tokens = array_create_n(sizeof(token_t), 8);
+
+    n = array_length(macro_body);
+
+    for (i = 0; i < n; i++) {
+        token_t token = token_dup(array_cast_at(token_t, macro_body, i));
+        array_cast_append(token_t, expand_tokens, token);
+    }
+
+    return expand_tokens;
+}
+
+
+/**
+* Select an argument for expansion.
+*/
+static inline
+array_t __preprocessor_select__(map_t args, token_t index)
+{
+    array_t arg;
+
+    if (index->type != TOKEN_IDENTIFIER) {
+        return NULL;
+    }
+
+    arg = map_find(args, index->cs);
+    if (arg != NULL) {
+        array_t replacements;
+        size_t i, n;
+
+        replacements = array_create_n(sizeof(token_t), 2);
+
+        for (i = 0, n = array_length(arg); i < n; i++) {
+            token_t token = array_cast_at(token_t, arg, i);
+            array_cast_append(token_t, replacements, token);
+        }
+
+        __propagate_space__(replacements, index);
+        return replacements;
+    }
+
+    return NULL;
+}
+
+
+static inline 
+array_t __preprocessor_substitute_function_like__(preprocessor_t pp, bool is_variadic, 
+    array_t macro_body, map_t args)
+{
+    array_t expand_tokens;
+    size_t i, n;
+
+    expand_tokens = array_create_n(sizeof(token_t), 8);
+
+    n = array_length(macro_body);
+
+    for (i = 0; i < n; i++) {
+        token_t token;
+        token_t *item;
+        
+        token = array_cast_at(token_t, macro_body, i);
+        if (token->type == TOKEN_HASH) {
+
+        } else if (token->type == TOKEN_HASHHASH) {
+
+        } else {
+            array_t replacements = __preprocessor_select__(args, token);
+            if (replacements != NULL) {
+                array_extend(expand_tokens, replacements);
+                continue;
+            }
+        }
+
+        item = array_push_back(expand_tokens);
+        *item = token_dup(token);
+    }
+
+    return expand_tokens;
+}
+
+
+static inline 
 array_t __preprocessor_substitute__(preprocessor_t pp, macro_t macro, map_t args, set_t hideset)
 {
     array_t expand_tokens;
-    token_t *item;
-    token_t *macro_tokens;
-    size_t i;
-
-    expand_tokens = array_create_n(sizeof(token_t), TOKEN_EXPAND_NUMBER);
 
     switch (macro->type) {
-    case PP_MACRO_OBJECT: {
-        array_foreach(macro->object_like.body, macro_tokens, i) {
-            item = array_push(expand_tokens);
-            *item = macro_tokens[i];
-        }
+    case PP_MACRO_OBJECT:
+        expand_tokens = __preprocessor_substitute_object_like__(pp, 
+            macro->object_like.body);
         break;
-    }
-    case PP_MACRO_FUNCTION: {
-        if (macro->function_like.body != NULL) {
-            array_foreach(macro->function_like.body, macro_tokens, i) {
-                if (macro_tokens[i]->type == TOKEN_IDENTIFIER) {
-                    array_t arg = map_find(args, macro_tokens[i]->cs);
-                    if (arg != NULL) {
-                        size_t j;
-                        for (j = 0; j < array_length(arg); j++) {
-                            item = array_push(expand_tokens);
-                            *item = token_dup(array_at(token_t, arg, j));
-                            (*item)->spaces = macro_tokens[i]->spaces;
-                        }
-                        continue;
-                    }
-                }
-                item = array_push(expand_tokens);
-                *item = macro_tokens[i];
-            }
-        }
+    case PP_MACRO_FUNCTION:
+        expand_tokens = __preprocessor_substitute_function_like__(pp,
+            macro->function_like.is_variadic, macro->function_like.body, args);
         break;
-    }
     default:
         assert(false);
     }
@@ -443,7 +476,7 @@ array_t __preprocessor_substitute__(preprocessor_t pp, macro_t macro, map_t args
 static inline
 bool __preprocessor_parse_directive__(preprocessor_t pp, token_t hash)
 {
-    if (hash->begin_of_line && hash->type == TOKEN_HASH && hash->hideset == NULL) {
+    if (hash->begin_of_line && hash->type == TOKEN_HASH && set_is_empty(hash->hideset)) {
         token_t tok;
         cstring_t cs;
 
@@ -476,36 +509,33 @@ bool __preprocessor_parse_directive__(preprocessor_t pp, token_t hash)
 static inline 
 bool __preprocessor_parse_define__(preprocessor_t pp)
 {
-    token_t macro_name_token;
+    token_t macroname_token;
     token_t r_paren_token;
 
-    macro_name_token = lexer_next(pp->lexer);
-    if (macro_name_token->type != TOKEN_IDENTIFIER) {
-        /* TODO: macro name must be an identifier */
+    macroname_token = lexer_next(pp->lexer);
+    if (macroname_token->type != TOKEN_IDENTIFIER) {
+        ERRORF_WITH_TOKEN(macroname_token, "macro names must be identifiers");
+        __preprocessor_skip_one_line__(pp);
+        return false;
     }
-
+    
     /* if get the (, parse function like */
     r_paren_token = lexer_peek(pp->lexer);
     if (r_paren_token->type == TOKEN_L_PAREN && r_paren_token->spaces == 0) {
-        return __preprocessor_parse_function_like__(pp, macro_name_token);
+        return __preprocessor_parse_function_like__(pp, macroname_token);
     }
 
-    return __preprocessor_parse_object_like__(pp, macro_name_token);
+    return __preprocessor_parse_object_like__(pp, macroname_token);
 }
 
 
 static
-bool __preprocessor_add_function_like_param__(preprocessor_t pp, array_t *params, token_t param_token)
+bool __preprocessor_add_function_like_param__(preprocessor_t pp, array_t params, token_t param_token)
 {
     token_t *tokens;
-    token_t *item;
     size_t i;
 
-    if (*params == NULL) {
-        *params = array_create_n(sizeof(token_t), 8);
-    }
-
-    array_foreach(*params, tokens, i) {
+    array_foreach(params, tokens, i) {
         if (cstring_cmp(tokens[i]->cs, param_token->cs) == 0) {
             ERRORF_WITH_TOKEN(param_token, 
                 "duplicate macro parameter \"%s\"", tok2s(param_token));
@@ -513,14 +543,13 @@ bool __preprocessor_add_function_like_param__(preprocessor_t pp, array_t *params
         }
     }
 
-    item = array_push(*params);
-    *item = param_token;
+    array_cast_append(token_t, params, param_token);
     return true;
 }
 
 
 static inline
-bool __preprocessor_parse_function_like_params__(preprocessor_t pp, array_t *params, bool *variadic)
+bool __preprocessor_parse_function_like_params__(preprocessor_t pp, array_t params, bool *variadic)
 {
     token_t token = NULL;
    
@@ -582,31 +611,19 @@ missing_r_paren:
 
 
 static inline
-bool __preprocessor_add_function_like_body__(preprocessor_t pp, array_t *macro_body, token_t token)
-{
-    token_t *item;
-
-    if (*macro_body == NULL) {
-        *macro_body = array_create_n(sizeof(token_t), 8);
-    }
-
-    item = array_push(*macro_body);
-    *item = token;
-    return true;
-}
-
-
-static inline
-bool __preprocessor_parse_function_like_body__(preprocessor_t pp, array_t *macro_body)
+bool __preprocessor_parse_function_like_body__(preprocessor_t pp, array_t macro_body)
 {
     for (; !lexer_is_empty(pp->lexer); ) {
         token_t token = lexer_peek(pp->lexer);
         if (token->type == TOKEN_NEWLINE) {
             return true;
         }
-        __preprocessor_add_function_like_body__(pp, macro_body, token);
+        
+        array_cast_append(token_t, macro_body, token);
+
         lexer_next(pp->lexer);
     }
+
     return false;
 }
 
@@ -614,19 +631,19 @@ bool __preprocessor_parse_function_like_body__(preprocessor_t pp, array_t *macro
 static inline
 bool __preprocessor_parse_function_like__(preprocessor_t pp, token_t macroname_token)
 {
-    array_t macro_params = NULL;
-    array_t macro_body = NULL;
+    array_t macro_params = array_create_n(sizeof(token_t), 8);
+    array_t macro_body = array_create_n(sizeof(token_t), 8);
     bool is_variadic = false;
 
     /* eat '(' */
     lexer_next(pp->lexer);
 
-    if (!__preprocessor_parse_function_like_params__(pp, &macro_params, &is_variadic)) {
+    if (!__preprocessor_parse_function_like_params__(pp, macro_params, &is_variadic)) {
         __preprocessor_skip_one_line__(pp);
         return false;
     }
 
-    if (!__preprocessor_parse_function_like_body__(pp, &macro_body)) {
+    if (!__preprocessor_parse_function_like_body__(pp, macro_body)) {
         __preprocessor_skip_one_line__(pp);
         return false;
     }
@@ -637,11 +654,11 @@ bool __preprocessor_parse_function_like__(preprocessor_t pp, token_t macroname_t
 
 
 static inline
-bool __preprocessor_parse_object_like__(preprocessor_t pp, token_t macro_name_token)
+bool __preprocessor_parse_object_like__(preprocessor_t pp, token_t macroname_token)
 {
     array_t macro_body;
 
-    macro_body = array_create_n(sizeof(token_t), MACRO_BODY);
+    macro_body = array_create_n(sizeof(token_t), 8);
 
     for (;;) {
         token_t tok;
@@ -661,11 +678,11 @@ bool __preprocessor_parse_object_like__(preprocessor_t pp, token_t macro_name_to
             break;
         }
 
-        item = (token_t*)array_push(macro_body);
+        item = (token_t*)array_push_back(macro_body);
         *item = tok;
     }
 
-    return __preprocessor_add_object_like_macro__(pp, macro_name_token->cs, macro_body);
+    return __preprocessor_add_object_like_macro__(pp, macroname_token->cs, macro_body);
 }
 
 
@@ -716,7 +733,7 @@ bool __preprocessor_add_native_like_macro__(preprocessor_t pp, cstring_t macro_n
 {
     macro_t macro;;
 
-    if ((macro = (macro_t)pmalloc(sizeof(struct macro_s))) == NULL) {
+    if ((macro = (macro_t) pmalloc(sizeof(struct macro_s))) == NULL) {
         return false;
     }
 
@@ -730,24 +747,13 @@ bool __preprocessor_add_native_like_macro__(preprocessor_t pp, cstring_t macro_n
 
 
 static inline 
-token_t __preprocessor_except_identifier__(preprocessor_t pp)
-{
-    token_t tok = lexer_next(pp->lexer);
-    if (tok->type != TOKEN_IDENTIFIER) {
-        /* TODO: report error. */
-    }
-    return tok;
-}
-
-
-static inline 
 void __preprocessor_unget_tokens__(preprocessor_t pp, array_t tokens)
 {
 
     if (tokens != NULL) {
         size_t i;
         for (i = array_length(tokens); i--; ) {
-            lexer_untread(pp->lexer, array_at(token_t, tokens, i));
+            lexer_unget(pp->lexer, array_cast_at(token_t, tokens, i));
         }
     }
 }

@@ -70,7 +70,7 @@ token_t token_create(void)
     tok->type = TOKEN_UNKNOWN;
     tok->cs = cstring_create_n(NULL, DEFUALT_LITERALS_LENGTH);
     tok->loc = source_location_create();
-    tok->hideset = NULL;
+    tok->hideset = set_create();
     tok->spaces = 0;
     return tok;
 }
@@ -80,15 +80,11 @@ void token_destroy(token_t tok)
 {
     assert(tok != NULL);
 
-    if (tok->cs != NULL) {
-        cstring_destroy(tok->cs);
-    }
-
     source_location_destroy(tok->loc);
 
-    if (tok->hideset != NULL) {
-        set_destroy(tok->hideset);
-    }
+    set_destroy(tok->hideset);
+
+    cstring_destroy(tok->cs);
 
     pfree(tok);
 }
@@ -100,7 +96,8 @@ void token_init(token_t token)
 
     cstring_clear(token->cs);
 
-    token->hideset = NULL;
+    set_clear(token->hideset);
+    
     token->spaces = 0;
     token->begin_of_line = false;
 
@@ -113,17 +110,13 @@ token_t token_dup(token_t tok)
     token_t ret;
     cstring_t cs = NULL;
 
-    if (tok->cs != NULL && cstring_length(tok->cs) != 0) {
-        cs = cstring_dup(tok->cs);
-    }
-
     ret = pmalloc(sizeof(struct token_s));
 
     ret->type = tok->type;
-    ret->hideset = tok->hideset ? set_dup(tok->hideset) : tok->hideset;
+    ret->hideset = set_dup(tok->hideset);
     ret->begin_of_line = tok->begin_of_line;
     ret->spaces = tok->spaces;
-    ret->cs = cs;
+    ret->cs = cstring_dup(tok->cs);
     ret->loc = source_location_dup(tok->loc);
     return ret;
 }

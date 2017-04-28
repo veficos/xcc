@@ -56,7 +56,7 @@ void array_destroy(array_t array)
 }
 
 
-void *array_push(array_t array)
+void *array_push_back(array_t array)
 {
     void *elt;
 
@@ -81,7 +81,7 @@ void *array_push(array_t array)
 }
 
 
-void *array_push_n(array_t array, size_t n)
+void *array_push_back_n(array_t array, size_t n)
 {
     void *elt;
 
@@ -99,7 +99,7 @@ void *array_push_n(array_t array, size_t n)
 }
 
 
-bool array_append(array_t a, array_t b)
+bool array_extend(array_t a, array_t b)
 {
     void *chunk;
 
@@ -107,7 +107,9 @@ bool array_append(array_t a, array_t b)
         return false;
     }
 
-    chunk = array_push_n(a, b->nelts);
+    if ((chunk = array_push_back_n(a, b->nelts)) == NULL) {
+        return false;
+    }
 
     memcpy(chunk, b->elts, b->size * b->nelts);
 

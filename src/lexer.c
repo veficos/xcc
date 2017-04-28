@@ -39,7 +39,7 @@ static inline token_t __lexer_parse_identifier__(lexer_t lexer);
 static inline bool __lexer_parse_white_space__(lexer_t lexer);
 static inline void __lexer_parse_comment__(lexer_t lexer);
 
-static inline bool __lexer_make_stash__(array_t a);
+static inline void __lexer_make_stash__(array_t a);
 static inline array_t __lexer_last_snapshot__(lexer_t lexer);
 
 static inline token_t __lexer_make_token__(lexer_t lexer, token_type_t type);
@@ -267,8 +267,8 @@ token_t lexer_next(lexer_t lexer)
 
     tokens = __lexer_last_snapshot__(lexer);
     if (array_length(tokens) > 0) {
-        tok = array_at(token_t, tokens, array_length(tokens) - 1);
-        array_pop(tokens);
+        tok = array_cast_at(token_t, tokens, array_length(tokens) - 1);
+        array_pop_back(tokens);
         return tok;
     }
     
@@ -291,7 +291,7 @@ token_t lexer_next(lexer_t lexer)
 token_t lexer_peek(lexer_t lexer)
 {
     token_t tok = lexer_next(lexer);
-    if (tok->type != TOKEN_END) lexer_untread(lexer, tok);
+    if (tok->type != TOKEN_END) lexer_unget(lexer, tok);
     return tok;
 }
 
@@ -307,23 +307,16 @@ bool lexer_try(lexer_t lexer, token_type_t tt)
 }
 
 
-bool lexer_untread(lexer_t lexer, token_t tok)
+void lexer_unget(lexer_t lexer, token_t tok)
 {
-    array_t tail;
+    array_t last;
     token_t *item;
 
-    assert(tok != NULL && tok->type != TOKEN_END);
-    assert(array_length(lexer->snapshots) > 0);
+    assert(tok != NULL && tok->type != TOKEN_END && array_length(lexer->snapshots) > 0);
 
-    tail = array_at(array_t, lexer->snapshots, (array_length(lexer->snapshots) - 1));
-
-    item = array_push(tail);
-    if (item == NULL) {
-        return false;
-    }
-
+    last = array_cast_at(array_t, lexer->snapshots, (array_length(lexer->snapshots) - 1));
+    item = array_push_back(last);
     *item = tok;
-    return true;
 }
 
 
@@ -335,16 +328,16 @@ bool lexer_is_empty(lexer_t lexer)
 }
 
 
-bool lexer_stash(lexer_t lexer)
+void lexer_stash(lexer_t lexer)
 {
-    return __lexer_make_stash__(lexer->snapshots);
+    __lexer_make_stash__(lexer->snapshots);
 }
 
 
 void lexer_unstash(lexer_t lexer)
 {
     assert(array_length(lexer->snapshots) > 0);
-    array_pop(lexer->snapshots);
+    array_pop_back(lexer->snapshots);
 }
 
 
@@ -661,13 +654,9 @@ void __lexer_parse_comment__(lexer_t lexer)
 
 
 static inline 
-bool __lexer_make_stash__(array_t a)
+void __lexer_make_stash__(array_t a)
 {
-    array_t *item = array_push(a);
-
-    *item = array_create_n(sizeof(token_t), 12);
-
-    return true;
+    array_cast_append(array_t, a, array_create_n(sizeof(token_t), 12));
 }
 
 
@@ -675,7 +664,7 @@ static inline
 array_t __lexer_last_snapshot__(lexer_t lexer)
 {
     assert(array_length(lexer->snapshots) > 0);
-    return array_at(array_t, lexer->snapshots, array_length(lexer->snapshots) - 1);
+    return array_cast_back(array_t, lexer->snapshots);
 }
 
 

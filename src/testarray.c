@@ -18,14 +18,16 @@ void test_array(void)
     TEST_COND("array_capacity()", array_capacity(array) == 0);
 
     for (i = 0; i < 10; i++) {
-        a = array_push(array);
+        a = array_push_back(array);
         *a = i;
     }
 
     for (i = 0; i < 10; i++) {
-        TEST_COND("array_at()", array_at(int, array, i) == i);
+        TEST_COND("array_cast_at()", array_cast_at(int, array, i) == i);
     }
     
+    TEST_COND("array_cast_front", array_cast_front(int, array) == 0);
+    TEST_COND("array_cast_back", array_cast_back(int, array) == 9);
     TEST_COND("array_empty()", !array_empty(array));
     TEST_COND("array_length()", array_length(array) == 10);
     TEST_COND("array_capacity()", array_capacity(array) == 6);
@@ -35,10 +37,10 @@ void test_array(void)
         TEST_COND("array_push()", a[i] == i);
     }
 
-    array_pop(array);
+    array_pop_back(array);
     TEST_COND("array_pop()", array_length(array) == 9);
 
-    array_pop_n(array, 2);
+    array_pop_back_n(array, 2);
     TEST_COND("array_pop_n()", array_length(array) == 7);
 
     array_clear(array);

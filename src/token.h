@@ -65,7 +65,7 @@ typedef enum token_type_e {
     TOKEN_HASH,                             /* # */
     TOKEN_HASHHASH,                         /* ## */
     TOKEN_BACKSLASH,                        /* \ */
-    TOKEN_NEWLINE,                         /* \n */
+    TOKEN_NEWLINE,                          /* \n */
     TOKEN_SPACE,                            /* spaces */
     TOKEN_COMMENT,                          /* comment */
 

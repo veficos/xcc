@@ -32,7 +32,7 @@ void print_pp(preprocessor_t pp)
             printf(" ");
 
         printf("%s", tok2s(tok));
-        //token_destroy(tok);
+        token_destroy(tok);
     }
 }
 
