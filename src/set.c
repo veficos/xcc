@@ -91,21 +91,9 @@ set_t set_union(set_t a, set_t b)
     dict_iterator_t iter;
     dict_entry_t *entry;
 
-    if ((r = set_create()) == NULL) { 
+    if ((r = set_dup(a)) == NULL) { 
         goto done;
     }
-
-    if ((iter = dict_get_iterator((dict_t)a)) == NULL) { 
-        goto clean_set;
-    }
-
-    while (entry = dict_next(iter)) {
-        if (dict_add_or_find(r, entry->key) == NULL) {
-            goto clean_iter;
-        }
-    }
-    
-    dict_release_iterator(iter);
 
     if ((iter = dict_get_iterator((dict_t)b)) == NULL) {
         goto clean_set;
@@ -136,7 +124,7 @@ set_t set_intersection(set_t a, set_t b)
     dict_entry_t *entry;
     
     if (dict_size(a) > dict_size(b)) {
-        r = a; a = b; b = a;
+        r = a; a = b; b = r;
     }
 
     if ((r = set_create()) == NULL) {

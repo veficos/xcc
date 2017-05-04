@@ -124,6 +124,18 @@ void preprocessor_add_include_path(preprocessor_t pp, const char *path)
 }
 
 
+token_t preprocessor_expand(preprocessor_t pp)
+{
+    for (;;) {
+        token_t tok = __preprocessor_expand__(pp);
+        if (__preprocessor_parse_directive__(pp, tok)) {
+            continue;
+        }
+        return tok;
+    }
+}
+
+
 token_t preprocessor_peek(preprocessor_t pp)
 {
     token_t tok = preprocessor_next(pp);
@@ -135,22 +147,19 @@ token_t preprocessor_peek(preprocessor_t pp)
 token_t preprocessor_next(preprocessor_t pp)
 {
     for (;;) {
-        token_t tok = __preprocessor_expand__(pp);
-
-        if (__preprocessor_parse_directive__(pp, tok)) {
+        token_t tok = preprocessor_expand(pp);
+        if (tok->type == TOKEN_NEWLINE) {
             continue;
         }
-
         return tok;
     }
 }
 
 
-bool preprocessor_unget(preprocessor_t pp, token_t tok)
+void preprocessor_unget(preprocessor_t pp, token_t tok)
 {
     assert(tok && tok->type != TOKEN_END);
     lexer_unget(pp->lexer, tok);
-    return true;
 }
 
 
@@ -193,23 +202,28 @@ array_t __preprocessor_parse_function_like_argument__(preprocessor_t pp)
 
     int level = 0;
 
-    for (; !lexer_is_empty(pp->lexer); ) {
-        token_t token = lexer_peek(pp->lexer);
+    for (; ; ) {
+        token_t token = preprocessor_peek(pp);
+        if (token->type == TOKEN_END) {
+            break;
+        }
+
         if (token->type == TOKEN_L_PAREN) {
             level++;
         }
+        
         if (token->type == TOKEN_COMMA ||
             token->type == TOKEN_R_PAREN) {
             if (level == 0) {
                 break;
-            }else {
+            }else if (token->type == TOKEN_R_PAREN) {
                 level--;
             }
         }
 
         array_cast_append(token_t, arg, token);
 
-        lexer_next(pp->lexer);
+        preprocessor_next(pp);
     }
 
     return arg;
@@ -288,7 +302,7 @@ token_t __preprocessor_expand__(preprocessor_t pp)
         if (tok->type != TOKEN_IDENTIFIER || tok->type == TOKEN_NEWLINE) {
             return tok;
         }
-
+        
         if (tok->hideset && set_has(tok->hideset, tok->cs)) {
             return tok;
         }
@@ -336,7 +350,6 @@ token_t __preprocessor_expand__(preprocessor_t pp)
             break;
         } else if (macro->type == PP_MACRO_NATIVE) {
             macro->native_macro_fn(tok);
-
             break;
         } else {
             assert(false);
@@ -414,6 +427,60 @@ array_t __preprocessor_select__(map_t args, token_t index)
 }
 
 
+static inline
+token_t __preprocessor_stringify__(preprocessor_t pp, token_t template, array_t arg)
+{
+    token_t dst;
+    cstring_t cs = cstring_create_n(NULL, 24);
+    token_t *tokens;
+    size_t i, spaces;
+
+    array_foreach(arg, tokens, i) {
+        spaces = tokens[i]->spaces;
+        while (spaces--) {
+            cs = cstring_cat_ch(cs, ' ');
+        }
+        cs = cstring_cat_n(cs, tok2s(tokens[i]), strlen(tok2s(tokens[i])));
+    }
+
+    dst = token_dup(template);
+    if (dst->cs) {
+        cstring_destroy(dst->cs);
+    }
+
+    dst->type = TOKEN_CONSTANT_STRING;
+    dst->cs = cs;
+    return dst;
+}
+
+
+static inline 
+array_t __preprocessor_glue_token__(preprocessor_t pp, token_t left, token_t right)
+{
+    cstring_t cs;
+    cs = cstring_create(tok2s(left));
+    cs = cstring_cat_n(cs, tok2s(right), strlen(tok2s(right)));
+    
+    return lexer_tokenize(pp->lexer, STREAM_TYPE_STRING, cs);
+}
+
+
+static inline 
+void __preprocessor_glue__(preprocessor_t pp, array_t expand_tokens, token_t token)
+{
+    token_t last;
+    array_t glue_token;
+
+    last = array_cast_back(token_t, expand_tokens);
+
+    array_pop_back(expand_tokens);
+
+    glue_token = __preprocessor_glue_token__(pp, last, token);
+
+    array_extend(expand_tokens, glue_token);
+}
+
+
 static inline 
 array_t __preprocessor_substitute_function_like__(preprocessor_t pp, bool is_variadic, 
     array_t macro_body, map_t args)
@@ -425,25 +492,72 @@ array_t __preprocessor_substitute_function_like__(preprocessor_t pp, bool is_var
 
     n = array_length(macro_body);
 
+    {
+        token_t *tokens;
+        size_t i;
+        static int z = 0;
+        array_foreach(expand_tokens, tokens, i) {
+            printf("%d: debug: %s\n", z, tok2s(tokens[i]));
+        }
+        if (z == 23) {
+            printf("");
+        }
+        z++;
+    }
+
     for (i = 0; i < n; i++) {
         token_t token;
-        token_t *item;
         
         token = array_cast_at(token_t, macro_body, i);
         if (token->type == TOKEN_HASH) {
+            token_t stringify = array_cast_at(token_t, macro_body, ++i);
+            array_t replacements = __preprocessor_select__(args, stringify);
 
+            array_cast_append(token_t, expand_tokens, __preprocessor_stringify__(pp, token, replacements));
+            continue;
         } else if (token->type == TOKEN_HASHHASH) {
+            token_t stringify = array_cast_at(token_t, macro_body, ++i);
+            array_t replacements = __preprocessor_select__(args, stringify);
+            if (replacements == NULL) {
+                __preprocessor_glue__(pp, expand_tokens, stringify);
 
+            } else {
+                size_t j, n;
+
+                if (array_length(replacements) == 0) {
+                    i++;
+                    continue;
+                } else {
+                    stringify = array_cast_front(token_t, replacements);
+                    __preprocessor_glue__(pp, expand_tokens, stringify);
+
+                    for (j = 1, n = array_length(replacements); j < n; j++) {
+                        array_cast_append(token_t, expand_tokens, array_cast_at(token_t, replacements, j));
+                    }
+                    continue;
+                }
+            }
+            
         } else {
             array_t replacements = __preprocessor_select__(args, token);
-            if (replacements != NULL) {
-                array_extend(expand_tokens, replacements);
-                continue;
+            if (cstring_cmp(token->cs, "c") == 0) {
+                printf("");
             }
+            if (replacements != NULL) {
+                if (i + 1 < n && array_cast_at(token_t, macro_body, i + 1)->type == TOKEN_HASHHASH) {
+                    if (array_length(replacements) == 0) {
+                        i++;
+                    } else {
+                        array_extend(expand_tokens, replacements);
+                    }
+                } else {
+                    array_extend(expand_tokens, replacements);
+                }
+                continue;
+            } 
         }
 
-        item = array_push_back(expand_tokens);
-        *item = token_dup(token);
+        array_cast_append(token_t, expand_tokens, token);
     }
 
     return expand_tokens;
@@ -469,6 +583,7 @@ array_t __preprocessor_substitute__(preprocessor_t pp, macro_t macro, map_t args
     }
 
     __add_hide_set__(hideset, expand_tokens);
+
     return expand_tokens;
 }
 

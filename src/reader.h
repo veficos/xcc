@@ -9,10 +9,10 @@
 
 
 typedef struct array_s*     array_t;
-typedef struct option_s*    option_t;
-typedef struct diag_s*      diag_t;
 typedef struct stream_s*    stream_t;
 typedef struct cspool_s*    cspool_t;
+typedef struct option_s*    option_t;
+typedef struct diag_s*      diag_t;
 
 
 typedef enum stream_type_e {
@@ -33,8 +33,9 @@ typedef struct reader_s {
 } *reader_t;
 
 
-reader_t reader_create(diag_t diag, option_t op);
+reader_t reader_create(diag_t diag, option_t option);
 void reader_destroy(reader_t reader);
+size_t reader_level(reader_t reader);
 bool reader_push(reader_t reader, stream_type_t type, const unsigned char *s);
 int reader_get(reader_t reader);
 int reader_peek(reader_t reader);

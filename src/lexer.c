@@ -50,25 +50,20 @@ static inline void __lexer_remark_loc__(lexer_t lexer);
 lexer_t lexer_create(reader_t reader, option_t option, diag_t diag)
 {
     lexer_t lexer;
-    token_t tok;
-    array_t snapshots;
-
-    snapshots = array_create_n(sizeof(array_t), 12);
-
-    __lexer_make_stash__(snapshots);
-
-    tok = token_create();
+    time_t t;
 
     lexer = pmalloc(sizeof(struct lexer_s));
-
-    time_t timet = time(NULL);
-    localtime_r(&timet, &lexer->tm);
 
     lexer->reader = reader;
     lexer->option = option;
     lexer->diag = diag;
-    lexer->tok = tok;
-    lexer->snapshots = snapshots;
+    lexer->tok = token_create();
+    lexer->snapshots = array_create_n(sizeof(array_t), 12);
+
+    t = time(NULL);
+    localtime_r(&t, &lexer->tm);
+
+    __lexer_make_stash__(lexer->snapshots);
     return lexer;
 }
 
@@ -96,9 +91,19 @@ void lexer_destroy(lexer_t lexer)
 }
 
 
+bool lexer_push(lexer_t lexer, stream_type_t type, const unsigned char* s)
+{
+    return reader_push(lexer->reader, type, s);
+}
+
+
 token_t lexer_scan(lexer_t lexer)
 {
     int ch;
+
+    if (reader_peek(lexer->reader) == EOF) {
+        return __lexer_make_token__(lexer, TOKEN_END);
+    }
 
     __lexer_mark_loc__(lexer);
 
@@ -258,16 +263,49 @@ token_t lexer_scan(lexer_t lexer)
 }
 
 
+array_t lexer_tokenize(lexer_t lexer, stream_type_t type, const unsigned char *s)
+{
+    size_t level;
+    array_t tokens;
+    token_t tok;
+
+    level = reader_level(lexer->reader);
+
+    if (!reader_push(lexer->reader, type, s)) {
+        return NULL;
+    }
+    
+    lexer_stash(lexer);
+    tokens = array_create_n(sizeof(token_t), 2);
+    for (;;) {
+        tok = lexer_peek(lexer);
+        if (tok->type == TOKEN_END || reader_level(lexer->reader) <= level) {
+            break;
+        }
+
+        tok = lexer_next(lexer);
+        if (tok->type == TOKEN_NEWLINE) {
+            token_destroy(tok);
+            continue;
+        }
+
+        array_cast_append(token_t, tokens, tok);
+    }
+    lexer_unstash(lexer);
+    return tokens;
+}
+
+
 token_t lexer_next(lexer_t lexer)
 {
     token_t tok;
     array_t tokens;
     bool begin_of_line = false;
-    size_t leading_space = 0;
+    size_t spaces = 0;
 
     tokens = __lexer_last_snapshot__(lexer);
-    if (array_length(tokens) > 0) {
-        tok = array_cast_at(token_t, tokens, array_length(tokens) - 1);
+    if (!array_is_empty(tokens)) {
+        tok = array_cast_back(token_t, tokens);
         array_pop_back(tokens);
         return tok;
     }
@@ -277,13 +315,13 @@ token_t lexer_next(lexer_t lexer)
     tok = lexer_scan(lexer);
     while (tok->type == TOKEN_SPACE || 
            tok->type == TOKEN_COMMENT) {
-        leading_space += tok->spaces;
+        spaces += tok->spaces;
         token_destroy(tok);
         tok = lexer_scan(lexer);
     }
 
     tok->begin_of_line = begin_of_line;
-    tok->spaces = leading_space;
+    tok->spaces = spaces;
     return tok;
 }
 
@@ -309,14 +347,11 @@ bool lexer_try(lexer_t lexer, token_type_t tt)
 
 void lexer_unget(lexer_t lexer, token_t tok)
 {
-    array_t last;
-    token_t *item;
+    assert(tok != NULL && 
+           tok->type != TOKEN_END &&
+           array_length(lexer->snapshots) > 0);
 
-    assert(tok != NULL && tok->type != TOKEN_END && array_length(lexer->snapshots) > 0);
-
-    last = array_cast_at(array_t, lexer->snapshots, (array_length(lexer->snapshots) - 1));
-    item = array_push_back(last);
-    *item = tok;
+    array_cast_append(token_t, __lexer_last_snapshot__(lexer), tok);
 }
 
 

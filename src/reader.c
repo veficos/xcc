@@ -2,15 +2,15 @@
 
 #include "config.h"
 #include "array.h"
-#include "reader.h"
 #include "pmalloc.h"
 #include "cstring.h"
 #include "cspool.h"
 #include "utils.h"
+#include "reader.h"
 #include "diag.h"
 
 
-/*
+/**
 * Notices
 *
 * 1. C11 5.1.1: "\r\n" or "\r" are canonicalized to "\n". 
@@ -65,8 +65,8 @@ struct stream_s {
 };
 
 
-#define __WARNINGF__(fmt, ...)                                                      \
-    diag_warningf_with_line(reader->diag, stream->fn, stream->line, stream->column, \
+#define __WARNINGF__(fmt, ...)                                                              \
+    diag_warningf_with_line(reader->diag, stream->fn, stream->line, stream->column,    \
         stream->line_note, stream->column, 1, __VA_ARGS__);
 
 
@@ -88,12 +88,11 @@ static inline int __stream_peek__(stream_t stream);
 
 reader_t reader_create(diag_t diag, option_t option)
 {
-    reader_t reader;
-    reader = (reader_t)pmalloc(sizeof(struct reader_s));
+    reader_t reader = (reader_t) pmalloc(sizeof(struct reader_s));
     reader->diag = diag;
     reader->option = option;
     reader->pool = cspool_create();
-    reader->streams = array_create_n(sizeof(struct reader_s), READER_STREAM_DEPTH);
+    reader->streams = array_create_n(sizeof(struct stream_s), READER_STREAM_DEPTH);
     reader->last = NULL;
     return reader;
 }
@@ -118,6 +117,12 @@ void reader_destroy(reader_t reader)
 }
 
 
+size_t reader_level(reader_t reader)
+{
+    return array_length(reader->streams);
+}
+
+
 bool reader_push(reader_t reader, stream_type_t type, const unsigned char *s)
 {
     stream_t stream;
@@ -135,27 +140,27 @@ bool reader_push(reader_t reader, stream_type_t type, const unsigned char *s)
 
 void reader_pop(reader_t reader)
 {
-    stream_t streams;
+    assert(!array_is_empty(reader->streams));
 
-    assert(array_length(reader->streams) > 0);
-
-    streams = array_prototype(reader->streams, struct stream_s);
-    
-    __stream_uninit__(&(streams[array_length(reader->streams) - 1]));
+    __stream_uninit__(reader->last);
 
     array_pop_back(reader->streams);
 
-    reader->last = &(streams[array_length(reader->streams) - 1]);
+    if (array_is_empty(reader->streams)) {
+        reader->last = NULL;
+    } else {
+        reader->last = &(array_cast_back(struct stream_s, reader->streams));
+    }
 }
 
 
 int reader_get(reader_t reader)
 {
-    for (;;) {
+    for (;reader->last;) {
         int ch = __stream_next__(reader, reader->last);
 
         if (ch == EOF) {
-            if (array_length(reader->streams) == 1) {
+            if (array_length(reader->streams) == 0) {
                 return ch;
             }
             reader_pop(reader);
@@ -171,11 +176,11 @@ int reader_get(reader_t reader)
 
 int reader_peek(reader_t reader)
 {
-    for (;;) {
+    for (;reader->last;) {
         int ch = __stream_peek__(reader->last);
 
         if (ch == EOF) {
-            if (array_length(reader->streams) == 1) {
+            if (array_length(reader->streams) == 0) {
                 return ch;
             }
             reader_pop(reader);
@@ -214,18 +219,21 @@ bool reader_test(reader_t reader, int ch)
 
 linenote_t reader_linenote(reader_t reader)
 {
+    if (!reader->last) return NULL;
     return reader->last->line_note;
 }
 
 
 size_t reader_line(reader_t reader)
 {
+    if (!reader->last) return 0;
     return reader->last->line;
 }
 
 
 size_t reader_column(reader_t reader)
 {
+    if (!reader->last) return 0;
     return reader->last->column;
 }
 
@@ -238,6 +246,7 @@ bool reader_is_empty(reader_t reader)
 
 cstring_t reader_name(reader_t reader)
 {
+    if (!reader->last) return NULL;
     return reader->last->fn;
 }
 

@@ -14,6 +14,7 @@ typedef struct reader_s*    reader_t;
 typedef struct diag_s*      diag_t;
 typedef struct token_s*     token_t;
 typedef enum token_type_e   token_type_t;
+typedef enum stream_type_e  stream_type_t;
 
 
 typedef struct lexer_s {
@@ -28,6 +29,8 @@ typedef struct lexer_s {
 
 lexer_t lexer_create(reader_t reader, option_t option, diag_t diag);
 void lexer_destroy(lexer_t lexer);
+bool lexer_push(lexer_t lexer, stream_type_t type, const unsigned char* s);
+array_t lexer_tokenize(lexer_t lexer, stream_type_t type, const unsigned char *s);
 token_t lexer_scan(lexer_t lexer);
 token_t lexer_next(lexer_t lexer);
 token_t lexer_peek(lexer_t lexer);

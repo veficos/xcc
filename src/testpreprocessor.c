@@ -15,7 +15,7 @@ void print_pp(preprocessor_t pp)
 {
     unsigned int spaces;
     for (;;) {
-        token_t tok = preprocessor_next(pp);
+        token_t tok = preprocessor_expand(pp);
         if (tok->type == TOKEN_END) {
             token_destroy(tok);
             break;
@@ -30,6 +30,7 @@ void print_pp(preprocessor_t pp)
         spaces = tok->spaces;
         while (spaces--)
             printf(" ");
+            ;
 
         printf("%s", tok2s(tok));
         token_destroy(tok);
@@ -50,7 +51,7 @@ void test_preprocessor(void)
 
     reader = reader_create(diag, &option);
 
-    reader_push(reader, STREAM_TYPE_FILE, "1.c");
+    reader_push(reader, STREAM_TYPE_FILE, "turing.c");
 
     lexer = lexer_create(reader, &option, diag);
 

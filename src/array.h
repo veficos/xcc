@@ -49,7 +49,7 @@ typedef struct array_s {
     ((array)->nelts = 0)
 
 
-#define array_empty(array)                          \
+#define array_is_empty(array)                       \
     ((array)->nelts == 0)
 
 

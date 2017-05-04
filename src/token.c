@@ -113,7 +113,7 @@ token_t token_dup(token_t tok)
     ret = pmalloc(sizeof(struct token_s));
 
     ret->type = tok->type;
-    ret->hideset = set_dup(tok->hideset);
+    ret->hideset = set_create();// set_dup(tok->hideset);
     ret->begin_of_line = tok->begin_of_line;
     ret->spaces = tok->spaces;
     ret->cs = cstring_dup(tok->cs);

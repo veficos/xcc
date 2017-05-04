@@ -15,18 +15,16 @@
 static 
 void test_reader_case1()
 {
-    diag_t diag;
     reader_t reader;
     cstring_t cs;
-    struct option_s option;
+    diag_t diag = diag_create();
+    option_t option = option_create();
 
     const char *s = "Hello World\r"
                     " \n"
                     "\r\n";
 
-    diag = diag_create();
-
-    reader = reader_create(diag, &option);
+    reader = reader_create(diag, option);
     reader_push(reader, STREAM_TYPE_STRING, s);
 
     TEST_COND("reader_create()", reader != NULL);
@@ -70,6 +68,7 @@ void test_reader_case1()
 
     cstring_destroy(cs);
     reader_destroy(reader);
+    option_destroy(option);
     diag_destroy(diag);
 }
 
@@ -77,9 +76,10 @@ void test_reader_case1()
 static 
 void test_reader_case2()
 {
-    diag_t diag;
-    struct option_s option;
     reader_t reader;
+    diag_t diag = diag_create();
+    option_t option = option_create();
+
 
     const char *s = "#in\\\r"
         "clude<stdio.h>\r"
@@ -99,25 +99,22 @@ void test_reader_case2()
 
     int i;
 
-    diag = diag_create();
-   
-    reader = reader_create(diag, &option);
+  
+    reader = reader_create(diag, option);
     reader_push(reader, STREAM_TYPE_STRING, s);
 
     for (i = 0; ; i++) {
         int ch1 = reader_peek(reader);
         int ch2 = reader_get(reader);
         TEST_COND("reader_peek()", ch1 == ch2);
-        TEST_COND("reader_next()", ch2 == t[i]);
+        TEST_COND("reader_next()", (char)ch2 == t[i]);
         if (ch2 == EOF) {
             break;
-        }
-        if (ch1 != ch2) {
-            printf("");
         }
     }
 
     reader_destroy(reader);
+    option_destroy(option);
     diag_destroy(diag);
 }
 
@@ -125,16 +122,18 @@ void test_reader_case2()
 static
 void test_reader_case3()
 {
-    diag_t diag;
-    struct option_s option;
     reader_t reader;
+    diag_t diag = diag_create();
+    option_t option = option_create();
     cstring_t cs;
     const char *s =" printf(\"HelloWorld\"); \\ f";
 
-    diag = diag_create();
     cs = cstring_create_n(NULL, 24);
-    reader = reader_create(diag, &option);
+
+    
+    reader = reader_create(diag, option);
     reader_push(reader, STREAM_TYPE_STRING, s);
+    reader_push(reader, STREAM_TYPE_FILE, "2.c");
 
     for (;;) {
         int ch = reader_get(reader);
@@ -145,10 +144,10 @@ void test_reader_case3()
     }
 
     printf("%s", cs);
-
+    cstring_destroy(cs);
     reader_destroy(reader);
     diag_destroy(diag);
-    cstring_destroy(cs);
+    option_destroy(option);
 }
 
 
