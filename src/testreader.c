@@ -64,7 +64,7 @@ void test_reader_case1()
     TEST_COND("reader_line()", reader_line(reader) == 4);
     TEST_COND("reader_column()", reader_column(reader) == 1);
     TEST_COND("reader_next()", reader_get(reader) == EOF);
-    TEST_COND("reader_column()", reader_column(reader) == 1);
+    TEST_COND("reader_column()", reader_column(reader) == 0);
 
     cstring_destroy(cs);
     reader_destroy(reader);

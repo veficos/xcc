@@ -22,7 +22,7 @@ typedef struct lexer_s {
     reader_t reader;
     diag_t diag;
     token_t tok;        /* current token */
-    array_t snapshots;
+    array_t stashs;
     struct tm tm;
 } *lexer_t;
 

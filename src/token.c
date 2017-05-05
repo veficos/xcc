@@ -99,6 +99,7 @@ void token_init(token_t token)
     set_clear(token->hideset);
     
     token->spaces = 0;
+
     token->begin_of_line = false;
 
     source_location_mark(token->loc, 0, 0, NULL, NULL);

@@ -138,6 +138,13 @@ bool reader_push(reader_t reader, stream_type_t type, const unsigned char *s)
 }
 
 
+time_t reader_mt(reader_t reader)
+{
+    if (reader->last == NULL) return 0;
+    return reader->last->mt;
+}
+
+
 void reader_pop(reader_t reader)
 {
     assert(!array_is_empty(reader->streams));
@@ -156,40 +163,30 @@ void reader_pop(reader_t reader)
 
 int reader_get(reader_t reader)
 {
-    for (;reader->last;) {
+    if (reader->last != NULL) {
         int ch = __stream_next__(reader, reader->last);
 
         if (ch == EOF) {
-            if (array_length(reader->streams) == 0) {
-                return ch;
-            }
             reader_pop(reader);
-            continue;
         }
 
         return ch;
     }
-
     return EOF;
 }
 
 
 int reader_peek(reader_t reader)
 {
-    for (;reader->last;) {
+    if (reader->last != NULL) {
         int ch = __stream_peek__(reader->last);
 
         if (ch == EOF) {
-            if (array_length(reader->streams) == 0) {
-                return ch;
-            }
             reader_pop(reader);
-            continue;
         }
 
         return ch;
     }
-
     return EOF;
 }
 
@@ -219,35 +216,41 @@ bool reader_test(reader_t reader, int ch)
 
 linenote_t reader_linenote(reader_t reader)
 {
-    if (!reader->last) return NULL;
+    if (reader->last == NULL) return NULL;
     return reader->last->line_note;
 }
 
 
 size_t reader_line(reader_t reader)
 {
-    if (!reader->last) return 0;
+    if (reader->last == NULL) return 0;
     return reader->last->line;
 }
 
 
 size_t reader_column(reader_t reader)
 {
-    if (!reader->last) return 0;
+    if (reader->last == NULL) return 0;
     return reader->last->column;
-}
-
-
-bool reader_is_empty(reader_t reader)
-{
-    return reader_peek(reader) == EOF;
 }
 
 
 cstring_t reader_name(reader_t reader)
 {
-    if (!reader->last) return NULL;
+    if (reader->last == NULL) return NULL;
     return reader->last->fn;
+}
+
+
+bool reader_is_empty(reader_t reader)
+{
+    return (reader_peek(reader) == EOF) && (reader_level(reader) == 0);
+}
+
+
+bool reader_is_eof(reader_t reader)
+{
+    return (reader_peek(reader) == EOF);
 }
 
 

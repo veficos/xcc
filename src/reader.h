@@ -37,6 +37,7 @@ reader_t reader_create(diag_t diag, option_t option);
 void reader_destroy(reader_t reader);
 size_t reader_level(reader_t reader);
 bool reader_push(reader_t reader, stream_type_t type, const unsigned char *s);
+time_t reader_mt(reader_t reader);
 int reader_get(reader_t reader);
 int reader_peek(reader_t reader);
 void reader_unget(reader_t reader, int ch);
@@ -46,6 +47,7 @@ linenote_t reader_linenote(reader_t reader);
 size_t reader_line(reader_t reader);
 size_t reader_column(reader_t reader);
 bool reader_is_empty(reader_t reader);
+bool reader_is_eof(reader_t reader);
 cstring_t reader_name(reader_t reader);
 
 cstring_t linenode2cs(linenote_t linenote);

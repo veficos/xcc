@@ -14,6 +14,7 @@
 
 typedef enum token_type_e {
     TOKEN_UNKNOWN = -1,
+    TOKEN_EOF,
     TOKEN_END,
     
     TOKEN_L_SQUARE,                         /* [ */
