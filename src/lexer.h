@@ -30,13 +30,15 @@ typedef struct lexer_s {
 lexer_t lexer_create(reader_t reader, option_t option, diag_t diag);
 void lexer_destroy(lexer_t lexer);
 bool lexer_push(lexer_t lexer, stream_type_t type, const unsigned char* s);
-array_t lexer_tokenize(lexer_t lexer, stream_type_t type, const unsigned char *s);
+array_t lexer_tokenize(lexer_t lexer);
 token_t lexer_scan(lexer_t lexer);
-token_t lexer_next(lexer_t lexer);
+token_t lexer_get(lexer_t lexer);
 token_t lexer_peek(lexer_t lexer);
+void lexer_eat(lexer_t lexer);
 void lexer_unget(lexer_t lexer, token_t tok);
 bool lexer_try(lexer_t lexer, token_type_t tt);
 bool lexer_is_empty(lexer_t lexer);
+bool lexer_is_eos(lexer_t lexer);
 
 void lexer_stash(lexer_t lexer);
 void lexer_unstash(lexer_t lexer);

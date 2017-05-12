@@ -5,8 +5,6 @@
 
 #define A() 123
 
-A()
 
-DEFER(A)()
 OBSTRUCT(DEFER(A)())
 EXPAND(DEFER(A)())

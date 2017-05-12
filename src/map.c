@@ -46,7 +46,7 @@ void __free_fn__(void *privdata, void *val) {
 
 dict_type_t __map_dict_type__ = {
     __hash_fn__,
-    NULL,
+    __key_dup__,
     NULL,
     __compare_fn__,
     __free_fn__,

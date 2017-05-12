@@ -44,6 +44,7 @@ typedef struct macro_s {
         native_macro_pt native_macro_fn;
     };
 
+    token_t name_token;
 } *macro_t;
 
 
@@ -64,7 +65,6 @@ typedef struct preprocessor_s {
     set_t include_guard;
     set_t once_guard;
 
-    array_t backup;
     diag_t diag;
 } *preprocessor_t;
 
@@ -74,7 +74,7 @@ void preprocessor_destroy(preprocessor_t pp);
 void preprocessor_add_include_path(preprocessor_t pp, const char *path);
 token_t preprocessor_expand(preprocessor_t pp);
 token_t preprocessor_peek(preprocessor_t pp);
-token_t preprocessor_next(preprocessor_t pp);
+token_t preprocessor_get(preprocessor_t pp);
 void preprocessor_unget(preprocessor_t pp, token_t tok);
 
 

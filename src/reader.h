@@ -47,10 +47,10 @@ linenote_t reader_linenote(reader_t reader);
 size_t reader_line(reader_t reader);
 size_t reader_column(reader_t reader);
 bool reader_is_empty(reader_t reader);
-bool reader_is_eof(reader_t reader);
+bool reader_is_eos(reader_t reader);
 cstring_t reader_name(reader_t reader);
 
-cstring_t linenode2cs(linenote_t linenote);
+cstring_t linenote2cs(linenote_t linenote);
 
 
 #endif

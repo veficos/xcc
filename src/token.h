@@ -19,8 +19,8 @@ typedef enum token_type_e {
     
     TOKEN_L_SQUARE,                         /* [ */
     TOKEN_R_SQUARE,                         /* ] */
-    TOKEN_L_PAREN,                          /* ) */
-    TOKEN_R_PAREN,                          /* ( */
+    TOKEN_L_PAREN,                          /* ( */
+    TOKEN_R_PAREN,                          /* ) */
     TOKEN_L_BRACE,                          /* { */
     TOKEN_R_BRACE,                          /* } */
     TOKEN_PERIOD,                           /* . */
@@ -184,6 +184,7 @@ typedef struct token_s {
     set_t hideset;          /* used by the preprocessor for macro expansion */
     bool begin_of_line;     /* true if the token is at the beginning of a line */
     size_t spaces;          /* >0 if the token has a leading space */
+    bool is_vararg;
 } *token_t;
 
 

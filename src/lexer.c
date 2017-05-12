@@ -38,6 +38,7 @@ static inline token_t __lexer_parse_string__(lexer_t lexer, encoding_type_t ent)
 static inline token_t __lexer_parse_identifier__(lexer_t lexer);
 static inline bool __lexer_parse_white_space__(lexer_t lexer);
 static inline void __lexer_parse_comment__(lexer_t lexer);
+token_t __lexer_get__(lexer_t lexer);
 
 static inline void __lexer_make_stash__(array_t a);
 static inline array_t __lexer_last_snapshot__(lexer_t lexer);
@@ -63,7 +64,6 @@ lexer_t lexer_create(reader_t reader, option_t option, diag_t diag)
     t = time(NULL);
     localtime_r(&t, &lexer->tm);
 
-    __lexer_make_stash__(lexer->stashs);
     return lexer;
 }
 
@@ -93,7 +93,13 @@ void lexer_destroy(lexer_t lexer)
 
 bool lexer_push(lexer_t lexer, stream_type_t type, const unsigned char* s)
 {
-    return reader_push(lexer->reader, type, s);
+    if (!reader_push(lexer->reader, type, s)) {
+        return false;
+    }
+
+    lexer_stash(lexer);
+
+    return true;
 }
 
 
@@ -248,7 +254,6 @@ token_t lexer_scan(lexer_t lexer)
         if (reader_is_empty(lexer->reader)) {
             return __lexer_make_token__(lexer, TOKEN_END);
         }
-        lexer_unstash(lexer);
         return __lexer_make_token__(lexer, TOKEN_EOF);
     default:
         if (ISALPHA(ch) || (0x80 <= ch && ch <= 0xfd) || ch == '_' || ch == '$') {
@@ -263,27 +268,21 @@ token_t lexer_scan(lexer_t lexer)
 }
 
 
-array_t lexer_tokenize(lexer_t lexer, stream_type_t type, const unsigned char *s)
+array_t lexer_tokenize(lexer_t lexer)
 {
-    size_t level;
     array_t tokens;
     token_t tok;
 
-    level = reader_level(lexer->reader);
-
-    if (!reader_push(lexer->reader, type, s)) {
-        return NULL;
-    }
-    
-    lexer_stash(lexer);
     tokens = array_create_n(sizeof(token_t), 2);
     for (;;) {
         tok = lexer_peek(lexer);
-        if (tok->type == TOKEN_EOF) {
+        
+        if (tok->type == TOKEN_EOF || tok->type == TOKEN_END) {
+            lexer_get(lexer);
             break;
         }
         
-        lexer_next(lexer);
+        lexer_get(lexer);
         if (tok->type == TOKEN_NEWLINE) {
             token_destroy(tok);
             continue;
@@ -295,39 +294,26 @@ array_t lexer_tokenize(lexer_t lexer, stream_type_t type, const unsigned char *s
 }
 
 
-token_t lexer_next(lexer_t lexer)
+token_t lexer_get(lexer_t lexer)
 {
     token_t token;
-    array_t tokens;
-    bool begin_of_line = false;
-    size_t spaces = 0;
 
-    tokens = __lexer_last_snapshot__(lexer);
-    if (!array_is_empty(tokens)) {
-        token = array_cast_back(token_t, tokens);
-        array_pop_back(tokens);
-        return token;
+    for (;;) {
+        token = __lexer_get__(lexer);
+        //if (token->type == TOKEN_EOF) {
+        //    token_destroy(token);
+        //    continue;
+        //}
+        break;
     }
-    
-    begin_of_line = reader_column(lexer->reader) == 1 ? true : false;
-
-    token = lexer_scan(lexer);
-    while (token->type == TOKEN_SPACE || 
-           token->type == TOKEN_COMMENT) {
-        spaces += token->spaces;
-        token_destroy(token);
-        token = lexer_scan(lexer);
-    }
-
-    token->begin_of_line = begin_of_line;
-    token->spaces = spaces;
+   
     return token;
 }
 
 
 token_t lexer_peek(lexer_t lexer)
 {
-    token_t tok = lexer_next(lexer);
+    token_t tok = lexer_get(lexer);
     if (tok->type != TOKEN_END) lexer_unget(lexer, tok);
     return tok;
 }
@@ -337,10 +323,18 @@ bool lexer_try(lexer_t lexer, token_type_t tt)
 {
     token_t tok = lexer_peek(lexer);
     if (tok->type == tt) {
-        lexer_next(lexer);
+        token_destroy(tok);
+        lexer_get(lexer);
         return true;
     }
     return false;
+}
+
+
+void lexer_eat(lexer_t lexer)
+{
+    token_t token = lexer_get(lexer);
+    token_destroy(token);
 }
 
 
@@ -358,6 +352,15 @@ bool lexer_is_empty(lexer_t lexer)
 {
     token_t token = lexer_peek(lexer);
     if (token->type == TOKEN_END) return true;
+    return false;
+}
+
+
+bool lexer_is_eos(lexer_t lexer)
+{
+    token_t token = lexer_peek(lexer);
+    if (token->type == TOKEN_END || 
+        token->type == TOKEN_EOF) return true;
     return false;
 }
 
@@ -399,6 +402,40 @@ cstring_t lexer_time(lexer_t lexer)
     char buf[10];
     strftime(buf, sizeof(buf), "%T", &lexer->tm);
     return cstring_create(buf);
+}
+
+
+token_t __lexer_get__(lexer_t lexer)
+{
+    token_t token;
+    array_t tokens;
+    bool begin_of_line = false;
+    size_t spaces = 0;
+
+    tokens = __lexer_last_snapshot__(lexer);
+    if (!array_is_empty(tokens)) {
+        token = array_cast_back(token_t, tokens);
+        array_pop_back(tokens);
+        return token;
+    }
+
+    begin_of_line = reader_column(lexer->reader) == 1 ? true : false;
+
+    token = lexer_scan(lexer);
+    while (token->type == TOKEN_SPACE ||
+        token->type == TOKEN_COMMENT) {
+        spaces += token->spaces;
+        token_destroy(token);
+        token = lexer_scan(lexer);
+    }
+
+    if (token->type == TOKEN_EOF) {
+        lexer_unstash(lexer);
+    }
+
+    token->begin_of_line = begin_of_line;
+    token->spaces = spaces;
+    return token;
 }
 
 
@@ -661,7 +698,7 @@ bool __lexer_parse_white_space__(lexer_t lexer)
 
     for (;;) {
         ch = reader_peek(lexer->reader);
-        if (!ISSPACE(ch) || ch == '\n' || reader_is_eof(lexer->reader)) {
+        if (!ISSPACE(ch) || ch == '\n' || reader_is_eos(lexer->reader)) {
             break;
         }
         reader_get(lexer->reader);

@@ -51,9 +51,9 @@ void test_preprocessor(void)
 
     reader = reader_create(diag, &option);
 
-    reader_push(reader, STREAM_TYPE_FILE, "turing.c");
-
     lexer = lexer_create(reader, &option, diag);
+
+    lexer_push(lexer, STREAM_TYPE_FILE, "1.c");
 
     pp = preprocessor_create(lexer, &option, diag);
 

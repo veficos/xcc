@@ -178,16 +178,11 @@ int reader_get(reader_t reader)
 
 int reader_peek(reader_t reader)
 {
+    int ch = EOF;
     if (reader->last != NULL) {
-        int ch = __stream_peek__(reader->last);
-
-        if (ch == EOF) {
-            reader_pop(reader);
-        }
-
-        return ch;
+        ch = __stream_peek__(reader->last);
     }
-    return EOF;
+    return ch;
 }
 
 
@@ -248,13 +243,13 @@ bool reader_is_empty(reader_t reader)
 }
 
 
-bool reader_is_eof(reader_t reader)
+bool reader_is_eos(reader_t reader)
 {
     return (reader_peek(reader) == EOF);
 }
 
 
-cstring_t linenode2cs(linenote_t linenote)
+cstring_t linenote2cs(linenote_t linenote)
 {
     const unsigned char *p = (const unsigned char *)linenote;
 
@@ -408,7 +403,6 @@ nextch:
                 }
 
                 stream->pc = pc + 1;
-                stream->line_note = stream->pc;
                 STREAM_LINE_ADVANCE(stream);
                 goto nextch;
             }

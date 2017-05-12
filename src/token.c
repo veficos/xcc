@@ -61,6 +61,7 @@ struct token_dictionary_s {
     { TOKEN_NEWLINE,             "TOKEN_NEWLINE",             "\\n"      },
     { TOKEN_SPACE,               "TOKEN_SPACE",               "spaces"   },
     { TOKEN_COMMENT,             "TOKEN_COMMENT",             "comment"  },
+    { TOKEN_EOF,                 "TOKEN_EOF",                 "eof"      },
 };
 
 
@@ -70,37 +71,42 @@ token_t token_create(void)
     tok->type = TOKEN_UNKNOWN;
     tok->cs = cstring_create_n(NULL, DEFUALT_LITERALS_LENGTH);
     tok->loc = source_location_create();
-    tok->hideset = set_create();
+    tok->hideset = NULL;
     tok->spaces = 0;
+    tok->is_vararg = false;
     return tok;
 }
 
 
-void token_destroy(token_t tok)
+void token_destroy(token_t token)
 {
-    assert(tok != NULL);
+    assert(token != NULL);
 
-    source_location_destroy(tok->loc);
+    source_location_destroy(token->loc);
 
-    set_destroy(tok->hideset);
+    if (token->hideset != NULL) set_destroy(token->hideset);
 
-    cstring_destroy(tok->cs);
+    cstring_destroy(token->cs);
 
-    pfree(tok);
+    pfree(token);
 }
 
 
 void token_init(token_t token)
 {
-    token->type = TOKEN_UNKNOWN;
-
     cstring_clear(token->cs);
 
-    set_clear(token->hideset);
+    if (token->hideset != NULL) set_destroy(token->hideset);
+
+    token->type = TOKEN_UNKNOWN;
+
+    token->hideset = NULL;
     
     token->spaces = 0;
 
     token->begin_of_line = false;
+
+    token->is_vararg = false;
 
     source_location_mark(token->loc, 0, 0, NULL, NULL);
 }
@@ -114,11 +120,12 @@ token_t token_dup(token_t tok)
     ret = pmalloc(sizeof(struct token_s));
 
     ret->type = tok->type;
-    ret->hideset = set_create();// set_dup(tok->hideset);
+    ret->hideset = tok->hideset ? set_dup(tok->hideset) : NULL;// set_dup(tok->hideset);
     ret->begin_of_line = tok->begin_of_line;
     ret->spaces = tok->spaces;
     ret->cs = cstring_dup(tok->cs);
     ret->loc = source_location_dup(tok->loc);
+    ret->is_vararg = false;
     return ret;
 }
 

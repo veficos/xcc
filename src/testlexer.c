@@ -25,12 +25,11 @@ void test_lexer(void)
 
     reader = reader_create(diag, &option);
 
-    reader_push(reader, STREAM_TYPE_FILE, "5.h");
-
     lexer = lexer_create(reader, &option, diag);
+    lexer_push(lexer, STREAM_TYPE_FILE, "3.c");
+    lexer_push(lexer, STREAM_TYPE_STRING, "1.c");
 
-    lexer_peek(lexer);
-    while (tok = lexer_next(lexer)) {
+    while (tok = lexer_get(lexer)) {
         if (tok->type == TOKEN_END) {
             token_destroy(tok);
             break;
