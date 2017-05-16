@@ -269,7 +269,7 @@ bool __preprocessor_parse_function_like_arguments__(preprocessor_t pp,
 
         if (separator->type != TOKEN_COMMA) {
             ERRORF_WITH_TOKEN(macroname_token,
-                "unterminated argument list invoking macro \"%s\"", tok2s(macroname_token));
+                "unterminated argument list invoking macro \"%s\"", token_as_text(macroname_token));
             return false;
         }
 
@@ -299,7 +299,7 @@ bool __preprocessor_expand_function_macro__(preprocessor_t pp, token_t token, ma
     r_paren_token = lexer_peek(pp->lexer);
     if (r_paren_token->type != TOKEN_R_PAREN) {
         ERRORF_WITH_TOKEN(token,
-            "unterminated argument list invoking macro \"%s\"", tok2s(token));
+            "unterminated argument list invoking macro \"%s\"", token_as_text(token));
         return false;
     }
     lexer_get(pp->lexer);
@@ -447,7 +447,7 @@ token_t __preprocessor_stringify__(preprocessor_t pp, token_t template, array_t 
         while (spaces--) {
             cs = cstring_cat_ch(cs, ' ');
         }
-        cs = cstring_cat_n(cs, tok2s(tokens[i]), strlen(tok2s(tokens[i])));
+        cs = cstring_cat_n(cs, token_as_text(tokens[i]), strlen(token_as_text(tokens[i])));
     }
 
     dst = token_dup(template);
@@ -465,8 +465,8 @@ static inline
 array_t __preprocessor_glue_token__(preprocessor_t pp, token_t left, token_t right)
 {
     cstring_t cs;
-    cs = cstring_create(tok2s(left));
-    cs = cstring_cat_n(cs, tok2s(right), strlen(tok2s(right)));
+    cs = cstring_create(token_as_text(left));
+    cs = cstring_cat_n(cs, token_as_text(right), strlen(token_as_text(right)));
     lexer_push(pp->lexer, STREAM_TYPE_STRING, cs);
     return lexer_tokenize(pp->lexer);
 }
@@ -662,7 +662,7 @@ bool __preprocessor_add_function_like_param__(preprocessor_t pp,
     array_foreach(params, tokens, i) {
         if (cstring_cmp(tokens[i]->cs, identifier_token->cs) == 0) {
             ERRORF_WITH_TOKEN(identifier_token,
-                "duplicate macro parameter \"%s\"", tok2s(identifier_token));
+                "duplicate macro parameter \"%s\"", token_as_text(identifier_token));
             return false;
         }
     }
@@ -739,7 +739,7 @@ bool __preprocessor_parse_function_like_params__(preprocessor_t pp, array_t para
             return false;
         default:
             ERRORF_WITH_TOKEN(token, 
-                "\"%s\" may not appear in macro parameter list", tok2s(token));
+                "\"%s\" may not appear in macro parameter list", token_as_text(token));
             return false;
         }
     }

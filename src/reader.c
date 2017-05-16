@@ -94,6 +94,7 @@ reader_t reader_create(diag_t diag, option_t option)
     reader->pool = cspool_create();
     reader->streams = array_create_n(sizeof(struct stream_s), READER_STREAM_DEPTH);
     reader->last = NULL;
+    reader->lastch = ~EOF;
     return reader;
 }
 
@@ -140,7 +141,7 @@ bool reader_push(reader_t reader, stream_type_t type, const unsigned char *s)
 
 time_t reader_mt(reader_t reader)
 {
-    if (reader->last == NULL) return 0;
+    assert(reader->last != NULL);
     return reader->last->mt;
 }
 
@@ -163,16 +164,18 @@ void reader_pop(reader_t reader)
 
 int reader_get(reader_t reader)
 {
-    if (reader->last != NULL) {
-        int ch = __stream_next__(reader, reader->last);
+    int ch = EOF;
 
-        if (ch == EOF) {
-            reader_pop(reader);
-        }
-
-        return ch;
+    if (reader->lastch == EOF) {
+        reader_pop(reader);
     }
-    return EOF;
+
+    if (reader->last != NULL) {
+        ch = __stream_next__(reader, reader->last);
+    }
+
+    reader->lastch = ch;
+    return ch;
 }
 
 
@@ -211,28 +214,28 @@ bool reader_test(reader_t reader, int ch)
 
 linenote_t reader_linenote(reader_t reader)
 {
-    if (reader->last == NULL) return NULL;
+    assert(reader->last != NULL);
     return reader->last->line_note;
 }
 
 
 size_t reader_line(reader_t reader)
 {
-    if (reader->last == NULL) return 0;
+    assert(reader->last != NULL);
     return reader->last->line;
 }
 
 
 size_t reader_column(reader_t reader)
 {
-    if (reader->last == NULL) return 0;
+    assert(reader->last != NULL);
     return reader->last->column;
 }
 
 
 cstring_t reader_name(reader_t reader)
 {
-    if (reader->last == NULL) return NULL;
+    assert(reader->last != NULL);
     return reader->last->fn;
 }
 

@@ -3,16 +3,26 @@
 #ifndef __CONFIG__H__
 #define __CONFIG__H__
 
-
 #define     DEBUG
-#define     USE_MALLOC
-//#define USE_CONSOLE_COLOR
 
-#if defined(WIN32) || defined(_WIN32)
-#define _CRT_SECURE_NO_WARNINGS     1
-#define _CRT_NONSTDC_NO_DEPRECATE   1
-#define _CRTDBG_MAP_ALLOC 
-#include <crtdbg.h>
+#if defined(DEBUG)
+#   define     USE_MALLOC
+#endif
+
+#if defined(WIN32) || defined(_WIN32) || defined(WINDOWS)
+#   if defined(DEBUG)
+#      define _CRT_SECURE_NO_WARNINGS     1
+#      define _CRT_NONSTDC_NO_DEPRECATE   1
+#      define _CRTDBG_MAP_ALLOC 
+#      include <crtdbg.h>
+#   endif 
+
+#   define localtime_r(tm, tmt) localtime_s(tmt, tm);
+
+#else
+
+#   define USE_CONSOLE_COLOR
+
 #endif
 
 
@@ -44,16 +54,11 @@ typedef enum {
 
 
 #ifndef va_copy 
-# ifdef __va_copy 
-# define va_copy(DEST,SRC)  __va_copy((DEST),(SRC)) 
-# else 
-# define va_copy(DEST, SRC) memcpy((&DEST), (&SRC), sizeof(va_list)) 
-# endif 
-#endif 
-
-
-#if defined(WIN32) || defined(_WIN32)
-#define localtime_r(tm, tmt) localtime_s(tmt, tm);
+#   ifdef __va_copy 
+#       define va_copy(DEST,SRC)  __va_copy((DEST),(SRC)) 
+#   else 
+#       define va_copy(DEST, SRC) memcpy((&DEST), (&SRC), sizeof(va_list)) 
+#   endif 
 #endif
 
 

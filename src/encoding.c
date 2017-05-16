@@ -139,18 +139,20 @@ bool __read_rune__(uint32_t *rune, size_t *rune_size, char *s, int n) {
     case 2:
         *rune = ((s[0] & 0x1F) << 6) | (s[1] & 0x3F);
         *rune_size = 2;
-        return true;
+        break;
     case 3:
         *rune = ((s[0] & 0xF) << 12) | ((s[1] & 0x3F) << 6) | (s[2] & 0x3F);
         *rune_size = 3;
-        return true;
+        break;
     case 4:
         *rune = ((s[0] & 0x7) << 18) | ((s[1] & 0x3F) << 12) | ((s[2] & 0x3F) << 6) | (s[3] & 0x3F);
         *rune_size = 4;
-        return true;
+        break;
+    default:
+        return false;
     }
 
-    return false;
+    return true;
 }
 
 

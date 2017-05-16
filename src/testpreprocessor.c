@@ -16,7 +16,7 @@ void print_pp(preprocessor_t pp)
     unsigned int spaces;
     for (;;) {
         token_t tok = preprocessor_expand(pp);
-        if (tok->type == TOKEN_END) {
+        if (tok->type == TOKEN_END || tok->type == TOKEN_EOF) {
             token_destroy(tok);
             break;
         }
@@ -32,7 +32,7 @@ void print_pp(preprocessor_t pp)
             printf(" ");
             ;
 
-        printf("%s", tok2s(tok));
+        printf("%s", token_as_text(tok));
         token_destroy(tok);
     }
 }

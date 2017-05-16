@@ -8,6 +8,7 @@
 
 
 typedef struct diag_s*          diag_t;
+typedef struct option_s*        option_t;
 typedef struct reader_s*        reader_t;
 typedef struct lexer_s*         lexer_t;
 typedef struct preprocessor_s*  preprocessor_t;
@@ -26,10 +27,6 @@ typedef struct stage_s {
     lexer_t lexer;
     preprocessor_t pp;
 } *stage_t;
-
-
-#define STAGE_READER(stage)\
-    ((stage)->reader)
 
 
 #endif

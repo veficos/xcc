@@ -145,7 +145,7 @@ const char *tok2id(token_t tok)
 }
 
 
-const char *tok2s(token_t tok)
+const char *token_as_text(token_t tok)
 {
     size_t i, length;
     length = sizeof(token_dictionary) / sizeof(struct token_dictionary_s);

@@ -200,7 +200,7 @@ void token_init(token_t token);
 void token_destroy(token_t tok);
 token_t token_dup(token_t tok);
 const char *tok2id(token_t tok);
-const char *tok2s(token_t tok);
+const char *token_as_text(token_t tok);
 
 
 source_location_t source_location_create(void);

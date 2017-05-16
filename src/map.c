@@ -108,9 +108,9 @@ unsigned long map_scan(map_t map, map_scan_pt map_fn, void *privdata)
 {
     void *p[2] = { map_fn, privdata };
     unsigned long v = 0;
-
     do {
         v = dict_scan((dict_t)map, v, dict_scan_fn, NULL, p);
     } while (v);
     return v;
 }
+

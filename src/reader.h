@@ -30,6 +30,7 @@ typedef struct reader_s {
     array_t streams;
     stream_t last;
     cspool_t pool;
+    int lastch;
 } *reader_t;
 
 
