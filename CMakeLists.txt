@@ -1,18 +1,12 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(occ)
+project(cc)
 
-set(CMAKE_C_FLAGS -g -ansi -Wall -Wno-unused-function)
-# set(CMAKE_C_STANDARD)
+set(CMAKE_C_STANDARD 90)
 
-set(TESTREADER src/array.c		\
-			   src/diag.c		\
-			   src/encoding.c	\
-			   src/token.c		\
-			   src/cstring.c	\
-			   src/pmalloc.c	\
-			   src/reader.c		\
-			   src/vpfmt.c		\
-			   src/testreader.c)
+set(TESTARRAY_FILES
+        src/pmalloc.c
+        src/array.c
+        src/testarray.c)
 
-add_executable(testreader ${TESTREADER})
+add_executable(testarray ${TESTARRAY_FILES})
