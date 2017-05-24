@@ -5,8 +5,7 @@
 #include "cspool.h"
 
 
-static
-void test_cspool(void)
+static void test_cspool(void)
 {
     cspool_t pool;
     cstring_t cs;

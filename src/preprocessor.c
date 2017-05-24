@@ -6,7 +6,7 @@
 #include "pmalloc.h"
 #include "token.h"
 #include "lexer.h"
-#include "diag.h"
+#include "diagnostor.h"
 #include "map.h"
 #include "set.h"
 #include "preprocessor.h"

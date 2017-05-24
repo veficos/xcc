@@ -4,7 +4,7 @@
 #include "pmalloc.h"
 #include "token.h"
 #include "reader.h"
-#include "diag.h"
+#include "diagnostor.h"
 #include "lexer.h"
 #include "array.h"
 #include "utils.h"

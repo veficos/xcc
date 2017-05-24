@@ -3,7 +3,7 @@
 #include "config.h"
 #include "number.h"
 #include "option.h"
-#include "diag.h"
+#include "diagnostor.h"
 #include "utils.h"
 #include "token.h"
 

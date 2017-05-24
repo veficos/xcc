@@ -7,7 +7,7 @@
 #include "cspool.h"
 #include "utils.h"
 #include "reader.h"
-#include "diag.h"
+#include "diagnostor.h"
 
 
 /**
@@ -90,7 +90,7 @@ reader_t reader_create(diag_t diag, option_t option)
 {
     reader_t reader = (reader_t) pmalloc(sizeof(struct reader_s));
     reader->diag = diag;
-    reader->option = option;
+    reader->opts = option;
     reader->pool = cspool_create();
     reader->streams = array_create_n(sizeof(struct stream_s), READER_STREAM_DEPTH);
     reader->last = NULL;

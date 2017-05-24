@@ -2,7 +2,6 @@
 
 #include "config.h"
 #include "color.h"
-#include "diag.h"
 #include "pmalloc.h"
 
 
@@ -11,7 +10,8 @@
 static inline
 void __default_alloc_oom_handler__(const char *fn, long line, void *ud)
 {
-    diag_panic("%s:%d: " BRUSH_RED("error: ") "out of memory.", fn, line);
+    fprintf(stderr, "%s:%d: " BRUSH_RED("error: ") "out of memory.", fn, line);
+    exit(-1);
 }
 
 

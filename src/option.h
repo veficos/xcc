@@ -21,6 +21,10 @@ typedef struct option_s {
 } *option_t;
 
 
+typedef struct reader_option_s {
+    bool w_backslash_newline_space;
+} *reader_option_t;
+
 static inline
 void option_init(option_t op)
 {

@@ -168,11 +168,18 @@ typedef enum token_type_e {
 #define DEFAULT_CURRENTLINE_LENGTH  64
 
 
+typedef struct linenote_caution_s {
+    size_t start;
+    size_t length;
+} *linenote_caution_t;
+
+
 typedef struct source_location_s {
+    cstring_t fn;
+    linenote_t linenote;
     size_t line;
     size_t column;
-    linenote_t linenote;
-    cstring_t fn;
+    array_t linenote_cautions;
 } *source_location_t;
 
 

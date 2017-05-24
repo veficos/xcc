@@ -6,7 +6,7 @@
 #define     DEBUG
 
 #if defined(DEBUG)
-#   define     USE_MALLOC
+//#   define     USE_MALLOC
 #endif
 
 #if defined(WIN32) || defined(_WIN32) || defined(WINDOWS)

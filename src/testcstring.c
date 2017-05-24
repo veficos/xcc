@@ -4,8 +4,7 @@
 #include "unittest.h"
 
 
-static 
-void test_cstring(void)
+static void test_cstring(void)
 {
     cstring_t cs, cs2;
     

@@ -13,7 +13,7 @@ typedef struct stream_s*    stream_t;
 typedef struct cspool_s*    cspool_t;
 typedef struct option_s*    option_t;
 typedef struct diag_s*      diag_t;
-
+typedef struct reader_option_s* reader_option_t;
 
 typedef enum stream_type_e {
     STREAM_TYPE_FILE,
@@ -26,7 +26,7 @@ typedef const void* linenote_t;
 
 typedef struct reader_s {
     diag_t diag;
-    option_t option;
+    reader_option_t opts;
     array_t streams;
     stream_t last;
     cspool_t pool;

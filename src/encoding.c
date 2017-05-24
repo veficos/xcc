@@ -2,7 +2,7 @@
 
 #include "config.h"
 #include "encoding.h"
-#include "diag.h"
+#include "diagnostor.h"
 
 
 static inline int __count_leading_ones__(char ch);

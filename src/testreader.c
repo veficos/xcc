@@ -3,7 +3,7 @@
 #include "config.h"
 #include "reader.h"
 #include "unittest.h"
-#include "diag.h"
+#include "diagnostor.h"
 #include "option.h"
 
 #include <stdlib.h>
@@ -89,13 +89,13 @@ void test_reader_case2()
         " \\ \n"    
         "\\  \r "                           
         "\n"
-        "} ÎÒ\\   ";                          
+        "} ï¿½ï¿½\\   ";                          
 
     const char *t = "#include<stdio.h>\n"
         "int main(void) \\ { \n"
         " printf(\"HelloWorld\"); \n"
         "  \n"
-        "} ÎÒ\n\xff";
+        "} ï¿½ï¿½\n\xff";
 
     int i;
 

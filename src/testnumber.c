@@ -2,7 +2,7 @@
 
 #include "config.h"
 #include "unittest.h"
-#include "diag.h"
+#include "diagnostor.h"
 #include "option.h"
 #include "number.h"
 #include "token.h"

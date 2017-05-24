@@ -66,4 +66,15 @@ void debug_linenote(const char* linenote, size_t start, size_t tilde);
         (tok)->loc->linenote, (tok)->loc->column, (tok)->cs ? cstring_length((tok)->cs) : 0, fmt, __VA_ARGS__)
 
 
+
+
+typedef struct diagnostor_s {
+    size_t nerrors;
+    size_t nwarnnings;
+} *diagnostor_t;
+
+
+void diagnostor_warningf(diagnostor_t diag, const char *fn, size_t line, size_t column, const char *fmt, ...);
+
+
 #endif

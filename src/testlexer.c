@@ -4,7 +4,7 @@
 #include "token.h"
 #include "cstring.h"
 #include "reader.h"
-#include "diag.h"
+#include "diagnostor.h"
 #include "option.h"
 #include "lexer.h"
 #include "dict.h"

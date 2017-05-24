@@ -9,4 +9,10 @@ set(TESTARRAY_FILES
         src/array.c
         src/testarray.c)
 
+set(TESTCSTRING_FILES
+        src/pmalloc.c
+        src/cstring.c
+        src/testcstring.c)
+
 add_executable(testarray ${TESTARRAY_FILES})
+add_executable(testcstring ${TESTCSTRING_FILES})

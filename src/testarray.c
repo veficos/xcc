@@ -4,8 +4,7 @@
 #include "array.h"
 
 
-static
-void test_array(void)
+static void test_array(void)
 {
     array_t array;
     int *a;
@@ -13,7 +12,7 @@ void test_array(void)
     
     array = array_create(sizeof(int));
 
-    TEST_COND("array_empty()", array_empty(array));
+    TEST_COND("array_is_empty()", array_is_empty(array));
     TEST_COND("array_length()", array_length(array) == 0);
     TEST_COND("array_capacity()", array_capacity(array) == 0);
 
@@ -28,7 +27,7 @@ void test_array(void)
     
     TEST_COND("array_cast_front", array_cast_front(int, array) == 0);
     TEST_COND("array_cast_back", array_cast_back(int, array) == 9);
-    TEST_COND("array_empty()", !array_empty(array));
+    TEST_COND("array_is_empty()", !array_is_empty(array));
     TEST_COND("array_length()", array_length(array) == 10);
     TEST_COND("array_capacity()", array_capacity(array) == 6);
 
@@ -44,7 +43,7 @@ void test_array(void)
     TEST_COND("array_pop_n()", array_length(array) == 7);
 
     array_clear(array);
-    TEST_COND("array_clear()", array_empty(array));
+    TEST_COND("array_is_empty()", array_is_empty(array));
     TEST_COND("array_capacity()", array_capacity(array) == 16);
 
     array_destroy(array);

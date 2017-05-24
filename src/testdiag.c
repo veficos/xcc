@@ -1,7 +1,7 @@
 
 
 #include "config.h"
-#include "diag.h"
+#include "diagnostor.h"
 #include "token.h"
 #include "cstring.h"
 

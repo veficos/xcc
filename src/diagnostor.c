@@ -3,7 +3,7 @@
 #include "config.h"
 #include "token.h"
 #include "color.h"
-#include "diag.h"
+#include "diagnostor.h"
 
 
 #ifndef MAX_COLUMN_HEAD
