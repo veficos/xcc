@@ -2,7 +2,6 @@
 
 #include "config.h"
 #include "dict.h"
-#include "hash.h"
 #include "set.h"
 
 
@@ -14,10 +13,11 @@ uint64_t __hash_fn__(const void *key)
 
 
 static inline
-cstring_t __key_dup__(void *privdata, const void *key)
+void* __key_dup__(void *privdata, const void *key)
 {
     return cstring_dup((const cstring_t) key);
 }
+
 
 static inline
 int __compare_fn__(void *privdata, const void *key1, const void *key2)
@@ -40,7 +40,7 @@ int __compare_fn__(void *privdata, const void *key1, const void *key2)
 static inline
 void __free_fn__(void *privdata, void *val) {
     DICT_NOTUSED(privdata);
-    cstring_destroy(val);
+    cstring_free(val);
 }
 
 
@@ -54,48 +54,92 @@ dict_type_t __set_dict_type__ = {
 };
 
 
-set_t set_create(void)
+set_t* set_create(void)
 {
-    dict_t dict = dict_create(&__set_dict_type__, NULL);
-    return (set_t) dict;
+    dict_t *dict = dict_create(&__set_dict_type__, NULL);
+    return (set_t*) dict;
 }
 
 
-void set_destroy(set_t set)
+void set_destroy(set_t *set)
 {
-    dict_destroy((dict_t)set);
+    dict_destroy((dict_t*)set);
 }
 
 
-bool set_add(set_t set, cstring_t cs)
+bool set_add(set_t *set, cstring_t cs)
 {
-    return dict_add_or_find((dict_t)set, cs) != NULL;
+    return dict_add_or_find((dict_t*)set, cs) != NULL;
 }
 
 
-bool set_has(set_t set, cstring_t cs)
+bool set_del(set_t *set, cstring_t cs)
 {
-    return dict_find((dict_t)set, cs) != NULL;
+    return dict_delete((dict_t*)set, cs);
 }
 
 
-bool set_is_empty(set_t set)
+bool set_has(set_t *set, cstring_t cs)
 {
-    return dict_size((dict_t)set) == 0;
+    return dict_find((dict_t*)set, cs) != NULL;
 }
 
 
-set_t set_union(set_t a, set_t b)
+bool set_is_empty(set_t *set)
 {
-    set_t r;
-    dict_iterator_t iter;
+    return dict_length((dict_t*)set) == 0;
+}
+
+
+void set_concat_union(set_t *a, set_t *b)
+{
+    dict_iterator_t *iter;
+    dict_entry_t *entry;
+
+    if ((iter = dict_get_iterator((dict_t*)b)) == NULL) {
+        return;
+    }
+
+    while (entry = dict_next(iter)) {
+        if (dict_add_or_find(a, entry->key) == NULL) {
+            break;
+        }
+    }
+
+    dict_release_iterator(iter);
+}
+
+
+void set_concat_intersection(set_t *a, set_t *b)
+{
+    dict_iterator_t *iter;
+    dict_entry_t *entry;
+
+    if ((iter = dict_get_safe_iterator((dict_t*)a)) == NULL) {
+        return;
+    }
+
+    while (entry = dict_next(iter)) {
+        if (!set_has(b, entry->key)) {
+            set_del(a, entry->key);
+        }
+    }
+
+    dict_release_iterator(iter);
+}
+
+
+set_t* set_union(set_t *a, set_t *b)
+{
+    set_t *r;
+    dict_iterator_t *iter;
     dict_entry_t *entry;
 
     if ((r = set_dup(a)) == NULL) { 
         goto done;
     }
 
-    if ((iter = dict_get_iterator((dict_t)b)) == NULL) {
+    if ((iter = dict_get_iterator((dict_t*)b)) == NULL) {
         goto clean_set;
     }
 
@@ -117,13 +161,13 @@ done:
 }
 
 
-set_t set_intersection(set_t a, set_t b)
+set_t* set_intersection(set_t *a, set_t *b)
 {
-    set_t r;
-    dict_iterator_t iter;
+    set_t *r;
+    dict_iterator_t *iter;
     dict_entry_t *entry;
     
-    if (dict_size(a) > dict_size(b)) {
+    if (dict_length(a) > dict_length(b)) {
         r = a; a = b; b = r;
     }
 
@@ -131,7 +175,7 @@ set_t set_intersection(set_t a, set_t b)
         goto done;
     }
 
-    if ((iter = dict_get_iterator((dict_t)a)) == NULL) {
+    if ((iter = dict_get_iterator((dict_t*)a)) == NULL) {
         goto clean_set;
     }
 
@@ -155,17 +199,17 @@ done:
 }
 
 
-set_t set_dup(set_t set)
+set_t* set_dup(set_t *set)
 {
-    set_t r;
-    dict_iterator_t iter;
+    set_t *r;
+    dict_iterator_t *iter;
     dict_entry_t *entry;
 
     if ((r = set_create()) == NULL) {
         goto done;
     }
 
-    if ((iter = dict_get_iterator((dict_t)set)) == NULL) {
+    if ((iter = dict_get_iterator((dict_t*)set)) == NULL) {
         goto clean_set;
     }
 
@@ -187,7 +231,7 @@ done:
 }
 
 
-void set_clear(set_t set)
+void set_clear(set_t *set)
 {
-    dict_empty((dict_t)set, NULL);
+    dict_empty((dict_t*)set, NULL);
 }

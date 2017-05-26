@@ -16,14 +16,14 @@
 #define EXCEPT_INTEGER_EQ(tok, expect, num)                                                 \
     do {                                                                                    \
         number_t n;                                                                         \
-        (tok)->cs = cstring_cpy_n((tok)->cs, num, strlen(num));                             \
+        (tok)->cs = cstring_copy_n((tok)->cs, num, strlen(num));                             \
         TEST_COND(num, parse_number(diag, &option, tok, &n)== true && n.ul == expect);      \
     } while(0)
 
 #define EXCEPT_INTEGER_NEQ(tok, expect, num)                                                \
     do {                                                                                    \
         number_t n;                                                                         \
-        (tok)->cs = cstring_cpy_n((tok)->cs, num, strlen(num));                             \
+        (tok)->cs = cstring_copy_n((tok)->cs, num, strlen(num));                             \
         TEST_COND(num, !parse_number(diag, &option, tok, &n));                              \
     } while(0)
 
@@ -599,7 +599,7 @@ void test_number2()
     CHECK_HEX_CONST(ffull);
     CHECK_HEX_CONST(ffllu);
     
-    tok->cs = cstring_cpy_n(tok->cs, "0xFFFFFFFFFFFFFFFFFFFFull", strlen("0xFFFFFFFFFFFFFFFFFFFFull"));
+    tok->cs = cstring_copy_n(tok->cs, "0xFFFFFFFFFFFFFFFFFFFFull", strlen("0xFFFFFFFFFFFFFFFFFFFFull"));
     parse_number(diag, &option, tok, &n);
     printf("%llu\n", n.ul);
     CHECK_DEP_CONST(123456, "12'3'4'56");

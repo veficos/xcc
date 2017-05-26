@@ -14,7 +14,7 @@ uint64_t __hash_fn__(const void *key)
 
 
 static inline
-cstring_t __key_dup__(void *privdata, const void *key)
+void* __key_dup__(void *privdata, const void *key)
 {
     return cstring_dup((const cstring_t) key);
 }
@@ -40,7 +40,7 @@ int __compare_fn__(void *privdata, const void *key1, const void *key2)
 static inline
 void __free_fn__(void *privdata, void *val) {
     DICT_NOTUSED(privdata);
-    cstring_destroy(val);
+    cstring_free(val);
 }
 
 
@@ -54,62 +54,63 @@ dict_type_t __map_dict_type__ = {
 };
 
 
-map_t map_create(void)
+map_t* map_create(void)
 {
-    dict_t dict = dict_create(&__map_dict_type__, NULL);
-    return (map_t) dict;
+    dict_t *dict = dict_create(&__map_dict_type__, NULL);
+    return (map_t*) dict;
 }
 
 
-void map_destroy(map_t map)
+void map_destroy(map_t *map)
 {
-    dict_destroy((dict_t)map);
+    dict_destroy((dict_t*)map);
 }
 
 
-bool map_add(map_t map, cstring_t cs, void *data)
+bool map_add(map_t *map, cstring_t cs, void *data)
 {
-    return dict_add((dict_t)map, cs, data) == DICT_OK;
+    return dict_add((dict_t*)map, cs, data) == true;
 }
 
 
-bool map_has(map_t map, cstring_t cs)
+bool map_has(map_t *map, cstring_t cs)
 {
-    return dict_find((dict_t)map, cs) != NULL;
+    return dict_find((dict_t*)map, cs) != NULL;
 }
 
 
-bool map_del(map_t map, cstring_t cs)
+bool map_del(map_t *map, cstring_t cs)
 {
-    return dict_delete((dict_t)map, cs) == DICT_OK;
+    return dict_delete((dict_t*)map, cs) == true;
 }
 
 
-void *map_find(map_t map, cstring_t cs)
+void *map_find(map_t *map, cstring_t cs)
 {
     dict_entry_t *entry;
-    if ((entry = dict_find((dict_t)map, cs)) == NULL) {
+    if ((entry = dict_find((dict_t*)map, cs)) == NULL) {
         return NULL;
     }
     return entry->v.val;
 }
 
 
-static
-void dict_scan_fn(void *privdata[], const dict_entry_t *de)
+static inline
+void dict_scan_fn(void *privdata, const dict_entry_t *de)
 {
-    map_scan_pt map_scan_fn = (map_scan_pt) privdata[0];
-    void *data = privdata[1];
+    void **ud = privdata;
+    map_scan_pt map_scan_fn = (map_scan_pt) ud[0];
+    void *data = ud[1];
     map_scan_fn(data, de->key, de->v.val);
 }
 
 
-unsigned long map_scan(map_t map, map_scan_pt map_fn, void *privdata)
+unsigned long map_scan(map_t *map, map_scan_pt map_fn, void *privdata)
 {
     void *p[2] = { map_fn, privdata };
     unsigned long v = 0;
     do {
-        v = dict_scan((dict_t)map, v, dict_scan_fn, NULL, p);
+        v = dict_scan((dict_t*)map, v, dict_scan_fn, NULL, p);
     } while (v);
     return v;
 }

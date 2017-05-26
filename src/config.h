@@ -31,6 +31,7 @@
 #include <malloc.h>
 #include <string.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include <ctype.h>
 #include <assert.h>
 #include <stdint.h>
@@ -38,6 +39,7 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <stdbool.h>
+#include <limits.h>
 
 
 #ifndef bool 

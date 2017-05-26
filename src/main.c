@@ -31,7 +31,7 @@ void parse_opts(option_t option, int argc, char *argv[])
             if (++i >= argc) {
                 printf("missing file name after '-o'");
             }
-            option->outfile = cstring_create(argv[i]);
+            option->outfile = cstring_new(argv[i]);
         } else if (strcmp(arg, "-h") == 0 || strcmp(arg, "--help") == 0 ||
             strcmp(arg, "-v") == 0 || strcmp(arg, "--version") == 0) {
             exit(EXIT_FAILURE);

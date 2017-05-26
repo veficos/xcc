@@ -5,101 +5,101 @@
 #include "pmalloc.h"
 
 
-static inline int __array_resize__(array_t array, size_t n);
+static inline int __array_resize__(array_t *a, size_t n);
 
 
-array_t array_create(size_t size)
+array_t* array_create(size_t size)
 {
-    array_t array;
+    array_t *a;
 
-    if ((array = (array_t) pmalloc(sizeof(struct array_s))) == NULL) {
+    if ((a = (array_t*) pmalloc(sizeof(array_t))) == NULL) {
         return NULL;
     }
 
-    array->elts   = NULL;
-    array->nelts  = 0;
-    array->nalloc = 0;
-    array->size   = size;
-    return array;
+    a->elts   = NULL;
+    a->nelts  = 0;
+    a->nalloc = 0;
+    a->size   = size;
+    return a;
 }
 
 
-array_t array_create_n(size_t size, size_t n)
+array_t* array_create_n(size_t size, size_t n)
 {
-    array_t array;
+    array_t *a;
 
-    if ((array = (array_t) pmalloc(sizeof(struct array_s))) == NULL) {
+    if ((a = (array_t*) pmalloc(sizeof(array_t))) == NULL) {
         return NULL;
     }
 
-    if ((array->elts = (void *) pmalloc(size * n)) == NULL) {
-        pfree(array);
+    if ((a->elts = pmalloc(size * n)) == NULL) {
+        pfree(a);
         return NULL;
     }
 
-    array->nelts   = 0;
-    array->nalloc  = n;
-    array->size    = size;
-    return array;
+    a->nelts   = 0;
+    a->nalloc  = n;
+    a->size    = size;
+    return a;
 }
 
 
-void array_destroy(array_t array)
+void array_destroy(array_t *a)
 {
-    assert(array && array->elts);
+    assert(a && a->elts);
 
-    if (array->elts != NULL) {
-        pfree(array->elts);
+    if (a->elts != NULL) {
+        pfree(a->elts);
     }
 
-    pfree(array);
+    pfree(a);
 }
 
 
-void *array_push_back(array_t array)
+void* array_push_back(array_t *a)
 {
     void *elt;
 
-    if (array->nelts == array->nalloc) {
+    if (a->nelts == a->nalloc) {
         size_t n;
 
-        if (array->nalloc == 0) {
+        if (a->nalloc == 0) {
             n = 2;
 
         } else {
-            n = array->nalloc * 2;
+            n = a->nalloc * 2;
         }
 
-        if (!__array_resize__(array, n)) {
+        if (!__array_resize__(a, n)) {
             return NULL;
         }
     }
 
-    elt = (char *) array->elts + array->size * array->nelts;
-    array->nelts++;
+    elt = (char *) a->elts + a->size * a->nelts;
+    a->nelts++;
     return elt;
 }
 
 
-void *array_push_back_n(array_t array, size_t n)
+void* array_push_back_n(array_t *a, size_t n)
 {
     void *elt;
 
-    if (array->nelts + n > array->nalloc) {
-        size_t nalloc = 2 * (n >= array->nalloc ? n : array->nalloc);
+    if (a->nelts + n > a->nalloc) {
+        size_t nalloc = 2 * (n >= a->nalloc ? n : a->nalloc);
 
-        if (!__array_resize__(array, nalloc)) {
+        if (!__array_resize__(a, nalloc)) {
             return NULL;
         }
     }
 
-    elt = (char *)array->elts + array->size * array->nelts;
-    array->nelts += n;
+    elt = (char *)a->elts + a->size * a->nelts;
+    a->nelts += n;
     return elt;
 }
 
 
-bool array_extend(array_t a, array_t b)
+bool array_extend(array_t *a, array_t *b)
 {
     void *chunk;
 
@@ -118,16 +118,16 @@ bool array_extend(array_t a, array_t b)
 
 
 static inline
-int __array_resize__(array_t array, size_t n)
+int __array_resize__(array_t *a, size_t n)
 {
-    size_t resize  = array->size * n;
+    size_t resize  = a->size * n;
 
     if (resize) {
-        if ((array->elts = prealloc(array->elts, resize)) == NULL) {
+        if ((a->elts = prealloc(a->elts, resize)) == NULL) {
             return 0;
         }
     }
     
-    array->nalloc = n;
+    a->nalloc = n;
     return n;
 }

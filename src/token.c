@@ -69,7 +69,7 @@ token_t token_create(void)
 {
     token_t tok = (token_t) pmalloc(sizeof(struct token_s));
     tok->type = TOKEN_UNKNOWN;
-    tok->cs = cstring_create_n(NULL, DEFUALT_LITERALS_LENGTH);
+    tok->cs = cstring_new_n(NULL, DEFUALT_LITERALS_LENGTH);
     tok->loc = source_location_create();
     tok->hideset = NULL;
     tok->spaces = 0;
@@ -86,7 +86,7 @@ void token_destroy(token_t token)
 
     if (token->hideset != NULL) set_destroy(token->hideset);
 
-    cstring_destroy(token->cs);
+    cstring_free(token->cs);
 
     pfree(token);
 }

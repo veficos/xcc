@@ -5,31 +5,31 @@
 
 
 #ifndef CSTRING_MAX_PREALLOC
-#define CSTRING_MAX_PREALLOC    (1024 * 1024)
+#define CSTRING_MAX_PREALLOC            (1024 * 1024)
 #endif 
 
 
 #ifndef MAX_LONGLONG_STRING_SIZE
-#define MAX_LONGLONG_STRING_SIZE (64)
+#define MAX_LONGLONG_STRING_SIZE        (64)
 #endif
 
 
 #ifndef MAX_LOCAL_STATIC_BUFFER_SIZE 
-#define MAX_LOCAL_STATIC_BUFFER_SIZE (1024)
+#define MAX_LOCAL_STATIC_BUFFER_SIZE    (1024)
 #endif
 
 
 static inline cstring_t __cstring_make_space__(cstring_t cs, size_t size);
 
 
-cstring_t cstring_create_n(const void *data, size_t size)
+cstring_t cstring_new_n(const void *data, size_t size)
 {
-    cstring_hdr_t *hdr;
+    cstring_header_t *hdr;
 
     if (data) {
-        hdr = (cstring_hdr_t *) pmalloc(sizeof(cstring_hdr_t) + size);
+        hdr = (cstring_header_t *) pmalloc(sizeof(cstring_header_t) + size);
     } else {
-        hdr = (cstring_hdr_t *) pmalloc(sizeof(cstring_hdr_t) + size);
+        hdr = (cstring_header_t *) pmalloc(sizeof(cstring_header_t) + size);
     }
 
     if (!hdr) {
@@ -53,9 +53,9 @@ cstring_t cstring_create_n(const void *data, size_t size)
 }
 
 
-cstring_t cstring_cat_n(cstring_t cs, const void *data, size_t size)
+cstring_t cstring_concat_n(cstring_t cs, const void *data, size_t size)
 {
-    cstring_hdr_t *hdr;
+    cstring_header_t *hdr;
     
     cs = __cstring_make_space__(cs, size);
     if (!cs) {
@@ -73,9 +73,9 @@ cstring_t cstring_cat_n(cstring_t cs, const void *data, size_t size)
 }
 
 
-cstring_t cstring_cpy_n(cstring_t cs, const void *data, size_t size)
+cstring_t cstring_copy_n(cstring_t cs, const void *data, size_t size)
 {
-    cstring_hdr_t *hdr = cstring_of(cs);
+    cstring_header_t *hdr = cstring_of(cs);
     size_t total = hdr->unused + hdr->length;
 
     if (total < size) {
@@ -100,7 +100,7 @@ cstring_t cstring_from_ll(long long value)
 {
     char buf[MAX_LONGLONG_STRING_SIZE];
     size_t len = ll2str(buf, value);
-    return cstring_create_n(buf, len);
+    return cstring_new_n(buf, len);
 }
 
 
@@ -108,11 +108,11 @@ cstring_t cstring_from_ull(unsigned long long value, int base)
 {
     char buf[MAX_LONGLONG_STRING_SIZE];
     size_t len = ull2str(buf, value, base);
-    return cstring_create_n(buf, len);
+    return cstring_new_n(buf, len);
 }
 
 
-cstring_t cstring_cat_vpf(cstring_t cs, const char *fmt, va_list ap)
+cstring_t cstring_concat_vpf(cstring_t cs, const char *fmt, va_list ap)
 {
     va_list cpy;
     char staticbuf[MAX_LOCAL_STATIC_BUFFER_SIZE];
@@ -154,7 +154,7 @@ cstring_t cstring_cat_vpf(cstring_t cs, const char *fmt, va_list ap)
         break;
     }
 
-    t = cstring_cat_n(cs, buf, strlen(buf));
+    t = cstring_concat_n(cs, buf, strlen(buf));
     if (buf != staticbuf) {
         pfree(buf);
     }
@@ -163,14 +163,14 @@ cstring_t cstring_cat_vpf(cstring_t cs, const char *fmt, va_list ap)
 }
 
 
-cstring_t cstring_cat_pf(cstring_t cs, const char *fmt, ...)
+cstring_t cstring_concat_pf(cstring_t cs, const char *fmt, ...)
 {
     va_list ap;
     char *t;
 
     va_start(ap, fmt);
 
-    t = cstring_cat_vpf(cs, fmt, ap);
+    t = cstring_concat_vpf(cs, fmt, ap);
 
     va_end(ap);
 
@@ -180,11 +180,11 @@ cstring_t cstring_cat_pf(cstring_t cs, const char *fmt, ...)
 
 cstring_t cstring_trim(cstring_t cs, const char *cset)
 {
-    cstring_hdr_t *hdr;
-    char *start, *end, *sp, *ep;
+    cstring_header_t *hdr;
+    unsigned char *end, *sp, *ep;
     size_t len;
 
-    sp = start = cs;
+    sp = cs;
     ep = end = cs + cstring_length(cs) - 1;
 
     while (sp <= end && strchr(cset, *sp)) sp++;
@@ -228,7 +228,7 @@ cstring_t cstring_trim_all(cstring_t cs, const char *cset)
 }
 
 
-int cstring_cmp(const cstring_t cs, const char *str)
+int cstring_compare(const cstring_t cs, const char *str)
 {
     size_t llen, rlen, minlen;
     int cmp;
@@ -247,7 +247,7 @@ int cstring_cmp(const cstring_t cs, const char *str)
 }
 
 
-int cstring_cmp_cs(const cstring_t l, const cstring_t r)
+int cstring_compare_cs(const cstring_t l, const cstring_t r)
 {
     size_t llen, rlen, minlen;
     int cmp;
@@ -266,7 +266,7 @@ int cstring_cmp_cs(const cstring_t l, const cstring_t r)
 }
 
 
-int cstring_cmp_n(const cstring_t cs, const void *data, size_t n)
+int cstring_compare_n(const cstring_t cs, const void *data, size_t n)
 {
     size_t cslen, minlen;
     int cmp;
@@ -307,7 +307,7 @@ void cstring_toupper(cstring_t cs)
 static inline
 cstring_t __cstring_make_space__(cstring_t cs, size_t size)
 {
-    cstring_hdr_t *hdr, *newhdr;
+    cstring_header_t *hdr, *newhdr;
     size_t newsize;
 
     hdr = cstring_of(cs);
@@ -322,7 +322,7 @@ cstring_t __cstring_make_space__(cstring_t cs, size_t size)
         newsize += CSTRING_MAX_PREALLOC;
     }
 
-    newhdr = (cstring_hdr_t *) prealloc(hdr, sizeof(cstring_hdr_t) + newsize);
+    newhdr = (cstring_header_t *) prealloc(hdr, sizeof(cstring_header_t) + newsize);
     if (newhdr == NULL) {
         return NULL;
     }

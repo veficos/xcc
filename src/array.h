@@ -8,54 +8,54 @@
 
 
 typedef struct array_s {
-    void        *elts;
-    size_t      nelts;
-    size_t      size;
-    size_t      nalloc;
-} *array_t;
+    void   *elts;
+    size_t  nelts;
+    size_t  size;
+    size_t  nalloc;
+} array_t;
 
 
-#define array_pop_back(array)                       \
+#define array_pop_back(a)                           \
     do {                                            \
-        if ((array)->nelts > 0) {                   \
-            (array)->nelts--;                       \
+        if ((a)->nelts > 0) {                       \
+            (a)->nelts--;                           \
         }                                           \
     } while(0)
 
 
-#define array_pop_back_n(array, n)                  \
+#define array_pop_back_n(a, n)                      \
     do {                                            \
-        if ((n) > (array)->nelts) {                 \
-            (array)->nelts = 0;                     \
+        if ((n) > (a)->nelts) {                     \
+            (a)->nelts = 0;                         \
         } else {                                    \
-            (array)->nelts -= n;                    \
+            (a)->nelts -= n;                        \
         }                                           \
     } while(0)
 
 
-#define array_prototype(array, type)                \
-    (array ? ((type*)((array)->elts)) : NULL)
+#define array_prototype(a, type)                    \
+    (a ? ((type*)((a)->elts)) : NULL)
 
 
-#define array_length(array)                         \
-    ((array)->nelts)
+#define array_length(a)                             \
+    ((a)->nelts)
 
 
-#define array_capacity(array)                       \
-    ((array)->nalloc - (array)->nelts)
+#define array_capacity(a)                           \
+    ((a)->nalloc - (a)->nelts)
 
 
-#define array_clear(array)                          \
-    ((array)->nelts = 0)
+#define array_clear(a)                              \
+    ((a)->nelts = 0)
 
 
-#define array_is_empty(array)                       \
-    ((array)->nelts == 0)
+#define array_is_empty(a)                           \
+    ((a)->nelts == 0)
 
 
-#define array_foreach(array, base, index)           \
-    for ((base) = (array)->elts, (index) = 0;       \
-         (size_t)(index) < (array)->nelts;          \
+#define array_foreach(a, base, index)               \
+    for ((base) = (a)->elts, (index) = 0;           \
+         (size_t)(index) < (a)->nelts;              \
          (index)++)
 
 
@@ -77,16 +77,16 @@ typedef struct array_s {
     } while (false)
 
 
-array_t array_create(size_t size);
-array_t array_create_n(size_t size, size_t n);
-void array_destroy(array_t a);
-void *array_push_back(array_t a);
-void *array_push_back_n(array_t a, size_t n);
-bool array_extend(array_t a, array_t b);
+array_t* array_create(size_t size);
+array_t* array_create_n(size_t size, size_t n);
+void array_destroy(array_t *a);
+void *array_push_back(array_t *a);
+void *array_push_back_n(array_t *a, size_t n);
+bool array_extend(array_t *a, array_t *b);
 
 
 static inline
-void *__array_at(array_t a, size_t i)
+void* __array_at(array_t *a, size_t i)
 {
     assert(a->nelts > i);
     return (((unsigned char *)a->elts) + (a->size * i));
@@ -94,7 +94,7 @@ void *__array_at(array_t a, size_t i)
 
 
 static inline
-void *__array_front(array_t a)
+void* __array_front(array_t *a)
 {
     assert(a->nelts > 0);
     return a->elts;
@@ -102,7 +102,7 @@ void *__array_front(array_t a)
 
 
 static inline
-void *__array_back(array_t a)
+void* __array_back(array_t *a)
 {
     assert(a->nelts > 0);
     return (((unsigned char *)a->elts) + (a->size * (a->nelts - 1)));

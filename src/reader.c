@@ -11,27 +11,27 @@
 
 
 /**
-* Notices
-*
-* 1. C11 5.1.1: "\r\n" or "\r" are canonicalized to "\n". 
-*
-* 2. C11 5.1.1: Each instance of a backslash character (\) immediately
-*       followed by a new-line character is deleted, splicing physical
-*       source lines to form logical source lines.Only the last backslash 
-*       on any physical source line shall be eligible for being part of 
-*       such a splice. A source file that is not empty shall end in a 
-*       new-line character, which shall not be immediately preceded by 
-*       a backslash character before any such splicing takes place.
-*
-*     example:
-*         |#inc\
-*         |lude <stdio.h>
-*
-* 3. C11 5.1.1: EOF not immediately following a newline is converted to
-*       a sequence of newline and EOF. (The C spec requires source
-*       files end in a newline character (5.1.1.2p2). Thus, if all
-*       source files are conforming, this step wouldn't be needed.
-*/
+ * Notices
+ *
+ * 1. C11 5.1.1: "\r\n" or "\r" are canonicalized to "\n".
+ *
+ * 2. C11 5.1.1: Each instance of a backslash character (\) immediately
+ *       followed by a new-line character is deleted, splicing physical
+ *       source lines to form logical source lines.Only the last backslash
+ *       on any physical source line shall be eligible for being part of
+ *       such a splice. A source file that is not empty shall end in a
+ *       new-line character, which shall not be immediately preceded by
+ *       a backslash character before any such splicing takes place.
+ *
+ *     example:
+ *         |#inc\
+ *         |lude <stdio.h>
+ *
+ * 3. C11 5.1.1: EOF not immediately following a newline is converted to
+ *       a sequence of newline and EOF. (The C spec requires source
+ *       files end in a newline character (5.1.1.2p2). Thus, if all
+ *       source files are conforming, this step wouldn't be needed.
+ **/
 
 
 #ifndef STREAM_STASHED_SIZE
@@ -263,7 +263,7 @@ cstring_t linenote2cs(linenote_t linenote)
         p++;
     }
 
-    return cstring_create_n((const unsigned char*)linenote, p - (const unsigned char *)linenote);
+    return cstring_new_n((const unsigned char*)linenote, p - (const unsigned char *)linenote);
 }
 
 
@@ -291,9 +291,9 @@ bool __stream_init__(reader_t reader, stream_t stream, stream_type_t type, const
             goto failure;
         }
        
-        stream->fn = cspool_push_cs(reader->pool, cstring_create(s));
+        stream->fn = cspool_push_cs(reader->pool, cstring_new(s));
         stream->mt = st.st_mtime;
-        text = cspool_push_cs(reader->pool, cstring_create_n(buf, st.st_size));
+        text = cspool_push_cs(reader->pool, cstring_new_n(buf, st.st_size));
 
         pfree(buf);
         fclose(fp);
@@ -327,7 +327,7 @@ static inline
 void __stream_uninit__(stream_t stream)
 {
     if (stream->stashed != NULL) {
-        cstring_destroy(stream->stashed);
+        cstring_free(stream->stashed);
     }
 }
 
@@ -337,7 +337,7 @@ void __stream_stash__(stream_t stream, int ch)
 {
     assert(ch != EOF);
     if (stream->stashed == NULL) {
-        stream->stashed = cstring_create_n(NULL, STREAM_STASHED_SIZE);
+        stream->stashed = cstring_new_n(NULL, STREAM_STASHED_SIZE);
     }
     stream->stashed = cstring_push_ch(stream->stashed, ch);
 }

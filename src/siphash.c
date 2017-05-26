@@ -85,13 +85,13 @@ int siptlw(int c) {
 #endif
 
 #define U8TO64_LE_NOCASE(p)                                                    \
-    (((uint64_t)(siptlw((p)[0]))) |                                           \
-     ((uint64_t)(siptlw((p)[1])) << 8) |                                      \
-     ((uint64_t)(siptlw((p)[2])) << 16) |                                     \
-     ((uint64_t)(siptlw((p)[3])) << 24) |                                     \
-     ((uint64_t)(siptlw((p)[4])) << 32) |                                              \
-     ((uint64_t)(siptlw((p)[5])) << 40) |                                              \
-     ((uint64_t)(siptlw((p)[6])) << 48) |                                              \
+    (((uint64_t)(siptlw((p)[0]))) |                                            \
+     ((uint64_t)(siptlw((p)[1])) << 8) |                                       \
+     ((uint64_t)(siptlw((p)[2])) << 16) |                                      \
+     ((uint64_t)(siptlw((p)[3])) << 24) |                                      \
+     ((uint64_t)(siptlw((p)[4])) << 32) |                                      \
+     ((uint64_t)(siptlw((p)[5])) << 40) |                                      \
+     ((uint64_t)(siptlw((p)[6])) << 48) |                                      \
      ((uint64_t)(siptlw((p)[7])) << 56))
 
 #define SIPROUND                                                               \

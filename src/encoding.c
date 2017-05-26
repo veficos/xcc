@@ -51,14 +51,14 @@ cstring_t cstring_cast_to_utf16(cstring_t cs)
     size_t i, length;
 
     length = cstring_length(cs);
-    to = cstring_create_n(NULL, length * sizeof(uint16_t));
+    to = cstring_new_n(NULL, length * sizeof(uint16_t));
     if (!to) {
         return NULL;
     }
 
     for (i = 0; i < length;) {
         if (!__read_rune__(&rune, &rune_size, &cs[i], length - i)) {
-            cstring_destroy(to);
+            cstring_free(to);
             return NULL;
         }
 
@@ -84,7 +84,7 @@ cstring_t cstring_cast_to_utf32(cstring_t cs)
     size_t i, length;
 
     length = cstring_length(cs);
-    if ((ret = cstring_create_n(NULL, length * sizeof(uint32_t))) == NULL) {
+    if ((ret = cstring_new_n(NULL, length * sizeof(uint32_t))) == NULL) {
         return NULL;
     }
 
@@ -159,7 +159,7 @@ bool __read_rune__(uint32_t *rune, size_t *rune_size, char *s, int n) {
 static inline 
 cstring_t __write8__(cstring_t cs, uint8_t u)
 {
-    return cstring_cat_n(cs, &u, sizeof(uint8_t));
+    return cstring_concat_n(cs, &u, sizeof(uint8_t));
 }
 
 

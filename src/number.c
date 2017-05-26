@@ -81,7 +81,7 @@ bool parse_number(diag_t diag, option_t option, token_t tok, number_t *number)
 
     const unsigned char *p = (unsigned char*)tok->cs;
     const unsigned char *q = (unsigned char*)tok->cs + cstring_length(tok->cs);
-    cstring_t cs = cstring_create_n(NULL, 128);
+    cstring_t cs = cstring_new_n(NULL, 128);
 
     assert(tok->type == TOKEN_NUMBER);
      
@@ -104,7 +104,7 @@ bool parse_number(diag_t diag, option_t option, token_t tok, number_t *number)
                 ERRORF_WITH_TOKEN(diag, tok, "digit separator after base indicator");
                 goto syntax_error;
             }
-            cs = cstring_cat_n(cs, "0x", 2);
+            cs = cstring_concat_n(cs, "0x", 2);
         } else if (*p == 'b' || *p == 'B') {
             if (p[1] == '0' || p[1] == '1') {
                 radix = 2;
@@ -119,7 +119,7 @@ bool parse_number(diag_t diag, option_t option, token_t tok, number_t *number)
     for (;;) {
         unsigned int ch = *p++;
 
-        cs = cstring_cat_ch(cs, (unsigned char)ch);
+        cs = cstring_concat_ch(cs, (unsigned char)ch);
         if (ISDIGIT(ch) || (ISHEX(ch) && radix == 16)) {
             seen_digit_sep = false;
             seen_digit = true;
@@ -344,11 +344,11 @@ syntax_ok:
     }
     
     __to_number__(diag, cs, radix, property, tok, number);
-    cstring_destroy(cs);
+    cstring_free(cs);
     return true;
 
 syntax_error:
-    cstring_destroy(cs);
+    cstring_free(cs);
     return false;
 }
     

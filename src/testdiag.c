@@ -16,21 +16,21 @@ void test_diag(void)
 
     loc.line = 8;
     loc.column = 220;
-    loc.fn = cstring_create("<string>");
-    loc.row = cstring_create("                                                                                                                                                                                                                            int val;xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+    loc.fn = cstring_new("<string>");
+    loc.row = cstring_new("                                                                                                                                                                                                                            int val;xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 
     diag_errorf_with_loc(diag, &loc, "unknown identifier");
-	cstring_destroy(loc.fn);
-	cstring_destroy(loc.row);
+	cstring_free(loc.fn);
+	cstring_free(loc.row);
 
     loc.line = 8;
     loc.column = 5;
-    loc.fn = cstring_create("<string>");
-    loc.row = cstring_create("int val;");
+    loc.fn = cstring_new("<string>");
+    loc.row = cstring_new("int val;");
     
     diag_errorf_with_loc(diag, &loc, "unknown identifier");
-	cstring_destroy(loc.fn);
-	cstring_destroy(loc.row);
+	cstring_free(loc.fn);
+	cstring_free(loc.row);
 
     diag_report(diag);
 

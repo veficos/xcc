@@ -6,7 +6,7 @@
 
 static void test_array(void)
 {
-    array_t array;
+    array_t *array;
     int *a;
     int i;
     
@@ -52,6 +52,10 @@ static void test_array(void)
 
 int main(void)
 {
+#ifdef WIN32
+    _CrtSetDbgFlag(_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG) | _CRTDBG_LEAK_CHECK_DF);
+#endif
+
     test_array();
     TEST_REPORT();
     return 0;

@@ -38,7 +38,7 @@ void test_reader_case1()
     TEST_COND("reader_next()", reader_get(reader) == 'l');
     TEST_COND("reader_column()", reader_column(reader) == 5);
     cs = linenode2cs(reader_linenote(reader));
-    TEST_COND("line_note", cstring_cmp(cs, "Hello World") == 0);
+    TEST_COND("line_note", cstring_compare(cs, "Hello World") == 0);
     TEST_COND("reader_next()", reader_get(reader) == 'o');
     TEST_COND("reader_column()", reader_column(reader) == 6);
     TEST_COND("reader_next()", reader_get(reader) == ' ');
@@ -66,7 +66,7 @@ void test_reader_case1()
     TEST_COND("reader_next()", reader_get(reader) == EOF);
     TEST_COND("reader_column()", reader_column(reader) == 0);
 
-    cstring_destroy(cs);
+    cstring_free(cs);
     reader_destroy(reader);
     option_destroy(option);
     diag_destroy(diag);
@@ -128,7 +128,7 @@ void test_reader_case3()
     cstring_t cs;
     const char *s =" printf(\"HelloWorld\"); \\ f";
 
-    cs = cstring_create_n(NULL, 24);
+    cs = cstring_new_n(NULL, 24);
 
     
     reader = reader_create(diag, option);
@@ -144,7 +144,7 @@ void test_reader_case3()
     }
 
     printf("%s", cs);
-    cstring_destroy(cs);
+    cstring_free(cs);
     reader_destroy(reader);
     diag_destroy(diag);
     option_destroy(option);

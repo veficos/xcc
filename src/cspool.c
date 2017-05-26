@@ -17,14 +17,14 @@ static inline
 int __compare_fn__(void *privdata, const void *key1, const void *key2)
 {
     DICT_NOTUSED(privdata);
-    return cstring_cmp((cstring_t)key2, (char*)key1) == 0;
+    return cstring_compare((cstring_t)key2, (char*)key1) == 0;
 }
 
 
 static inline
 void __free_fn__(void *privdata, void *val) {
     DICT_NOTUSED(privdata);
-    cstring_destroy((cstring_t)val);
+    cstring_free((cstring_t)val);
 }
 
 
@@ -65,7 +65,7 @@ cstring_t cspool_push(cspool_t pool, const char *s)
 
     ret = dict_get_key(entry);
     if (ret == s) {
-        ret = cstring_create(s);
+        ret = cstring_new(s);
         dict_set_key(pool->d, entry, ret);
     }
 
@@ -85,7 +85,7 @@ cstring_t cspool_push_cs(cspool_t pool, cstring_t cs)
 
     ret = dict_get_key(entry);
     if (ret != cs) {
-        cstring_destroy(cs);
+        cstring_free(cs);
     }
 
     return ret;

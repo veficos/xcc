@@ -98,7 +98,7 @@ void preprocessor_destroy(preprocessor_t pp)
     size_t i;
 
     array_foreach(pp->std_include_paths, std_include_paths, i) {
-        cstring_destroy(std_include_paths[i]);
+        cstring_free(std_include_paths[i]);
     }
 
     array_destroy(pp->std_include_paths);
@@ -113,7 +113,7 @@ void preprocessor_destroy(preprocessor_t pp)
 
 void preprocessor_add_include_path(preprocessor_t pp, const char *path)
 {
-    array_cast_append(cstring_t, pp->std_include_paths, cstring_create(path));
+    array_cast_append(cstring_t, pp->std_include_paths, cstring_new(path));
 }
 
 
@@ -438,21 +438,21 @@ static inline
 token_t __preprocessor_stringify__(preprocessor_t pp, token_t template, array_t arg)
 {
     token_t dst;
-    cstring_t cs = cstring_create_n(NULL, 24);
+    cstring_t cs = cstring_new_n(NULL, 24);
     token_t *tokens;
     size_t i, spaces;
 
     array_foreach(arg, tokens, i) {
         spaces = tokens[i]->spaces;
         while (spaces--) {
-            cs = cstring_cat_ch(cs, ' ');
+            cs = cstring_concat_ch(cs, ' ');
         }
-        cs = cstring_cat_n(cs, token_as_text(tokens[i]), strlen(token_as_text(tokens[i])));
+        cs = cstring_concat_n(cs, token_as_text(tokens[i]), strlen(token_as_text(tokens[i])));
     }
 
     dst = token_dup(template);
     if (dst->cs) {
-        cstring_destroy(dst->cs);
+        cstring_free(dst->cs);
     }
 
     dst->type = TOKEN_CONSTANT_STRING;
@@ -465,8 +465,8 @@ static inline
 array_t __preprocessor_glue_token__(preprocessor_t pp, token_t left, token_t right)
 {
     cstring_t cs;
-    cs = cstring_create(token_as_text(left));
-    cs = cstring_cat_n(cs, token_as_text(right), strlen(token_as_text(right)));
+    cs = cstring_new(token_as_text(left));
+    cs = cstring_concat_n(cs, token_as_text(right), strlen(token_as_text(right)));
     lexer_push(pp->lexer, STREAM_TYPE_STRING, cs);
     return lexer_tokenize(pp->lexer);
 }
@@ -534,7 +534,7 @@ array_t __preprocessor_substitute_function_like__(preprocessor_t pp, bool is_var
             
         } else {
             array_t replacements = __preprocessor_select__(args, token);
-            if (cstring_cmp(token->cs, "c") == 0) {
+            if (cstring_compare(token->cs, "c") == 0) {
                 printf("");
             }
             if (replacements != NULL) {
@@ -660,7 +660,7 @@ bool __preprocessor_add_function_like_param__(preprocessor_t pp,
     size_t i;
 
     array_foreach(params, tokens, i) {
-        if (cstring_cmp(tokens[i]->cs, identifier_token->cs) == 0) {
+        if (cstring_compare(tokens[i]->cs, identifier_token->cs) == 0) {
             ERRORF_WITH_TOKEN(identifier_token,
                 "duplicate macro parameter \"%s\"", token_as_text(identifier_token));
             return false;
@@ -717,7 +717,7 @@ bool __preprocessor_parse_function_like_params__(preprocessor_t pp, array_t para
                 const size_t n_va_args = 11;
                 token = token_dup(token);
                 token->type = TOKEN_IDENTIFIER;
-                token->cs = cstring_cpy_n(token->cs, va_args, n_va_args);
+                token->cs = cstring_copy_n(token->cs, va_args, n_va_args);
                 token->is_vararg = true;
                 if (!__preprocessor_add_function_like_param__(pp, params, token)) {
                     return false;
@@ -849,7 +849,7 @@ bool __preprocessor_parse_directive__(preprocessor_t pp, token_t hash)
             return false;
         }
 
-        if (cstring_cmp(directive_token->cs, "define") == 0) {
+        if (cstring_compare(directive_token->cs, "define") == 0) {
             __preprocessor_parse_define__(pp);
         }
 

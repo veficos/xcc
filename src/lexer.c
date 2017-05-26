@@ -393,7 +393,7 @@ cstring_t lexer_date(lexer_t lexer)
 {
     char buf[20];
     strftime(buf, sizeof(buf), "%b %e %Y", &lexer->tm);
-    return cstring_create(buf);
+    return cstring_new(buf);
 }
 
 
@@ -401,7 +401,7 @@ cstring_t lexer_time(lexer_t lexer)
 {
     char buf[10];
     strftime(buf, sizeof(buf), "%T", &lexer->tm);
-    return cstring_create(buf);
+    return cstring_new(buf);
 }
 
 
@@ -451,7 +451,7 @@ token_t __lexer_parse_number__(lexer_t lexer, int ch)
    ((prevc) == 'e' || (prevc) == 'E' \
     || (((prevc) == 'p' || (prevc) == 'P') )))
 
-    lexer->tok->cs = cstring_cat_ch(lexer->tok->cs, ch);
+    lexer->tok->cs = cstring_concat_ch(lexer->tok->cs, ch);
 
     for (;;) {
         ch = reader_peek(lexer->reader);
@@ -459,7 +459,7 @@ token_t __lexer_parse_number__(lexer_t lexer, int ch)
             break;
         }
 
-        lexer->tok->cs = cstring_cat_ch(lexer->tok->cs, ch);
+        lexer->tok->cs = cstring_concat_ch(lexer->tok->cs, ch);
 
         prev = ch;
 
@@ -622,7 +622,7 @@ token_t __lexer_parse_character__(lexer_t lexer, encoding_type_t ent)
             }
         }
 
-        lexer->tok->cs = cstring_cat_ch(lexer->tok->cs, ch);
+        lexer->tok->cs = cstring_concat_ch(lexer->tok->cs, ch);
     }
 
     if (ch != '\'') {
@@ -655,7 +655,7 @@ token_t __lexer_parse_string__(lexer_t lexer, encoding_type_t ent)
             }
         }
 
-        lexer->tok->cs = cstring_cat_ch(lexer->tok->cs, ch);
+        lexer->tok->cs = cstring_concat_ch(lexer->tok->cs, ch);
     }
 
     if (ch != '\"') {
@@ -674,7 +674,7 @@ token_t __lexer_parse_identifier__(lexer_t lexer)
     for (;;) {
         ch = reader_get(lexer->reader);
         if (ISIDNUM(ch) || ch == '$' || (0x80 <= ch && ch <= 0xfd)) {
-            lexer->tok->cs = cstring_cat_ch(lexer->tok->cs, ch);
+            lexer->tok->cs = cstring_concat_ch(lexer->tok->cs, ch);
             continue;
         }
 
