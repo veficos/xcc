@@ -6,9 +6,6 @@
 #include "set.h"
 
 
-#define STRINGIFY(a) #a
-
-
 static void reset_sets(set_t *a, set_t *b)
 {
     cstring_t cs;

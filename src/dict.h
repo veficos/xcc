@@ -42,6 +42,13 @@
 #include "config.h"
 
 
+#if defined(DEBUG)
+#   ifndef COLLECT_DICT_STATS
+#       define COLLECT_DICT_STATS
+#   endif
+#endif
+
+
 typedef struct dict_entry_s {
     void *key;
     union {
@@ -78,7 +85,7 @@ typedef struct dict_hash_table_s {
 
 typedef struct dict_s {
     dict_type_t      *type;
-    void             *privdata;
+    void             *ud;
     dict_hash_table_t ht[2];
     long              rehashidx;
     bool              dict_can_resize;
@@ -94,12 +101,15 @@ typedef struct dict_s {
  **/
 typedef struct dict_iterator_s {
     dict_t *d;
+    dict_entry_t *entry;
+    dict_entry_t *next;
+
     long index;
-    int table, safe;
-    dict_entry_t *entry, *next;
+    int table;
 
     /* unsafe iterator fingerprint for misuse detection. */
     long long fingerprint;
+    bool safe;
 } dict_iterator_t;
 
 
@@ -114,13 +124,13 @@ typedef void (*dict_scan_bucket_function_pt)(void *privdata, dict_entry_t **buck
 
 #define dict_free_val(d, entry)                                         \
     if ((d)->type->val_destructor)                                      \
-        (d)->type->val_destructor((d)->privdata, (entry)->v.val)
+        (d)->type->val_destructor((d)->ud, (entry)->v.val)
 
 
 #define dict_set_val(d, entry, new_val)                                 \
     do {                                                                \
         if ((d)->type->val_dup)                                         \
-            (entry)->v.val = (d)->type->val_dup((d)->privdata, new_val);\
+            (entry)->v.val = (d)->type->val_dup((d)->ud, new_val);\
         else                                                            \
             (entry)->v.val = (new_val);                                 \
     } while(0)
@@ -140,21 +150,22 @@ typedef void (*dict_scan_bucket_function_pt)(void *privdata, dict_entry_t **buck
 
 #define dict_free_key(d, entry)                                         \
     if ((d)->type->key_destructor)                                      \
-        (d)->type->key_destructor((d)->privdata, (entry)->key)
+        (d)->type->key_destructor((d)->ud, (entry)->key)
 
 
 #define dict_set_key(d, entry, new_key)                                 \
     do {                                                                \
-        if ((d)->type->key_dup)                                         \
-            (entry)->key = (d)->type->key_dup((d)->privdata, new_key);  \
-        else                                                            \
+        if ((d)->type->key_dup) {                                       \
+            (entry)->key = (d)->type->key_dup((d)->ud, new_key);        \
+        } else {                                                        \
             (entry)->key = (new_key);                                   \
+        }                                                               \
     } while(0)
 
 
 #define dict_compare_keys(d, key1, key2)                                \
     (((d)->type->key_compare) ?                                         \
-        (d)->type->key_compare((d)->privdata, key1, key2) :             \
+        (d)->type->key_compare((d)->ud, key1, key2) :                   \
         (key1) == (key2))
 
 
@@ -181,25 +192,51 @@ bool dict_delete(dict_t *d, const void *key);
 dict_entry_t* dict_unlink(dict_t *ht, const void *key);
 void dict_free_unlinked_entry(dict_t *d, dict_entry_t *he);
 dict_entry_t* dict_find(dict_t *d, const void *key);
-void *dict_fetch_value(dict_t *d, const void *key);
+void* dict_fetch_value(dict_t *d, const void *key);
 bool dict_resize(dict_t *d);
 dict_iterator_t* dict_get_iterator(dict_t *d);
 dict_iterator_t* dict_get_safe_iterator(dict_t *d);
 dict_entry_t* dict_next(dict_iterator_t *iter);
 void dict_release_iterator(dict_iterator_t *iter);
-void dict_get_stats(char *buf, size_t bufsize, dict_t *d);
 
 uint64_t dict_gen_hash_function(const void *key, int len);
 uint64_t dict_gen_case_hash_function(const unsigned char *buf, int len);
-void dict_empty(dict_t *d, void(callback)(void*));
+void dict_empty(dict_t *d, void(*callback)(void*));
 void dict_enable_resize(dict_t *d);
 void dict_disable_resize(dict_t *d);
-int dict_rehash(dict_t *d, int n);
+bool dict_rehash(dict_t *d, int n);
 void dict_set_hash_function_seed(uint8_t *seed);
 uint8_t* dict_get_hash_function_seed(void);
-unsigned long dict_scan(dict_t *d, unsigned long v, dict_scan_function_pt fn, dict_scan_bucket_function_pt bucketfn, void *privdata);
+unsigned long dict_scan(dict_t *d, unsigned long v, dict_scan_function_pt scan_fn, dict_scan_bucket_function_pt bucket_fn, void *ud);
 unsigned int dict_get_hash(dict_t *d, const void *key);
 dict_entry_t** dict_find_entry_ref_by_ptr_and_hash(dict_t *d, const void *oldptr, unsigned int hash);
+
+
+
+#ifdef COLLECT_DICT_STATS
+
+
+typedef struct dict_hash_table_stat_s {
+    unsigned long table_size;
+    unsigned long number_of_elements;
+    unsigned long different_slots;
+    unsigned long max_chain_length;
+    double counted_avg_chain_length;
+    double computed_avg_chain_length;
+    unsigned long clvector[DICT_STATS_VECTLEN];
+} dict_hash_table_stat_t;
+
+
+typedef struct dict_stat_s {
+    dict_hash_table_stat_t main;
+    dict_hash_table_stat_t rehashing;
+} dict_stat_t;
+
+
+void dict_get_stats(dict_t *d, dict_stat_t* stats);
+
+
+#endif
 
 
 #endif

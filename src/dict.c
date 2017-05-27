@@ -55,7 +55,7 @@ void dict_set_hash_function_seed(uint8_t *seed) {
 }
 
 
-uint8_t *dict_get_hash_function_seed(void) {
+uint8_t* dict_get_hash_function_seed(void) {
     return dict_hash_function_seed;
 }
 
@@ -100,7 +100,7 @@ bool __dict_init__(dict_t *d, dict_type_t *type, void *ud)
     __dict_reset__(&d->ht[1]);
 
     d->type      = type;
-    d->privdata  = ud;
+    d->ud        = ud;
     d->rehashidx = -1;
     d->iterators = 0;
 
@@ -154,10 +154,10 @@ bool dict_expand(dict_t *d, unsigned long size)
     }
 
     /* Allocate the new hash table and initialize all pointers to NULL */
-    n.size = realsize;
-    n.mask = realsize - 1;
+    n.size  = realsize;
+    n.mask  = realsize - 1;
     n.table = pcalloc(1, realsize * sizeof(dict_entry_t*));
-    n.used = 0;
+    n.used  = 0;
 
     /**
      * Is this the first initialization? If so it's not really a rehashing
@@ -186,7 +186,7 @@ bool dict_expand(dict_t *d, unsigned long size)
  * will visit at max N*10 empty buckets in total, otherwise the amount of
  * work it does would be unbound and the function may block for a long time.
  **/
-int dict_rehash(dict_t *d, int n) {
+bool dict_rehash(dict_t *d, int n) {
     /* Max number of empty buckets to visit. */
     int empty_visits = n * 10;
 
@@ -382,18 +382,23 @@ dict_entry_t* dict_add_or_find(dict_t *d, void *key)
 
 /**
  * Search and remove an element. This is an helper function for
- * dictDelete() and dictUnlink(), please check the top comment
+ * dict_delete() and dict_unlink(), please check the top comment
  * of those functions.
  **/
-static dict_entry_t* __dict_generic_delete__(dict_t *d, const void *key, int nofree)
+static dict_entry_t* __dict_generic_delete__(dict_t *d, const void *key, bool nofree)
 {
     unsigned int h, idx;
     dict_entry_t *he, *prevhe;
     int table;
 
-    if (d->ht[0].used == 0 && d->ht[1].used == 0) return NULL;
+    if (d->ht[0].used == 0 && d->ht[1].used == 0) {
+        return NULL;
+    }
 
-    if (dict_is_rehashing(d)) __dict_rehash_step__(d);
+    if (dict_is_rehashing(d)) {
+        __dict_rehash_step__(d);
+    }
+
     h = (unsigned int) dict_hash_key(d, key);
 
     for (table = 0; table <= 1; table++) {
@@ -437,7 +442,7 @@ static dict_entry_t* __dict_generic_delete__(dict_t *d, const void *key, int nof
  * element was not found.
  */
 bool dict_delete(dict_t *ht, const void *key) {
-    return __dict_generic_delete__(ht, key, 0) ? true : false;
+    return __dict_generic_delete__(ht, key, false) ? true : false;
 }
 
 
@@ -465,7 +470,7 @@ bool dict_delete(dict_t *ht, const void *key) {
  **/
 dict_entry_t* dict_unlink(dict_t *ht, const void *key)
 {
-    return __dict_generic_delete__(ht, key, 1);
+    return __dict_generic_delete__(ht, key, true);
 }
 
 
@@ -485,15 +490,16 @@ void dict_free_unlinked_entry(dict_t *d, dict_entry_t *he)
 }
 
 
-static bool __dict_clear__(dict_t *d, dict_hash_table_t *ht, void(callback)(void *))
+static
+bool __dict_clear__(dict_t *d, dict_hash_table_t *ht, void(*callback)(void *))
 {
     unsigned long i;
 
     for (i = 0; i < ht->size && ht->used > 0; i++) {
-        dict_entry_t *he, *nextHe;
+        dict_entry_t *he, *next;
 
         if (callback && (i & 65535) == 0) {
-            callback(d->privdata);
+            callback(d->ud);
         }
 
         if ((he = ht->table[i]) == NULL) {
@@ -501,19 +507,17 @@ static bool __dict_clear__(dict_t *d, dict_hash_table_t *ht, void(callback)(void
         }
 
         while (he) {
-            nextHe = he->next;
+            next = he->next;
             dict_free_key(d, he);
             dict_free_val(d, he);
             pfree(he);
             ht->used--;
-            he = nextHe;
+            he = next;
         }
     }
 
     pfree(ht->table);
-
     __dict_reset__(ht);
-
     return true;
 }
 
@@ -620,7 +624,7 @@ dict_iterator_t* dict_get_iterator(dict_t *d)
     iter->d = d;
     iter->table = 0;
     iter->index = -1;
-    iter->safe = 0;
+    iter->safe = false;
     iter->entry = NULL;
     iter->next = NULL;
     return iter;
@@ -629,14 +633,14 @@ dict_iterator_t* dict_get_iterator(dict_t *d)
 
 dict_iterator_t* dict_get_safe_iterator(dict_t *d) {
     dict_iterator_t* i = dict_get_iterator(d);
-    i->safe = 1;
+    i->safe = true;
     return i;
 }
 
 
-dict_entry_t* dict_next(dict_iterator_t* iter)
+dict_entry_t* dict_next(dict_iterator_t *iter)
 {
-    while (true) {
+    for(;;) {
         if (iter->entry == NULL) {
             dict_hash_table_t *ht = &iter->d->ht[iter->table];
             if (iter->index == -1 && iter->table == 0) {
@@ -677,7 +681,7 @@ dict_entry_t* dict_next(dict_iterator_t* iter)
 }
 
 
-void dict_release_iterator(dict_iterator_t* iter)
+void dict_release_iterator(dict_iterator_t *iter)
 {
     if (!(iter->index == -1 && iter->table == 0)) {
         if (iter->safe) {
@@ -696,8 +700,9 @@ void dict_release_iterator(dict_iterator_t* iter)
  * http://graphics.stanford.edu/~seander/bithacks.html#ReverseParallel
  **/
 static inline 
-unsigned long __reverse__(unsigned long v) {
-    unsigned long s = 8 * sizeof(v); // bit size; must be power of 2
+unsigned long __reverse_parallel__(unsigned long v) {
+    /* bit size; must be power of 2 */
+    unsigned long s = 8 * sizeof(v);
     unsigned long mask = ~0;
     while ((s >>= 1) > 0) {
         mask ^= (mask << s);
@@ -791,8 +796,8 @@ unsigned long __reverse__(unsigned long v) {
  * 3) The reverse cursor is somewhat hard to understand at first, but this
  *    comment is supposed to help.
  **/
-unsigned long dict_scan(dict_t *d, unsigned long v, dict_scan_function_pt fn,
-                        dict_scan_bucket_function_pt bucketfn, void *privdata)
+unsigned long dict_scan(dict_t *d, unsigned long v, dict_scan_function_pt scan_fn,
+                        dict_scan_bucket_function_pt bucket_fn, void *ud)
 {
     dict_hash_table_t *t0, *t1;
     dict_entry_t *de, *next;
@@ -807,11 +812,14 @@ unsigned long dict_scan(dict_t *d, unsigned long v, dict_scan_function_pt fn,
         m0 = t0->mask;
 
         /* Emit entries at cursor */
-        if (bucketfn) bucketfn(privdata, &t0->table[v & m0]);
+        if (bucket_fn) {
+            bucket_fn(ud, &t0->table[v & m0]);
+        }
+
         de = t0->table[v & m0];
         while (de) {
             next = de->next;
-            fn(privdata, de);
+            scan_fn(ud, de);
             de = next;
         }
 
@@ -829,11 +837,14 @@ unsigned long dict_scan(dict_t *d, unsigned long v, dict_scan_function_pt fn,
         m1 = t1->mask;
 
         /* Emit entries at cursor */
-        if (bucketfn) bucketfn(privdata, &t0->table[v & m0]);
+        if (bucket_fn) {
+            bucket_fn(ud, &t0->table[v & m0]);
+        }
+
         de = t0->table[v & m0];
         while (de) {
             next = de->next;
-            fn(privdata, de);
+            scan_fn(ud, de);
             de = next;
         }
 
@@ -843,11 +854,14 @@ unsigned long dict_scan(dict_t *d, unsigned long v, dict_scan_function_pt fn,
          **/
         do {
             /* Emit entries at cursor */
-            if (bucketfn) bucketfn(privdata, &t1->table[v & m1]);
+            if (bucket_fn) {
+                bucket_fn(ud, &t1->table[v & m1]);
+            }
+
             de = t1->table[v & m1];
             while (de) {
                 next = de->next;
-                fn(privdata, de);
+                scan_fn(ud, de);
                 de = next;
             }
 
@@ -865,9 +879,9 @@ unsigned long dict_scan(dict_t *d, unsigned long v, dict_scan_function_pt fn,
     v |= ~m0;
 
     /* Increment the reverse cursor */
-    v = __reverse__(v);
+    v = __reverse_parallel__(v);
     v++;
-    v = __reverse__(v);
+    v = __reverse_parallel__(v);
 
     return v;
 }
@@ -897,6 +911,7 @@ bool __dict_expand_if_needed__(dict_t *d)
             d->ht[0].used / d->ht[0].size > dict_force_resize_ratio)) {
         return dict_expand(d, d->ht[0].used * 2);
     }
+
     return true;
 }
 
@@ -963,7 +978,7 @@ static int __dict_key_index__(dict_t *d, const void *key, unsigned int hash, dic
 }
 
 
-void dict_empty(dict_t *d, void(callback)(void*)) {
+void dict_empty(dict_t *d, void(*callback)(void*)) {
     __dict_clear__(d, &d->ht[0], callback);
     __dict_clear__(d, &d->ht[1], callback);
 
@@ -992,13 +1007,12 @@ unsigned int dict_get_hash(dict_t *d, const void *key) {
  * oldkey is a dead pointer and should not be accessed.
  * the hash value should be provided using dictGetHash.
  * no string / key comparison is performed.
- * return value is the reference to the dictEntry if found, or NULL if not found.
+ * return value is the reference to the dict_entry_t if found, or NULL if not found.
  **/
 dict_entry_t** dict_find_entry_ref_by_ptr_and_hash(dict_t *d, const void *oldptr, unsigned int hash) {
     dict_entry_t *he, **heref;
     unsigned int idx, table;
 
-    /* dict is empty */
     if (d->ht[0].used + d->ht[1].used == 0) {
         return NULL;
     }
@@ -1007,39 +1021,62 @@ dict_entry_t** dict_find_entry_ref_by_ptr_and_hash(dict_t *d, const void *oldptr
         idx = hash & d->ht[table].mask;
         heref = &d->ht[table].table[idx];
         he = *heref;
+
         while (he) {
-            if (oldptr == he->key)
+            if (oldptr == he->key) {
                 return heref;
+            }
             heref = &he->next;
             he = *heref;
         }
-        if (!dict_is_rehashing(d)) return NULL;
+
+        if (!dict_is_rehashing(d)) {
+            return NULL;
+        }
     }
 
     return NULL;
 }
 
 
-size_t __dict_get_stats_ht__(char *buf, size_t bufsize, dict_hash_table_t *ht, int tableid) {
+#ifdef COLLECT_DICT_STATS
+
+
+static
+void __init_dict_hash_table_stat__(dict_hash_table_stat_t *ht_stat)
+{
+    int i;
+    ht_stat->table_size = 0;
+    ht_stat->number_of_elements = 0;
+    ht_stat->different_slots = 0;
+    ht_stat->max_chain_length = 0;
+    ht_stat->counted_avg_chain_length = 0;
+    ht_stat->computed_avg_chain_length = 0;
+    for (i = 0; i < DICT_STATS_VECTLEN; i++) {
+        ht_stat->clvector[i] = 0;
+    }
+}
+
+
+void __dict_get_stats_ht__(dict_hash_table_t *ht, dict_hash_table_stat_t *ht_stat) {
     unsigned long i, slots = 0, chainlen, maxchainlen = 0;
     unsigned long totchainlen = 0;
-    unsigned long clvector[DICT_STATS_VECTLEN];
     size_t l = 0;
 
     if (ht->used == 0) {
-        return snprintf(buf, bufsize, "No stats available for empty dictionaries\n");
+        return;
     }
 
-    /* Compute stats. */
-    for (i = 0; i < DICT_STATS_VECTLEN; i++) clvector[i] = 0;
     for (i = 0; i < ht->size; i++) {
         dict_entry_t *he;
 
         if (ht->table[i] == NULL) {
-            clvector[0]++;
+            ht_stat->clvector[0]++;
             continue;
         }
+
         slots++;
+
         /* For each hash entry on this slot... */
         chainlen = 0;
         he = ht->table[i];
@@ -1047,56 +1084,33 @@ size_t __dict_get_stats_ht__(char *buf, size_t bufsize, dict_hash_table_t *ht, i
             chainlen++;
             he = he->next;
         }
-        clvector[(chainlen < DICT_STATS_VECTLEN) ? chainlen : (DICT_STATS_VECTLEN - 1)]++;
+
+        ht_stat->clvector[(chainlen < DICT_STATS_VECTLEN) ? chainlen : (DICT_STATS_VECTLEN - 1)]++;
         if (chainlen > maxchainlen) maxchainlen = chainlen;
         totchainlen += chainlen;
     }
 
     /* Generate human readable stats. */
-    l += snprintf(buf + l, bufsize - l,
-        "Hash table %d stats (%s):\n"
-        " table size: %ld\n"
-        " number of elements: %ld\n"
-        " different slots: %ld\n"
-        " max chain length: %ld\n"
-        " avg chain length (counted): %.02f\n"
-        " avg chain length (computed): %.02f\n"
-        " Chain length distribution:\n",
-        tableid, (tableid == 0) ? "main hash table" : "rehashing target",
-        ht->size, ht->used, slots, maxchainlen,
-        (float)totchainlen / slots, (float)ht->used / slots);
-
-    for (i = 0; i < DICT_STATS_VECTLEN - 1; i++) {
-        if (clvector[i] == 0) continue;
-        if (l >= bufsize) break;
-        l += snprintf(buf + l, bufsize - l,
-            "   %s%ld: %ld (%.02f%%)\n",
-            (i == DICT_STATS_VECTLEN - 1) ? ">= " : "",
-            i, clvector[i], ((float)clvector[i] / ht->size) * 100);
-    }
-
-    /* Unlike snprintf(), teturn the number of characters actually written. */
-    if (bufsize) {
-        buf[bufsize - 1] = '\0';
-    }
-    return strlen(buf);
+    ht_stat->table_size = ht->size;
+    ht_stat->number_of_elements = ht->used;
+    ht_stat->different_slots = slots;
+    ht_stat->max_chain_length = maxchainlen;
+    ht_stat->counted_avg_chain_length = (double)totchainlen / (double)slots;
+    ht_stat->computed_avg_chain_length = (double)ht->used / (double)slots;
 }
 
 
-void dict_get_stats(char *buf, size_t bufsize, dict_t *d) {
-    size_t l;
-    char *orig_buf = buf;
-    size_t orig_bufsize = bufsize;
+void dict_get_stats(dict_t *d, dict_stat_t* stats)
+{
+    __init_dict_hash_table_stat__(&stats->main);
+    __init_dict_hash_table_stat__(&stats->rehashing);
 
-    l = __dict_get_stats_ht__(buf, bufsize, &d->ht[0], 0);
-    buf += l;
-    bufsize -= l;
-    
-    if (dict_is_rehashing(d) && bufsize > 0) {
-        __dict_get_stats_ht__(buf, bufsize, &d->ht[1], 1);
-    }
+    __dict_get_stats_ht__(&d->ht[0], &stats->main);
 
-    if (orig_bufsize) {
-        orig_buf[orig_bufsize - 1] = '\0';
+    if (dict_is_rehashing(d)) {
+        __dict_get_stats_ht__(&d->ht[1], &stats->rehashing);
     }
 }
+
+
+#endif
