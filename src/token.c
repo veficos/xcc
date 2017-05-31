@@ -65,12 +65,11 @@ struct token_dictionary_s {
 };
 
 
-token_t token_create(void)
+token_t* token_create(void)
 {
-    token_t tok = (token_t) pmalloc(sizeof(struct token_s));
+    token_t* tok = (token_t*) pmalloc(sizeof(token_t));
     tok->type = TOKEN_UNKNOWN;
     tok->cs = cstring_new_n(NULL, DEFUALT_LITERALS_LENGTH);
-    tok->loc = source_location_create();
     tok->hideset = NULL;
     tok->spaces = 0;
     tok->is_vararg = false;
@@ -78,11 +77,11 @@ token_t token_create(void)
 }
 
 
-void token_destroy(token_t token)
+void token_destroy(token_t *token)
 {
     assert(token != NULL);
 
-    source_location_destroy(token->loc);
+//    source_location_destroy(token->loc);
 
     if (token->hideset != NULL) set_destroy(token->hideset);
 
@@ -92,7 +91,7 @@ void token_destroy(token_t token)
 }
 
 
-void token_init(token_t token)
+void token_init(token_t *token)
 {
     cstring_clear(token->cs);
 
@@ -108,29 +107,28 @@ void token_init(token_t token)
 
     token->is_vararg = false;
 
-    source_location_mark(token->loc, 0, 0, NULL, NULL);
+    //source_location_mark(token->loc, 0, 0, NULL, NULL);
 }
 
 
-token_t token_dup(token_t tok)
+token_t* token_dup(token_t *tok)
 {
-    token_t ret;
+    token_t* ret;
     cstring_t cs = NULL;
 
-    ret = pmalloc(sizeof(struct token_s));
+    ret = pmalloc(sizeof(token_t));
 
     ret->type = tok->type;
     ret->hideset = tok->hideset ? set_dup(tok->hideset) : NULL;// set_dup(tok->hideset);
     ret->begin_of_line = tok->begin_of_line;
     ret->spaces = tok->spaces;
     ret->cs = cstring_dup(tok->cs);
-    ret->loc = source_location_dup(tok->loc);
     ret->is_vararg = false;
     return ret;
 }
 
 
-const char *tok2id(token_t tok)
+const char* tok2id(token_t *tok)
 {
     size_t i, length;
     length = sizeof(token_dictionary) / sizeof(struct token_dictionary_s);
@@ -145,7 +143,7 @@ const char *tok2id(token_t tok)
 }
 
 
-const char *token_as_text(token_t tok)
+const char* token_as_text(token_t *tok)
 {
     size_t i, length;
     length = sizeof(token_dictionary) / sizeof(struct token_dictionary_s);
@@ -159,9 +157,9 @@ const char *token_as_text(token_t tok)
 }
 
 
-source_location_t source_location_create(void)
+token_location_t* source_location_create(void)
 {
-    source_location_t loc = pmalloc(sizeof(struct source_location_s));
+    token_location_t *loc = pmalloc(sizeof(token_location_t));
     loc->linenote = NULL;
     loc->fn = NULL;
     loc->line = 0;
@@ -170,16 +168,16 @@ source_location_t source_location_create(void)
 }
 
 
-void source_location_destroy(source_location_t loc)
+void source_location_destroy(token_location_t *loc)
 {
     assert(loc != NULL);
     pfree(loc);
 }
 
 
-source_location_t source_location_dup(source_location_t loc)
+token_location_t* source_location_dup(token_location_t *loc)
 {
-    source_location_t ret = pmalloc(sizeof(struct source_location_s));
+    token_location_t *ret = pmalloc(sizeof(token_location_t));
     ret->linenote = loc->linenote;
     ret->fn = loc->fn;
     ret->line = loc->line;

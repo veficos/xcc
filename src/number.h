@@ -10,7 +10,7 @@
 
 typedef struct diag_s*      diag_t;
 typedef struct option_s*    option_t;
-typedef struct token_s*     token_t;
+typedef struct token_s      token_t;
 
 
 typedef enum number_property_e {

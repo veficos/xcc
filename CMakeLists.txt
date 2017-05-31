@@ -40,7 +40,12 @@ set(TESTMAP_FILES
 set(TESTDIAGNOSTOR_FILES
         src/pmalloc.c
         src/cstring.c
+        src/siphash.c
+        src/dict.c
+        src/set.c
+        src/encoding.c
         src/token.c
+        src/option.c
         src/diagnostor.c
         src/testdiagnostor.c)
 

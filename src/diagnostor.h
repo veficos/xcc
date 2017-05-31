@@ -66,17 +66,26 @@ void debug_linenote(const char* linenote, size_t start, size_t tilde);
         (tok)->loc->linenote, (tok)->loc->column, (tok)->cs ? cstring_length((tok)->cs) : 0, fmt, __VA_ARGS__)
 
 
+typedef struct array_s array_t;
+
 typedef enum diagnostor_msgtype_e {
-    DIAGNOSTOR_NOTE,
-    DIAGNOSTOR_WARNING,
-    DIAGNOSTOR_ERROR,
+    DIAGNOSTOR_MSGTYPE_NORMAL,
+    DIAGNOSTOR_MSGTYPE_NOTE,
+    DIAGNOSTOR_MSGTYPE_WARNING,
+    DIAGNOSTOR_MSGTYPE_ERROR,
 } diagnostor_msgtype_t;
 
 
 typedef struct diagnostor_s {
     size_t nerrors;
-    size_t nwarnnings;
+    size_t nwarnings;
 } diagnostor_t;
+
+
+typedef struct diagnostor_callback_s {
+    void (* error)();
+    void (* warning)();
+} diagnostor_callback_t;
 
 
 #define diagnostor_has_error(diagnostor)    \
@@ -86,9 +95,16 @@ typedef struct diagnostor_s {
     ((diagnostor)->nwarnnings != 0)
 
 
+void diagnostor_note(diagnostor_t *diagnostor, diagnostor_msgtype_t msgtype, const char *fmt, ...);
+void diagnostor_note_with_line(diagnostor_t *diagnostor, diagnostor_msgtype_t msgtype, const char *fn,
+                               size_t line, size_t column, const char *fmt, ...);
+void diagnostor_note_linenote(diagnostor_t *diagnostor, diagnostor_msgtype_t msgtype, linenote_t linenote,
+                              linenote_caution_t *linenote_caution);
 void diagnostor_warningf(diagnostor_t *diagnostor, const char *fn, size_t line, size_t column, const char *fmt, ...);
 void diagnostor_report(diagnostor_t *diagnostor);
 
+diagnostor_t* diagnostor_create(void);
+void diagnostor_destroy(diagnostor_t *diagnostor);
 
 
 #endif

@@ -18,9 +18,10 @@
 #   endif 
 
 #   define localtime_r(tm, tmt) localtime_s(tmt, tm);
-
+#   define WINDOWS
 #else
 
+#   define UNIX
 #   define USE_CONSOLE_COLOR
 
 #endif

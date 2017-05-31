@@ -7,10 +7,8 @@
 #include "config.h"
 #include "array.h"
 #include "set.h"
-#include "reader.h"
 #include "cstring.h"
 #include "encoding.h"
-#include "number.h"
 
 typedef enum token_type_e {
     TOKEN_UNKNOWN = -1,
@@ -162,6 +160,8 @@ typedef enum token_type_e {
 
 } token_type_t;
 
+typedef unsigned char* linenote_t;
+typedef struct number_s number_t;
 
 #define DEFUALT_LITERALS_LENGTH     12
 #define DEFAULT_FILENAME_LENGTH     32
@@ -171,28 +171,31 @@ typedef enum token_type_e {
 typedef struct linenote_caution_s {
     size_t start;
     size_t length;
-} *linenote_caution_t;
+} linenote_caution_t;
 
 
-typedef struct source_location_s {
+typedef struct token_location_s {
     cstring_t fn;
     linenote_t linenote;
     size_t line;
     size_t column;
     array_t linenote_cautions;
-} *source_location_t;
+} token_location_t;
 
 
 typedef struct token_s {
     token_type_t type;
     cstring_t cs;
-    number_t number;
-    source_location_t loc;
-    set_t hideset;          /* used by the preprocessor for macro expansion */
-    bool begin_of_line;     /* true if the token is at the beginning of a line */
-    size_t spaces;          /* >0 if the token has a leading space */
+    token_location_t location;
+    number_t *number;
+
+
+    /* used by the preprocessor for macro expansion */
+    set_t *hideset;
+    bool begin_of_line;
+    size_t spaces;
     bool is_vararg;
-} *token_t;
+} token_t;
 
 
 #define token_mark_loc(tok, line, column, linenote, fn) \
@@ -202,21 +205,21 @@ typedef struct token_s {
     source_location_remark((tok)->loc, line, column, linenote)
 
 
-token_t token_create(void);
-void token_init(token_t token);
-void token_destroy(token_t tok);
-token_t token_dup(token_t tok);
-const char *tok2id(token_t tok);
-const char *token_as_text(token_t tok);
+token_t* token_create(void);
+void token_init(token_t *token);
+void token_destroy(token_t *tok);
+token_t* token_dup(token_t *tok);
+const char* tok2id(token_t *tok);
+const char* token_as_text(token_t *tok);
 
 
-source_location_t source_location_create(void);
-void source_location_destroy(source_location_t loc);
-source_location_t source_location_dup(source_location_t loc);
+token_location_t* source_location_create(void);
+void source_location_destroy(token_location_t *loc);
+token_location_t* source_location_dup(token_location_t *loc);
 
 
 static inline
-void source_location_mark(source_location_t loc, 
+void source_location_mark(token_location_t *loc,
     size_t line, size_t column, linenote_t linenote, cstring_t fn)
 {
     loc->line = line;
@@ -227,7 +230,7 @@ void source_location_mark(source_location_t loc,
 
 
 static inline
-void source_location_remark(source_location_t loc, 
+void source_location_remark(token_location_t *loc,
     size_t line, size_t column, linenote_t linenote)
 {
     loc->line = line;

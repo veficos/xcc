@@ -2,7 +2,6 @@
 
 #include "config.h"
 #include "encoding.h"
-#include "diagnostor.h"
 
 
 static inline int __count_leading_ones__(char ch);
@@ -105,11 +104,14 @@ cstring_t cstring_cast_to_utf32(cstring_t cs)
 static inline
 int __count_leading_ones__(char ch)
 {
-    for (int i = 7; i >= 0; i--) {
+    int i;
+
+    for (i = 7; i >= 0; i--) {
         if ((ch & (1 << i)) == 0) {
             return 7 - i;
         }
     }
+
     return 8;
 }
 
@@ -117,7 +119,10 @@ int __count_leading_ones__(char ch)
 static inline
 bool __read_rune__(uint32_t *rune, size_t *rune_size, char *s, int n) {
 
-    int len = __count_leading_ones__(s[0]);
+    int len;
+    int i;
+
+    len = __count_leading_ones__(s[0]);
 
     if (len == 0) {
         *rune = s[0];
@@ -129,7 +134,7 @@ bool __read_rune__(uint32_t *rune, size_t *rune_size, char *s, int n) {
         return false;
     }
 
-    for (int i = 1; i < len; i++) {
+    for (i = 1; i < len; i++) {
         if ((s[i] & 0xC0) != 0x80) {
             return false;
         }
