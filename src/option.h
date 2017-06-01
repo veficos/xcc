@@ -25,7 +25,7 @@ typedef struct option_s {
     const char* infile;
     const char* outfile;
 
-    int ferror_limit;
+    size_t ferror_limit;
 
     bool cflag: 1;
     bool Sflag: 1;

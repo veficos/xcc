@@ -82,12 +82,6 @@ typedef struct diagnostor_s {
 } diagnostor_t;
 
 
-typedef struct diagnostor_callback_s {
-    void (* error)();
-    void (* warning)();
-} diagnostor_callback_t;
-
-
 #define diagnostor_has_error(diagnostor)    \
     ((diagnostor)->nerrors != 0)
 
@@ -95,13 +89,13 @@ typedef struct diagnostor_callback_s {
     ((diagnostor)->nwarnnings != 0)
 
 
-void diagnostor_note(diagnostor_t *diagnostor, diagnostor_msgtype_t msgtype, const char *fmt, ...);
-void diagnostor_note_with_line(diagnostor_t *diagnostor, diagnostor_msgtype_t msgtype, const char *fn,
+void diagnostor_note(diagnostor_t *diag, diagnostor_msgtype_t msgtype, const char *fmt, ...);
+void diagnostor_note_with_line(diagnostor_t *diag, diagnostor_msgtype_t msgtype, const char *fn,
                                size_t line, size_t column, const char *fmt, ...);
-void diagnostor_note_linenote(diagnostor_t *diagnostor, diagnostor_msgtype_t msgtype, linenote_t linenote,
+void diagnostor_note_linenote(diagnostor_t *diag, diagnostor_msgtype_t msgtype, linenote_t linenote,
                               linenote_caution_t *linenote_caution);
 void diagnostor_warningf(diagnostor_t *diagnostor, const char *fn, size_t line, size_t column, const char *fmt, ...);
-void diagnostor_report(diagnostor_t *diagnostor);
+void diagnostor_report(diagnostor_t *diag);
 
 diagnostor_t* diagnostor_create(void);
 void diagnostor_destroy(diagnostor_t *diagnostor);
