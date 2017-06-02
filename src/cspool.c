@@ -38,22 +38,22 @@ dict_type_t __cspool_dict_type__ = {
 };
 
 
-cspool_t cspool_create(void)
+cspool_t* cspool_create(void)
 {
-    cspool_t pool = (cspool_t)pmalloc(sizeof(struct cspool_s));
+    cspool_t *pool = (cspool_t *)pmalloc(sizeof(cspool_t));
     pool->d = dict_create(&__cspool_dict_type__, NULL);
     return pool;
 }
 
 
-void cspool_destroy(cspool_t pool)
+void cspool_destroy(cspool_t *pool)
 {
     dict_destroy(pool->d);
     pfree(pool);
 }
 
 
-cstring_t cspool_push(cspool_t pool, const char *s)
+cstring_t cspool_push(cspool_t *pool, const char *s)
 {
     void *ret;
     dict_entry_t *entry;
@@ -73,7 +73,7 @@ cstring_t cspool_push(cspool_t pool, const char *s)
 }
 
 
-cstring_t cspool_push_cs(cspool_t pool, cstring_t cs)
+cstring_t cspool_push_cs(cspool_t *pool, cstring_t cs)
 {
     cstring_t ret;
     dict_entry_t *entry;
@@ -92,7 +92,7 @@ cstring_t cspool_push_cs(cspool_t pool, cstring_t cs)
 }
 
 
-void cspool_pop(cspool_t pool, const char *key)
+void cspool_pop(cspool_t *pool, const char *key)
 {
     dict_delete(pool->d, key);
 }

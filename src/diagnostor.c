@@ -1,17 +1,10 @@
 
 
 #include "config.h"
-#include "token.h"
 #include "color.h"
-#include "diagnostor.h"
+#include "token.h"
 #include "option.h"
-
-#ifndef MAX_COLUMN_HEAD
-#define MAX_COLUMN_HEAD  64
-#endif
-
-
-static void __write_one_line__(FILE *fp, const char *p);
+#include "diagnostor.h"
 
 
 #if defined(UNIX)
@@ -55,171 +48,57 @@ int get_console_height() {
 }
 
 
-diag_t diag_create(void)
+#ifndef MIN_LINE_LIMIT
+#define MIN_LINE_LIMIT  12
+#endif
+
+
+diagnostor_t __diagnostor__ = {
+    0,
+    0,
+};
+
+diagnostor_t* diagnostor = &__diagnostor__;
+
+
+static void __write_linenote__(const unsigned char *linenote, size_t outputed, size_t width);
+static void __write_linenote_caution__(diagnostor_level_t level, linenote_t linenote,
+                                       size_t start, size_t length, size_t width);
+
+
+diagnostor_t* diagnostor_create(void)
 {
-    diag_t diag = pmalloc(sizeof(struct diag_s));
-    diag->nwarnings = 0;
+    diagnostor_t *diag = pmalloc(sizeof(diagnostor_t));
     diag->nerrors = 0;
+    diag->nwarnings = 0;
     return diag;
 }
 
 
-void diag_destroy(diag_t diag)
+void diagnostor_destroy(diagnostor_t *diag)
 {
     assert(diag != NULL);
     pfree(diag);
 }
 
 
-void diag_report(diag_t diag)
-{
-    if (diag->nwarnings != 0 && diag->nerrors != 0) {
-        fprintf(stderr, "%d warning and %d error generated.\n", diag->nwarnings, diag->nerrors);
-    }
-
-    if (diag->nwarnings != 0) {
-        fprintf(stderr, "%d warning generated.\n", diag->nwarnings);
-    }
-
-    if (diag->nerrors != 0) {
-        fprintf(stderr, "%d error generated.\n", diag->nerrors);
-    }
-}
-
-
-void diag_errorvf(diag_t diag, const char *fmt, va_list ap)
-{
-    fprintf(stdout, fmt, ap);
-    fprintf(stdout, "\n");
-    diag->nerrors++;
-}
-
-
-void diag_errorf(diag_t diag, const char *fmt, ...)
+void diagnostor_note(diagnostor_t *diag, diagnostor_level_t level, const char *fmt, ...)
 {
     va_list ap;
 
     va_start(ap, fmt);
 
-    fprintf(stdout, fmt, ap);
-    fprintf(stdout, "\n");
-
-    va_end(ap);
-}
-
-
-void diag_fmt(const char *fmt, ...)
-{
-    va_list ap;
-
-    va_start(ap, fmt);
-
-    fprintf(stdout, fmt, ap);
-    fprintf(stdout, "\n");
-
-    va_end(ap);
-}
-
-
-void diag_panic(const char *fmt, ...)
-{
-    va_list ap;
-
-    va_start(ap, fmt);
-
-    fprintf(stderr, fmt, ap);
-    fprintf(stderr, "\n");
-
-    va_end(ap);
-
-    exit(-1);
-}
-
-
-void debug_linenote(const char* linenote, size_t start, size_t tilde)
-{
-    const char *p = linenote;
-
-    if (start >= MAX_COLUMN_HEAD) {
-
-        fprintf(stderr, "   ...");
-
-        __write_one_line__(stderr, p + start);
-
-        fprintf(stderr, BRUSH_RED("\n      ^\n"));
-
-    } else {
-        const char *q = p + (start - 1);
-        size_t step;
-
-        __write_one_line__(stderr, p);
-
-        fprintf(stderr, "\n");
-
-        for (; p < q; ) {
-            step = utf8_rune_size(*p);
-            p += step;
-            if (step > 1) {
-                fprintf(stderr, "   ");
-            } else {
-                fprintf(stderr, " ");
-            }
-        }
-
-        fprintf(stderr, BRUSH_RED("^"));
-
-        while (tilde && --tilde) {
-            fprintf(stderr, BRUSH_GREEN("~"));
-        }
-
-        fprintf(stderr, "\n");
-    }
-}
-
-
-static void __write_one_line__(FILE *fp, const char *p)
-{
-    for (;*p != '\r' && *p != '\n' && *p; p++) {
-        fputc(*p, fp);
-    }
-}
-
-
-#define MIN_LINE_LIMIT  12
-
-diagnostor_t* diagnostor_create(void)
-{
-    diagnostor_t *diagnostor = pmalloc(sizeof(diagnostor_t));
-    diagnostor->nerrors = 0;
-    diagnostor->nwarnings = 0;
-    return diagnostor;
-}
-
-
-void diagnostor_destroy(diagnostor_t *diagnostor)
-{
-    assert(diagnostor != NULL);
-    pfree(diagnostor);
-}
-
-
-void diagnostor_note(diagnostor_t *diag, diagnostor_msgtype_t msgtype, const char *fmt, ...)
-{
-    va_list ap;
-
-    va_start(ap, fmt);
-
-    switch (msgtype) {
-    case DIAGNOSTOR_MSGTYPE_NORMAL:
+    switch (level) {
+    case DIAGNOSTOR_LEVEL_NORMAL:
         break;
-    case DIAGNOSTOR_MSGTYPE_NOTE:
+    case DIAGNOSTOR_LEVEL_NOTE:
         printf(BRUSH_BOLD_CYAN("note: "));
         break;
-    case DIAGNOSTOR_MSGTYPE_WARNING:
+    case DIAGNOSTOR_LEVEL_WARNING:
         printf(BRUSH_BOLD_PURPLE("warning: "));
         diag->nwarnings++;
         break;
-    case DIAGNOSTOR_MSGTYPE_ERROR:
+    case DIAGNOSTOR_LEVEL_ERROR:
         printf(BRUSH_BOLD_RED("error: "));
         diag->nerrors++;
         break;
@@ -234,8 +113,8 @@ void diagnostor_note(diagnostor_t *diag, diagnostor_msgtype_t msgtype, const cha
 }
 
 
-void diagnostor_note_with_line(diagnostor_t *diag, diagnostor_msgtype_t msgtype,
-                               const char *fn, size_t line, size_t column, const char *fmt, ...)
+void diagnostor_note_with_location(diagnostor_t *diag, diagnostor_level_t level,
+                                   const char *fn, size_t line, size_t column, const char *fmt, ...)
 {
     va_list ap;
 
@@ -243,17 +122,17 @@ void diagnostor_note_with_line(diagnostor_t *diag, diagnostor_msgtype_t msgtype,
 
     printf("%s:%lu:%lu: ", fn, line, column);
 
-    switch (msgtype) {
-    case DIAGNOSTOR_MSGTYPE_NORMAL:
+    switch (level) {
+    case DIAGNOSTOR_LEVEL_NORMAL:
         break;
-    case DIAGNOSTOR_MSGTYPE_NOTE:
+    case DIAGNOSTOR_LEVEL_NOTE:
         printf(BRUSH_BOLD_CYAN("note: "));
         break;
-    case DIAGNOSTOR_MSGTYPE_WARNING:
+    case DIAGNOSTOR_LEVEL_WARNING:
         printf(BRUSH_BOLD_PURPLE("warning: "));
         diag->nwarnings++;
         break;
-    case DIAGNOSTOR_MSGTYPE_ERROR:
+    case DIAGNOSTOR_LEVEL_ERROR:
         printf(BRUSH_BOLD_RED("error: "));
         diag->nerrors++;
         if (diag->nerrors >= option->ferror_limit) {
@@ -271,18 +150,56 @@ void diagnostor_note_with_line(diagnostor_t *diag, diagnostor_msgtype_t msgtype,
     va_end(ap);
 }
 
-static void __write_linenote__(const unsigned char *linenote, size_t outputed, size_t width);
-static void __write_linenote_caution__(diagnostor_msgtype_t msgtype,
-                                       linenote_t linenote,
-                                       linenote_caution_t *linenote_caution,
-                                       size_t width_limit);
+
+void diagnostor_note_with_linenote_caution(diagnostor_t *diag, diagnostor_level_t level,
+                                           const char *fn, size_t line, size_t column, linenote_t linenote,
+                                           linenote_caution_t *linenote_caution, const char *fmt, ...)
+{
+    va_list ap;
+
+    va_start(ap, fmt);
+
+    printf("%s:%lu:%lu: ", fn, line, column);
+
+    switch (level) {
+    case DIAGNOSTOR_LEVEL_NORMAL:
+        break;
+    case DIAGNOSTOR_LEVEL_NOTE:
+        printf(BRUSH_BOLD_CYAN("note: "));
+        break;
+    case DIAGNOSTOR_LEVEL_WARNING:
+        printf(BRUSH_BOLD_PURPLE("warning: "));
+        diag->nwarnings++;
+        break;
+    case DIAGNOSTOR_LEVEL_ERROR:
+        printf(BRUSH_BOLD_RED("error: "));
+        diag->nerrors++;
+        break;
+    default:
+        assert(false);
+        break;
+    }
+
+    vprintf(fmt, ap);
+    printf("\n");
+    va_end(ap);
+
+    diagnostor_note_linenote(diag, level, linenote, linenote_caution);
+
+    if (diag->nerrors >= option->ferror_limit) {
+        diagnostor_report(diag);
+        exit(-1);
+    }
+}
 
 
-void diagnostor_note_linenote(diagnostor_t *diag, diagnostor_msgtype_t msgtype, linenote_t linenote,
-                              linenote_caution_t *linenote_caution)
+void diagnostor_note_linenote(diagnostor_t *diag, diagnostor_level_t level,
+                              linenote_t linenote, linenote_caution_t *linenote_caution)
 {
     int width;
     int zoom, zoom_limit;
+    size_t start = linenote_caution->start;
+    size_t length = linenote_caution->length;
     size_t outputed = 0;
 
     width = get_console_width();
@@ -290,20 +207,50 @@ void diagnostor_note_linenote(diagnostor_t *diag, diagnostor_msgtype_t msgtype, 
         return;
     }
 
-    zoom = width - (int)linenote_caution->start;
-    zoom_limit = (int)linenote_caution->length;
+    zoom = width - (int)start;
+    zoom_limit = (int)length;
     if (zoom <= zoom_limit) {
         outputed += printf("   ...");
-        linenote = linenote + (linenote_caution->start - 1);
-        linenote_caution->start = outputed + 1;
+        linenote = linenote + start - 1;
+        start = outputed + 1;
     } else {
         outputed += printf("   ");
-        linenote_caution->start += outputed;
+        start += outputed;
     }
 
     __write_linenote__(linenote, outputed, width);
 
-    __write_linenote_caution__(msgtype, linenote, linenote_caution, width);
+    __write_linenote_caution__(level, linenote, start, length, width);
+}
+
+
+void diagnostor_panic(diagnostor_t *diag, const char *fmt, ...)
+{
+    va_list ap;
+
+    va_start(ap, fmt);
+    printf(BRUSH_BOLD_RED("fatal error: "));
+    vprintf(fmt, ap);
+    printf("\n");
+    va_end(ap);
+    diagnostor_report(diag);
+    exit(-1);
+}
+
+
+void diagnostor_panic_with_location(diagnostor_t *diag, const char *fn,
+                                    size_t line, size_t column, const char *fmt, ...)
+{
+    va_list ap;
+
+    va_start(ap, fmt);
+    printf("%s:%lu:%lu: ", fn, line, column);
+    printf(BRUSH_BOLD_RED("fatal error: "));
+    vprintf(fmt, ap);
+    printf("\n");
+    va_end(ap);
+    diagnostor_report(diag);
+    exit(-1);
 }
 
 
@@ -323,8 +270,7 @@ void diagnostor_report(diagnostor_t *diag)
 }
 
 
-static
-void __write_linenote__(const unsigned char *linenote, size_t outputed, size_t width)
+static void __write_linenote__(const unsigned char *linenote, size_t outputed, size_t width)
 {
     size_t i;
 
@@ -345,32 +291,32 @@ void __write_linenote__(const unsigned char *linenote, size_t outputed, size_t w
 }
 
 
-static
-void __write_linenote_caution__(diagnostor_msgtype_t msgtype,
-                                linenote_t linenote,
-                                linenote_caution_t *linenote_caution,
-                                size_t width_limit)
+static void __write_linenote_caution__(diagnostor_level_t level, linenote_t linenote,
+                                       size_t start, size_t length, size_t width)
 {
     size_t i, j;
     const char *tilde;
     const char *caret;
 
-    for (i = 1, j = 1; i < linenote_caution->start; i++, j++) {
+    for (i = 1, j = 1; i < start; i++, j++) {
         putchar(' ');
     }
 
-    if (msgtype == DIAGNOSTOR_MSGTYPE_WARNING) {
+    if (level == DIAGNOSTOR_LEVEL_WARNING) {
         caret = BRUSH_BOLD_PURPLE("^");
         tilde = BRUSH_BOLD_PURPLE("~");
-    } else if (msgtype == DIAGNOSTOR_MSGTYPE_ERROR) {
+    } else if (level == DIAGNOSTOR_LEVEL_ERROR) {
         caret = BRUSH_BOLD_RED("^");
         tilde = BRUSH_BOLD_RED("~");
+    } else if (level == DIAGNOSTOR_LEVEL_NOTE) {
+        caret = BRUSH_BOLD_CYAN("^");
+        tilde = BRUSH_BOLD_CYAN("~");
     } else {
         assert(false);
     }
 
     printf(caret);
-    for (i = 1; i < linenote_caution->length && j < width_limit; i++, j++) {
+    for (i = 1; i < length && j < width; i++, j++) {
         printf(tilde);
     }
     printf("\n");

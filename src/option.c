@@ -32,21 +32,21 @@ option_t* option_create(void)
 }
 
 
-void option_destroy(option_t *option)
+void option_destroy(option_t *opt)
 {
-    assert(option != NULL);
-    pfree(option);
+    assert(opt != NULL);
+    pfree(opt);
 }
 
 
-void option_init(option_t *op)
+void option_init(option_t *opt)
 {
-    op->lang = LANG_STANDARD_DEFAULT;
-    op->infile = "";
-    op->outfile = "";
-    op->ferror_limit = 5;
-    op->cflag = false;
-    op->Eflag = false;
-    op->w_unterminated_comment = true;
-    op->w_backslash_newline_space = true;
+    opt->lang = LANG_STANDARD_DEFAULT;
+    opt->infile = "";
+    opt->outfile = "";
+    opt->ferror_limit = 5;
+    opt->cflag = false;
+    opt->Eflag = false;
+    opt->w_unterminated_comment = true;
+    opt->w_backslash_newline_space = true;
 }

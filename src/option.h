@@ -39,11 +39,11 @@ typedef struct option_s {
 
 extern option_t* option;
 
-#define option_get(op, filed) (op)->filed
+#define option_get(opt, filed) (opt)->filed
 
 option_t* option_create(void);
-void option_init(option_t *option);
-void option_destroy(option_t *option);
+void option_init(option_t *opt);
+void option_destroy(option_t *opt);
 
 
 #endif

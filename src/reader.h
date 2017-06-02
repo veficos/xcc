@@ -8,12 +8,10 @@
 #include "cstring.h"
 
 
-typedef struct array_s*     array_t;
-typedef struct stream_s*    stream_t;
-typedef struct cspool_s*    cspool_t;
-typedef struct option_s*    option_t;
-typedef struct diag_s*      diag_t;
-typedef struct reader_option_s* reader_option_t;
+typedef struct array_s      array_t;
+typedef struct stream_s     stream_t;
+typedef struct cspool_s     cspool_t;
+
 
 typedef enum stream_type_e {
     STREAM_TYPE_FILE,
@@ -25,31 +23,29 @@ typedef const void* linenote_t;
 
 
 typedef struct reader_s {
-    diag_t diag;
-    reader_option_t opts;
-    array_t streams;
-    stream_t last;
-    cspool_t pool;
+    array_t *streams;
+    stream_t *last;
+    cspool_t *pool;
     int lastch;
-} *reader_t;
+} reader_t;
 
 
-reader_t reader_create(diag_t diag, option_t option);
-void reader_destroy(reader_t reader);
-size_t reader_level(reader_t reader);
-bool reader_push(reader_t reader, stream_type_t type, const unsigned char *s);
-time_t reader_mt(reader_t reader);
-int reader_get(reader_t reader);
-int reader_peek(reader_t reader);
-void reader_unget(reader_t reader, int ch);
-bool reader_try(reader_t reader, int ch);
-bool reader_test(reader_t reader, int ch);
-linenote_t reader_linenote(reader_t reader);
-size_t reader_line(reader_t reader);
-size_t reader_column(reader_t reader);
-bool reader_is_empty(reader_t reader);
-bool reader_is_eos(reader_t reader);
-cstring_t reader_name(reader_t reader);
+reader_t* reader_create(void);
+void reader_destroy(reader_t *reader);
+size_t reader_level(reader_t *reader);
+bool reader_push(reader_t *reader, stream_type_t type, const unsigned char *s);
+time_t reader_mt(reader_t *reader);
+int reader_get(reader_t *reader);
+int reader_peek(reader_t *reader);
+void reader_unget(reader_t *reader, int ch);
+bool reader_try(reader_t *reader, int ch);
+bool reader_test(reader_t *reader, int ch);
+linenote_t reader_linenote(reader_t *reader);
+size_t reader_line(reader_t *reader);
+size_t reader_column(reader_t *reader);
+bool reader_is_empty(reader_t *reader);
+bool reader_is_eos(reader_t *reader);
+cstring_t reader_name(reader_t *reader);
 
 cstring_t linenote2cs(linenote_t linenote);
 

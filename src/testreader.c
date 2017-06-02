@@ -3,8 +3,6 @@
 #include "config.h"
 #include "reader.h"
 #include "unittest.h"
-#include "diagnostor.h"
-#include "option.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -15,16 +13,14 @@
 static 
 void test_reader_case1()
 {
-    reader_t reader;
+    reader_t *reader;
     cstring_t cs;
-    diag_t diag = diag_create();
-    option_t option = option_create();
 
     const char *s = "Hello World\r"
                     " \n"
                     "\r\n";
 
-    reader = reader_create(diag, option);
+    reader = reader_create();
     reader_push(reader, STREAM_TYPE_STRING, s);
 
     TEST_COND("reader_create()", reader != NULL);
@@ -37,7 +33,7 @@ void test_reader_case1()
     TEST_COND("reader_column()", reader_column(reader) == 4);
     TEST_COND("reader_next()", reader_get(reader) == 'l');
     TEST_COND("reader_column()", reader_column(reader) == 5);
-    cs = linenode2cs(reader_linenote(reader));
+    cs = linenote2cs(reader_linenote(reader));
     TEST_COND("line_note", cstring_compare(cs, "Hello World") == 0);
     TEST_COND("reader_next()", reader_get(reader) == 'o');
     TEST_COND("reader_column()", reader_column(reader) == 6);
@@ -68,18 +64,13 @@ void test_reader_case1()
 
     cstring_free(cs);
     reader_destroy(reader);
-    option_destroy(option);
-    diag_destroy(diag);
 }
 
 
 static 
 void test_reader_case2()
 {
-    reader_t reader;
-    diag_t diag = diag_create();
-    option_t option = option_create();
-
+    reader_t *reader;
 
     const char *s = "#in\\\r"
         "clude<stdio.h>\r"
@@ -100,7 +91,7 @@ void test_reader_case2()
     int i;
 
   
-    reader = reader_create(diag, option);
+    reader = reader_create();
     reader_push(reader, STREAM_TYPE_STRING, s);
 
     for (i = 0; ; i++) {
@@ -114,24 +105,20 @@ void test_reader_case2()
     }
 
     reader_destroy(reader);
-    option_destroy(option);
-    diag_destroy(diag);
 }
 
 
 static
 void test_reader_case3()
 {
-    reader_t reader;
-    diag_t diag = diag_create();
-    option_t option = option_create();
+    reader_t *reader;
     cstring_t cs;
     const char *s =" printf(\"HelloWorld\"); \\ f";
 
     cs = cstring_new_n(NULL, 24);
 
     
-    reader = reader_create(diag, option);
+    reader = reader_create();
     reader_push(reader, STREAM_TYPE_STRING, s);
     reader_push(reader, STREAM_TYPE_FILE, "2.c");
 
@@ -146,8 +133,6 @@ void test_reader_case3()
     printf("%s", cs);
     cstring_free(cs);
     reader_destroy(reader);
-    diag_destroy(diag);
-    option_destroy(option);
 }
 
 
