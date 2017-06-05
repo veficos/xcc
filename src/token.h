@@ -160,7 +160,7 @@ typedef enum token_type_e {
 
 } token_type_t;
 
-typedef unsigned char* linenote_t;
+typedef const unsigned char* linenote_t;
 typedef struct number_s number_t;
 
 #define DEFUALT_LITERALS_LENGTH     12

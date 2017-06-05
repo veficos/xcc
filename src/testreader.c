@@ -78,15 +78,15 @@ void test_reader_case2()
         " printf(\"HelloWorld\"); \\\r\n"
         "\n"
         " \\ \n"    
-        "\\  \r "                           
+        "\\  \r "
         "\n"
-        "} ��\\   ";                          
+        "} 中文\\   ";
 
     const char *t = "#include<stdio.h>\n"
         "int main(void) \\ { \n"
         " printf(\"HelloWorld\"); \n"
         "  \n"
-        "} ��\n\xff";
+        "} 中文\n\xff";
 
     int i;
 

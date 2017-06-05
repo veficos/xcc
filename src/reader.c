@@ -6,8 +6,10 @@
 #include "cstring.h"
 #include "cspool.h"
 #include "utils.h"
-#include "reader.h"
+#include "token.h"
 #include "diagnostor.h"
+#include "option.h"
+#include "reader.h"
 
 
 /**
@@ -61,15 +63,6 @@ struct stream_s {
 
     int lastch;
 };
-
-
-#define __WARNINGF__(fmt, ...)
-
-#define WARN(fmt, ...)  \
-    diagnostor_note(diagnostor, DIAGNOSTOR_LEVEL_WARNING, fmt, __VA_ARGS__)
-
-#define WARN_WITH_LOCATION(fmt, ...)\
-    diagnostor_
 
 
 #define STREAM_LINE_ADVANCE(stream)         \
@@ -402,7 +395,15 @@ nextch:
                 }
             case '\n':
                 if (pc > stream->pc + step) {
-                    __WARNINGF__("backslash and newline separated by space");
+                    if (option_get(w_backslash_newline_space)) {
+                        warningf_with_linenote_position(stream->fn,
+                                                        stream->line,
+                                                        stream->column,
+                                                        stream->line_note,
+                                                        stream->column,
+                                                        1,
+                                                        "backslash and newline separated by space");
+                    }
                 }
 
                 stream->pc = pc + 1;
@@ -413,7 +414,15 @@ nextch:
         }
 
         if (pc == stream->pe) {
-            __WARNINGF__("backslash-newline at end of file");
+            if (option_get(warn_no_newline_eof)) {
+                warningf_with_linenote_position(stream->fn,
+                                                stream->line,
+                                                stream->column,
+                                                stream->line_note,
+                                                stream->column,
+                                                1,
+                                                "backslash-newline at end of file");
+            }
 
             ch = '\n';
             stream->pc = pc;

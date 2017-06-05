@@ -5,6 +5,7 @@ project(cc)
 set(CMAKE_C_STANDARD 90)
 
 set(TESTARRAY_FILES
+        src/config.h
         src/pmalloc.h
         src/pmalloc.c
         src/array.h
@@ -13,6 +14,7 @@ set(TESTARRAY_FILES
         src/testarray.c)
 
 set(TESTCSTRING_FILES
+        src/config.h
         src/pmalloc.c
         src/pmalloc.c
         src/cstring.c
@@ -21,6 +23,7 @@ set(TESTCSTRING_FILES
         src/testcstring.c)
 
 set(TESTDICT_FILES
+        src/config.h
         src/pmalloc.c
         src/cstring.c
         src/siphash.c
@@ -28,6 +31,7 @@ set(TESTDICT_FILES
         src/testdict.c)
 
 set(TESTSET_FILES
+        src/config.h
         src/pmalloc.c
         src/cstring.c
         src/dict.c
@@ -36,6 +40,7 @@ set(TESTSET_FILES
         src/testset.c)
 
 set(TESTMAP_FILES
+        src/config.h
         src/pmalloc.c
         src/cstring.c
         src/dict.c
@@ -44,18 +49,30 @@ set(TESTMAP_FILES
         src/testmap.c)
 
 set(TESTDIAGNOSTOR_FILES
+        src/config.h
+        src/pmalloc.h
         src/pmalloc.c
+        src/cstring.h
         src/cstring.c
+        src/hash.h
         src/siphash.c
+        src/dict.h
         src/dict.c
+        src/set.h
         src/set.c
+        src/encoding.h
         src/encoding.c
+        src/token.h
         src/token.c
+        src/option.h
         src/option.c
+        src/diagnostor.h
         src/diagnostor.c
+        src/unittest.h
         src/testdiagnostor.c)
 
 set(TESTREADER_FILES
+        src/config.h
         src/pmalloc.h
         src/pmalloc.c
         src/cstring.h

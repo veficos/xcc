@@ -19,7 +19,7 @@ typedef enum stream_type_e {
 } stream_type_t;
 
 
-typedef const void* linenote_t;
+typedef const unsigned char* linenote_t;
 
 
 typedef struct reader_s {

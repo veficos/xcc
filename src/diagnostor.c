@@ -66,6 +66,131 @@ static void __write_linenote_caution__(diagnostor_level_t level, linenote_t line
                                        size_t start, size_t length, size_t width);
 
 
+void warningf(const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    diagnostor_notevf(diagnostor, DIAGNOSTOR_LEVEL_WARNING, fmt, ap);
+    va_end(ap);
+}
+
+
+void errorf(const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    diagnostor_notevf(diagnostor, DIAGNOSTOR_LEVEL_ERROR, fmt, ap);
+    va_end(ap);
+}
+
+
+void warningf_with_location(const char *fn, size_t line, size_t column, const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    diagnostor_notevf_with_location(diagnostor, DIAGNOSTOR_LEVEL_WARNING, fn, line, column, fmt, ap);
+    va_end(ap);
+}
+
+
+void errorf_with_location(const char *fn, size_t line, size_t column, const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    diagnostor_notevf_with_location(diagnostor, DIAGNOSTOR_LEVEL_ERROR, fn, line, column, fmt, ap);
+    va_end(ap);
+}
+
+
+void warningf_with_linenote(const char *fn, size_t line, size_t column, linenote_t linenote,
+                            const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    diagnostor_notef_with_linenote(diagnostor, DIAGNOSTOR_LEVEL_WARNING, fn, line, column, linenote, fmt, ap);
+    va_end(ap);
+}
+
+
+void errorf_with_linenote(const char *fn, size_t line, size_t column, linenote_t linenote,
+                          const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    diagnostor_notef_with_linenote(diagnostor, DIAGNOSTOR_LEVEL_ERROR, fn, line, column, linenote, fmt, ap);
+    va_end(ap);
+}
+
+
+void warningf_with_linenote_caution(const char *fn, size_t line, size_t column, linenote_t linenote,
+                                    linenote_caution_t *linenote_caution, const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    diagnostor_notevf_with_linenote_caution(diagnostor, DIAGNOSTOR_LEVEL_WARNING, fn,
+                                            line, column, linenote, linenote_caution, fmt, ap);
+    va_end(ap);
+}
+
+
+void errorf_with_linenote_caution(const char *fn, size_t line, size_t column, linenote_t linenote,
+                                  linenote_caution_t *linenote_caution, const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    diagnostor_notevf_with_linenote_caution(diagnostor, DIAGNOSTOR_LEVEL_ERROR, fn,
+                                            line, column, linenote, linenote_caution, fmt, ap);
+    va_end(ap);
+}
+
+
+void warningf_with_linenote_position(const char *fn, size_t line, size_t column, linenote_t linenote,
+                                     size_t start, size_t length, const char *fmt, ...)
+{
+    va_list ap;
+    linenote_caution_t lc;
+    va_start(ap, fmt);
+    lc.start = start;
+    lc.length = length;
+    diagnostor_notevf_with_linenote_caution(diagnostor, DIAGNOSTOR_LEVEL_WARNING, fn,
+                                            line, column, linenote, &lc, fmt, ap);
+    va_end(ap);
+}
+
+
+void errorf_with_linenote_position(const char *fn, size_t line, size_t column, linenote_t linenote,
+                                   size_t start, size_t length, const char *fmt, ...)
+{
+    va_list ap;
+    linenote_caution_t lc;
+    va_start(ap, fmt);
+    lc.start = start;
+    lc.length = length;
+    diagnostor_notevf_with_linenote_caution(diagnostor, DIAGNOSTOR_LEVEL_ERROR, fn,
+                                            line, column, linenote, &lc, fmt, ap);
+    va_end(ap);
+}
+
+
+void panicf(const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    diagnostor_panicvf(diagnostor, fmt, ap);
+    va_end(ap);
+}
+
+
+void panicf_with_location(const char *fn, size_t line,
+                          size_t column, const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    diagnostor_panicvf_with_location(diagnostor, fn, line, column, fmt, ap);
+    va_end(ap);
+}
+
+
 diagnostor_t* diagnostor_create(void)
 {
     diagnostor_t *diag = pmalloc(sizeof(diagnostor_t));
@@ -82,12 +207,17 @@ void diagnostor_destroy(diagnostor_t *diag)
 }
 
 
-void diagnostor_note(diagnostor_t *diag, diagnostor_level_t level, const char *fmt, ...)
+void diagnostor_notef(diagnostor_t *diag, diagnostor_level_t level, const char *fmt, ...)
 {
     va_list ap;
-
     va_start(ap, fmt);
+    diagnostor_notevf(diag, level, fmt, ap);
+    va_end(ap);
+}
 
+
+void diagnostor_notevf(diagnostor_t *diag, diagnostor_level_t level, const char *fmt, va_list args)
+{
     switch (level) {
     case DIAGNOSTOR_LEVEL_NORMAL:
         break;
@@ -107,19 +237,24 @@ void diagnostor_note(diagnostor_t *diag, diagnostor_level_t level, const char *f
         break;
     }
 
-    vprintf(fmt, ap);
+    vprintf(fmt, args);
     printf("\n");
+}
+
+
+void diagnostor_notef_with_location(diagnostor_t *diag, diagnostor_level_t level,
+                                   const char *fn, size_t line, size_t column, const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    diagnostor_notevf_with_location(diag, level, fn, line, column, fmt, ap);
     va_end(ap);
 }
 
 
-void diagnostor_note_with_location(diagnostor_t *diag, diagnostor_level_t level,
-                                   const char *fn, size_t line, size_t column, const char *fmt, ...)
+void diagnostor_notevf_with_location(diagnostor_t *diag, diagnostor_level_t level,
+                                    const char *fn, size_t line, size_t column, const char *fmt, va_list args)
 {
-    va_list ap;
-
-    va_start(ap, fmt);
-
     printf("%s:%lu:%lu: ", fn, line, column);
 
     switch (level) {
@@ -145,20 +280,25 @@ void diagnostor_note_with_location(diagnostor_t *diag, diagnostor_level_t level,
         break;
     }
 
-    vprintf(fmt, ap);
+    vprintf(fmt, args);
     printf("\n");
+}
+
+
+
+void diagnostor_notef_with_linenote(diagnostor_t *diag, diagnostor_level_t level, const char *fn,
+                                    size_t line, size_t column, linenote_t linenote, const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    diagnostor_notevf_with_linenote(diag, level, fn, line, column, linenote, fmt, ap);
     va_end(ap);
 }
 
 
-void diagnostor_note_with_linenote_caution(diagnostor_t *diag, diagnostor_level_t level,
-                                           const char *fn, size_t line, size_t column, linenote_t linenote,
-                                           linenote_caution_t *linenote_caution, const char *fmt, ...)
+void diagnostor_notevf_with_linenote(diagnostor_t *diag, diagnostor_level_t level, const char *fn,
+                                     size_t line, size_t column, linenote_t linenote, const char *fmt, va_list args)
 {
-    va_list ap;
-
-    va_start(ap, fmt);
-
     printf("%s:%lu:%lu: ", fn, line, column);
 
     switch (level) {
@@ -180,11 +320,10 @@ void diagnostor_note_with_linenote_caution(diagnostor_t *diag, diagnostor_level_
         break;
     }
 
-    vprintf(fmt, ap);
+    vprintf(fmt, args);
     printf("\n");
-    va_end(ap);
 
-    diagnostor_note_linenote(diag, level, linenote, linenote_caution);
+    diagnostor_note_linenote(diag, linenote);
 
     if (diag->nerrors >= option->ferror_limit) {
         diagnostor_report(diag);
@@ -193,8 +332,73 @@ void diagnostor_note_with_linenote_caution(diagnostor_t *diag, diagnostor_level_
 }
 
 
-void diagnostor_note_linenote(diagnostor_t *diag, diagnostor_level_t level,
-                              linenote_t linenote, linenote_caution_t *linenote_caution)
+void diagnostor_notef_with_linenote_caution(diagnostor_t *diag, diagnostor_level_t level,
+                                           const char *fn, size_t line, size_t column, linenote_t linenote,
+                                           linenote_caution_t *linenote_caution, const char *fmt, ...)
+{
+    va_list ap;
+
+    va_start(ap, fmt);
+    diagnostor_notevf_with_linenote_caution(diag, level, fn, line, column, linenote, linenote_caution, fmt, ap);
+    va_end(ap);
+}
+
+
+void diagnostor_notevf_with_linenote_caution(diagnostor_t *diag, diagnostor_level_t level,
+                                            const char *fn, size_t line, size_t column, linenote_t linenote,
+                                            linenote_caution_t *linenote_caution, const char *fmt, va_list args)
+{
+    printf("%s:%lu:%lu: ", fn, line, column);
+
+    switch (level) {
+    case DIAGNOSTOR_LEVEL_NORMAL:
+        break;
+    case DIAGNOSTOR_LEVEL_NOTE:
+        printf(BRUSH_BOLD_CYAN("note: "));
+        break;
+    case DIAGNOSTOR_LEVEL_WARNING:
+        printf(BRUSH_BOLD_PURPLE("warning: "));
+        diag->nwarnings++;
+        break;
+    case DIAGNOSTOR_LEVEL_ERROR:
+        printf(BRUSH_BOLD_RED("error: "));
+        diag->nerrors++;
+        break;
+    default:
+        assert(false);
+        break;
+    }
+
+    vprintf(fmt, args);
+    printf("\n");
+
+    diagnostor_note_linenote_caution(diag, level, linenote, linenote_caution);
+
+    if (diag->nerrors >= option->ferror_limit) {
+        diagnostor_report(diag);
+        exit(-1);
+    }
+}
+
+
+void diagnostor_note_linenote(diagnostor_t *diag, linenote_t linenote)
+{
+    int width;
+    size_t outputed = 0;
+
+    width = get_console_width();
+    if (width < MIN_LINE_LIMIT) {
+        return;
+    }
+
+    outputed += printf("   ");
+
+    __write_linenote__(linenote, outputed, width);
+}
+
+
+void diagnostor_note_linenote_caution(diagnostor_t *diag, diagnostor_level_t level,
+                                      linenote_t linenote, linenote_caution_t *linenote_caution)
 {
     int width;
     int zoom, zoom_limit;
@@ -224,32 +428,49 @@ void diagnostor_note_linenote(diagnostor_t *diag, diagnostor_level_t level,
 }
 
 
-void diagnostor_panic(diagnostor_t *diag, const char *fmt, ...)
+void diagnostor_panicf(diagnostor_t *diag, const char *fmt, ...)
 {
     va_list ap;
 
     va_start(ap, fmt);
-    printf(BRUSH_BOLD_RED("fatal error: "));
-    vprintf(fmt, ap);
-    printf("\n");
+    diagnostor_panicvf(diag, fmt, ap);
     va_end(ap);
+
+}
+
+
+void diagnostor_panicvf(diagnostor_t *diag, const char *fmt, va_list args)
+{
+    printf(BRUSH_BOLD_RED("fatal error: "));
+    vprintf(fmt, args);
+    printf("\n");
     diagnostor_report(diag);
+    printf("compilation terminated.");
     exit(-1);
 }
 
 
-void diagnostor_panic_with_location(diagnostor_t *diag, const char *fn,
+void diagnostor_panicf_with_location(diagnostor_t *diag, const char *fn,
                                     size_t line, size_t column, const char *fmt, ...)
 {
     va_list ap;
 
     va_start(ap, fmt);
+    diagnostor_panicvf_with_location(diag, fn, line, column, fmt, ap);
+    va_end(ap);
+
+}
+
+
+void diagnostor_panicvf_with_location(diagnostor_t *diag, const char *fn,
+                                      size_t line, size_t column, const char *fmt, va_list args)
+{
     printf("%s:%lu:%lu: ", fn, line, column);
     printf(BRUSH_BOLD_RED("fatal error: "));
-    vprintf(fmt, ap);
+    vprintf(fmt, args);
     printf("\n");
-    va_end(ap);
     diagnostor_report(diag);
+    printf("compilation terminated.");
     exit(-1);
 }
 
@@ -258,14 +479,14 @@ void diagnostor_report(diagnostor_t *diag)
 {
     if (diag->nwarnings != 0 && diag->nerrors != 0) {
         printf("%d warning and %d error generated.\n", diag->nwarnings, diag->nerrors);
-    }
-
-    if (diag->nwarnings != 0) {
+    } else if (diag->nwarnings != 0) {
         printf("%d warning generated.\n", diag->nwarnings);
+    } else if (diag->nerrors != 0) {
+        printf("%d error generated.\n", diag->nerrors);
     }
 
     if (diag->nerrors != 0) {
-        printf("%d error generated.\n", diag->nerrors);
+        exit(-1);
     }
 }
 
