@@ -24,32 +24,50 @@ set(TESTCSTRING_FILES
 
 set(TESTDICT_FILES
         src/config.h
+        src/pmalloc.h
         src/pmalloc.c
+        src/cstring.h
         src/cstring.c
+        src/hash.h
         src/siphash.c
+        src/dict.h
         src/dict.c
+        src/unittest.h
         src/testdict.c)
 
 set(TESTSET_FILES
         src/config.h
+        src/pmalloc.h
         src/pmalloc.c
+        src/cstring.h
         src/cstring.c
+        src/dict.h
         src/dict.c
+        src/hash.h
         src/siphash.c
+        src/set.h
         src/set.c
+        src/unittest.h
         src/testset.c)
 
 set(TESTMAP_FILES
         src/config.h
+        src/pmalloc.h
         src/pmalloc.c
+        src/cstring.h
         src/cstring.c
+        src/dict.h
         src/dict.c
+        src/hash.h
         src/siphash.c
+        src/map.h
         src/map.c
+        src/unittest.h
         src/testmap.c)
 
 set(TESTDIAGNOSTOR_FILES
         src/config.h
+        src/color.h
         src/pmalloc.h
         src/pmalloc.c
         src/cstring.h
@@ -73,6 +91,7 @@ set(TESTDIAGNOSTOR_FILES
 
 set(TESTREADER_FILES
         src/config.h
+        src/color.h
         src/pmalloc.h
         src/pmalloc.c
         src/cstring.h
