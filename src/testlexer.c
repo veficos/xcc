@@ -13,19 +13,14 @@
 static
 void test_lexer(void)
 {
-    reader_t reader;
-    diag_t diag;
-    lexer_t lexer;
-    struct option_s option;
+    reader_t *reader;
+    lexer_t *lexer;
     const char *p;
-    token_t  tok;
+    token_t *tok;
 
+    reader = reader_create();
 
-    diag = diag_create();
-
-    reader = reader_create(diag, &option);
-
-    lexer = lexer_create(reader, &option, diag);
+    lexer = lexer_create(reader);
     lexer_push(lexer, STREAM_TYPE_FILE, "3.c");
     lexer_push(lexer, STREAM_TYPE_STRING, "1.c");
 
@@ -40,23 +35,18 @@ void test_lexer(void)
         printf("token: %s\n"
                "line: %d\n"
                "column: %d\n",
-               p ? p : tok->cs, tok->loc->line, tok->loc->column);
+               p ? p : tok->cs, tok->location.line, tok->location.column);
         
         token_destroy(tok);
     }
 
-    lexer_destroy(lexer); 
-
-    diag_report(diag);
-    diag_destroy(diag);
-
+    lexer_destroy(lexer);
     reader_destroy(reader);
 }
 
 
 int main(void)
 {
-
 #ifdef WIN32
     _CrtSetDbgFlag(_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG) | _CRTDBG_LEAK_CHECK_DF);
 #endif

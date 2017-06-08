@@ -25,14 +25,14 @@ typedef const unsigned char* linenote_t;
 typedef struct reader_s {
     array_t *streams;
     stream_t *last;
-    cspool_t *pool;
+    cspool_t *cspool;
     int lastch;
 } reader_t;
 
 
 reader_t* reader_create(void);
 void reader_destroy(reader_t *reader);
-size_t reader_level(reader_t *reader);
+size_t reader_depth(reader_t *reader);
 bool reader_push(reader_t *reader, stream_type_t type, const unsigned char *s);
 time_t reader_mt(reader_t *reader);
 int reader_get(reader_t *reader);

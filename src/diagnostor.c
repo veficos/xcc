@@ -172,6 +172,30 @@ void errorf_with_linenote_position(const char *fn, size_t line, size_t column, l
 }
 
 
+void warningf_with_token(token_t *token, const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    diagnostor_notevf_with_linenote_caution(diagnostor, DIAGNOSTOR_LEVEL_WARNING,
+                                            token->location.fn, token->location.line,
+                                            token->location.column, token->location.linenote,
+                                            &token->location.linenote_caution, fmt, ap);
+    va_end(ap);
+}
+
+
+void errorf_with_token(token_t *token, const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    diagnostor_notevf_with_linenote_caution(diagnostor, DIAGNOSTOR_LEVEL_ERROR,
+                                            token->location.fn, token->location.line,
+                                            token->location.column, token->location.linenote,
+                                            &token->location.linenote_caution, fmt, ap);
+    va_end(ap);
+}
+
+
 void panicf(const char *fmt, ...)
 {
     va_list ap;

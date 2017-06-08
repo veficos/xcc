@@ -69,7 +69,7 @@ token_t* token_create(void)
 {
     token_t* tok = (token_t*) pmalloc(sizeof(token_t));
     tok->type = TOKEN_UNKNOWN;
-    tok->cs = cstring_new_n(NULL, DEFUALT_LITERALS_LENGTH);
+    tok->cs = cstring_new_n(NULL, 8);
     tok->hideset = NULL;
     tok->spaces = 0;
     tok->is_vararg = false;

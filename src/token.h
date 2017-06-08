@@ -179,7 +179,7 @@ typedef struct token_location_s {
     linenote_t linenote;
     size_t line;
     size_t column;
-    array_t linenote_cautions;
+    linenote_caution_t linenote_caution;
 } token_location_t;
 
 

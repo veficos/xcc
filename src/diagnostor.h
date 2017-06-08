@@ -60,6 +60,8 @@ void warningf_with_linenote_position(const char *fn, size_t line, size_t column,
                                      size_t start, size_t length, const char *fmt, ...);
 void errorf_with_linenote_position(const char *fn, size_t line, size_t column, linenote_t linenote,
                                    size_t start, size_t length, const char *fmt, ...);
+void warningf_with_token(token_t *token, const char *fmt, ...);
+void errorf_with_token(token_t *token, const char *fmt, ...);
 void panicf(const char *fmt, ...);
 void panicf_with_location(const char *fn, size_t line,
                           size_t column, const char *fmt, ...);

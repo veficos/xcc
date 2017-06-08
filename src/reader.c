@@ -1,17 +1,3 @@
-
-
-#include "config.h"
-#include "array.h"
-#include "pmalloc.h"
-#include "cstring.h"
-#include "cspool.h"
-#include "utils.h"
-#include "token.h"
-#include "diagnostor.h"
-#include "option.h"
-#include "reader.h"
-
-
 /**
  * 1. C11 5.1.1: "\r\n" or "\r" are canonicalized to "\n".
  *
@@ -32,6 +18,17 @@
  *       files end in a newline character (5.1.1.2p2). Thus, if all
  *       source files are conforming, this step wouldn't be needed.
  **/
+
+#include "config.h"
+#include "array.h"
+#include "pmalloc.h"
+#include "cstring.h"
+#include "cspool.h"
+#include "utils.h"
+#include "token.h"
+#include "diagnostor.h"
+#include "option.h"
+#include "reader.h"
 
 
 #ifndef STREAM_STASHED_SIZE
@@ -73,18 +70,19 @@ struct stream_s {
     } while (false)
 
 
-static inline bool __stream_init__(reader_t *reader, stream_t *stream, stream_type_t type, const unsigned char *s);
-static inline void __stream_uninit__(stream_t *stream);
-static inline void __stream_stash__(stream_t *stream, int ch);
-static inline int __stream_unstash__(stream_t *stream);
-static inline int __stream_next__(reader_t *reader, stream_t *stream);
-static inline int __stream_peek__(stream_t *stream);
+static bool __stream_init__(cspool_t *cspool, stream_t *stream,
+                            stream_type_t type, const unsigned char *s);
+static void __stream_uninit__(stream_t *stream);
+static void __stream_stash__(stream_t *stream, int ch);
+static int __stream_unstash__(stream_t *stream);
+static int __stream_next__(stream_t *stream);
+static int __stream_peek__(stream_t *stream);
 
 
 reader_t* reader_create(void)
 {
     reader_t *reader = (reader_t*) pmalloc(sizeof(reader_t));
-    reader->pool = cspool_create();
+    reader->cspool = cspool_create();
     reader->streams = array_create_n(sizeof(stream_t), READER_STREAM_DEPTH);
     reader->last = NULL;
     reader->lastch = ~EOF;
@@ -105,13 +103,13 @@ void reader_destroy(reader_t *reader)
 
     array_destroy(reader->streams);
 
-    cspool_destroy(reader->pool);
+    cspool_destroy(reader->cspool);
 
     pfree(reader);
 }
 
 
-size_t reader_level(reader_t *reader)
+size_t reader_depth(reader_t *reader)
 {
     return array_length(reader->streams);
 }
@@ -123,7 +121,7 @@ bool reader_push(reader_t *reader, stream_type_t type, const unsigned char *s)
 
     stream = array_push_back(reader->streams);
 
-    if (!__stream_init__(reader, stream, type, s)) {
+    if (!__stream_init__(reader->cspool, stream, type, s)) {
         return false;
     }
 
@@ -164,7 +162,7 @@ int reader_get(reader_t *reader)
     }
 
     if (reader->last != NULL) {
-        ch = __stream_next__(reader, reader->last);
+        ch = __stream_next__(reader->last);
     }
 
     reader->lastch = ch;
@@ -174,11 +172,10 @@ int reader_get(reader_t *reader)
 
 int reader_peek(reader_t *reader)
 {
-    int ch = EOF;
     if (reader->last != NULL) {
-        ch = __stream_peek__(reader->last);
+        return __stream_peek__(reader->last);
     }
-    return ch;
+    return EOF;
 }
 
 
@@ -235,7 +232,8 @@ cstring_t reader_name(reader_t *reader)
 
 bool reader_is_empty(reader_t *reader)
 {
-    return (reader_peek(reader) == EOF) && (reader_level(reader) == 0);
+    return (reader_peek(reader) == EOF) &&
+           (reader_depth(reader) == 0);
 }
 
 
@@ -256,12 +254,14 @@ cstring_t linenote2cs(linenote_t linenote)
         p++;
     }
 
-    return cstring_new_n((const unsigned char*)linenote, p - (const unsigned char *)linenote);
+    return cstring_new_n((const unsigned char*)linenote,
+                         p - (const unsigned char *)linenote);
 }
 
 
-static inline 
-bool __stream_init__(reader_t *reader, stream_t *stream, stream_type_t type, const unsigned char *s)
+static
+bool __stream_init__(cspool_t *cspool, stream_t *stream,
+                     stream_type_t type, const unsigned char *s)
 {
     cstring_t text = NULL;
 
@@ -284,9 +284,9 @@ bool __stream_init__(reader_t *reader, stream_t *stream, stream_type_t type, con
             goto failure;
         }
        
-        stream->fn = cspool_push_cs(reader->pool, cstring_new(s));
+        stream->fn = cspool_push_cs(cspool, cstring_new(s));
         stream->mt = st.st_mtime;
-        text = cspool_push_cs(reader->pool, cstring_new_n(buf, st.st_size));
+        text = cspool_push_cs(cspool, cstring_new_n(buf, st.st_size));
 
         pfree(buf);
         fclose(fp);
@@ -296,9 +296,9 @@ bool __stream_init__(reader_t *reader, stream_t *stream, stream_type_t type, con
         return false;
     }
     case STREAM_TYPE_STRING: {
-        stream->fn = cspool_push(reader->pool, "<string>");
+        stream->fn = cspool_push(cspool, "<string>");
         stream->mt = 0;
-        text = cspool_push(reader->pool, s);
+        text = cspool_push(cspool, s);
         break;
     }
     default:
@@ -307,8 +307,8 @@ bool __stream_init__(reader_t *reader, stream_t *stream, stream_type_t type, con
 
     stream->type = type;
     stream->stashed = NULL;
-    stream->line_note = stream->pc = (unsigned char *)text;
-    stream->pe = (unsigned char *)&text[cstring_length(text)];
+    stream->line_note = stream->pc = text;
+    stream->pe = &text[cstring_length(text)];
     stream->line = 1;
     stream->column = 1;
     stream->lastch = EOF;
@@ -316,7 +316,7 @@ bool __stream_init__(reader_t *reader, stream_t *stream, stream_type_t type, con
 }
 
 
-static inline
+static
 void __stream_uninit__(stream_t *stream)
 {
     if (stream->stashed != NULL) {
@@ -325,7 +325,7 @@ void __stream_uninit__(stream_t *stream)
 }
 
 
-static inline
+static
 void __stream_stash__(stream_t *stream, int ch)
 {
     assert(ch != EOF);
@@ -336,7 +336,7 @@ void __stream_stash__(stream_t *stream, int ch)
 }
 
 
-static inline
+static
 int __stream_unstash__(stream_t *stream)
 {
     return stream->stashed == NULL || cstring_length(stream->stashed) <= 0 ? \
@@ -344,8 +344,8 @@ int __stream_unstash__(stream_t *stream)
 }
 
 
-static inline
-int __stream_next__(reader_t *reader, stream_t *stream)
+static
+int __stream_next__(stream_t *stream)
 {
     int ch;
 
@@ -363,9 +363,9 @@ nextch:
     stream->pc++;
 
     if (ch == '\r') {
-        /* 
+        /**
          * "\r\n" or "\r" are canonicalized to "\n" 
-         */
+         **/
 
         if (*stream->pc == '\n') {
             stream->pc++;
@@ -378,11 +378,11 @@ nextch:
         STREAM_LINE_ADVANCE(stream);
 
     } else if (ch == '\\') {
-        /*
-        * Each instance of a backslash character(\) immediately
-        * followed by a newline character is deleted, splicing 
-        * physical source lines to form logical source lines
-        */
+        /**
+         * Each instance of a backslash character(\) immediately
+         * followed by a newline character is deleted, splicing 
+         * physical source lines to form logical source lines
+         **/
 
         unsigned char *pc = stream->pc;
         uintptr_t step = 0;
@@ -438,8 +438,7 @@ done:
 }
 
 
-static inline
-int __stream_peek__(stream_t *stream)
+static int __stream_peek__(stream_t *stream)
 {
     int ch;
     unsigned char *pc;

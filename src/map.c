@@ -114,4 +114,3 @@ unsigned long map_scan(map_t *map, map_scan_pt map_fn, void *privdata)
     } while (v);
     return v;
 }
-

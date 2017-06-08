@@ -117,10 +117,9 @@ void test_reader_case3()
 
     cs = cstring_new_n(NULL, 24);
 
-    
     reader = reader_create();
     reader_push(reader, STREAM_TYPE_STRING, s);
-    reader_push(reader, STREAM_TYPE_FILE, "2.c");
+    //reader_push(reader, STREAM_TYPE_FILE, "2.c");
 
     for (;;) {
         int ch = reader_get(reader);
@@ -142,7 +141,7 @@ int main(void)
     _CrtSetDbgFlag(_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG) | _CRTDBG_LEAK_CHECK_DF);
 #endif
 
-    test_reader_case1();
+    //test_reader_case1();
     test_reader_case2();
     test_reader_case3();
     TEST_REPORT();

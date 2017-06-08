@@ -120,6 +120,39 @@ set(TESTREADER_FILES
         src/unittest.h
         src/testreader.c)
 
+set(TESTLEXER_FILES
+        src/config.h
+        src/color.h
+        src/pmalloc.h
+        src/pmalloc.c
+        src/cstring.h
+        src/cstring.c
+        src/cspool.h
+        src/cspool.c
+        src/array.h
+        src/array.c
+        src/hash.h
+        src/siphash.c
+        src/dict.h
+        src/dict.c
+        src/set.h
+        src/set.c
+        src/encoding.h
+        src/encoding.c
+        src/token.h
+        src/token.c
+        src/option.h
+        src/option.c
+        src/diagnostor.h
+        src/diagnostor.c
+        src/reader.h
+        src/reader.c
+        src/lexer.h
+        src/lexer.c
+        src/utils.h
+        src/unittest.h
+        src/testlexer.c)
+
 
 add_executable(testarray ${TESTARRAY_FILES})
 add_executable(testcstring ${TESTCSTRING_FILES})
@@ -128,3 +161,4 @@ add_executable(testset ${TESTSET_FILES})
 add_executable(testmap ${TESTMAP_FILES})
 add_executable(testdiagnostor ${TESTDIAGNOSTOR_FILES})
 add_executable(testreader ${TESTREADER_FILES})
+add_executable(testlexer ${TESTLEXER_FILES})
