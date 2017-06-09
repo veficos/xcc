@@ -48,14 +48,14 @@ static inline void __lexer_mark_loc__(lexer_t lexer);
 static inline void __lexer_remark_loc__(lexer_t lexer);
 
 
-lexer_t* lexer_create(reader_t *reader)
+lexer_t* lexer_create()
 {
     lexer_t *lexer;
     time_t t;
 
     lexer = pmalloc(sizeof(struct lexer_s));
 
-    lexer->reader = reader;
+    lexer->reader = reader_create();
     lexer->tok = token_create();
     lexer->stashs = array_create_n(sizeof(array_t), 12);
 

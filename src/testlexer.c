@@ -18,9 +18,7 @@ void test_lexer(void)
     const char *p;
     token_t *tok;
 
-    reader = reader_create();
-
-    lexer = lexer_create(reader);
+    lexer = lexer_create();
     lexer_push(lexer, STREAM_TYPE_FILE, "3.c");
     lexer_push(lexer, STREAM_TYPE_STRING, "1.c");
 
