@@ -10,36 +10,14 @@
 #include "dict.h"
 
 
-static
-void test_lexer(void)
+static void test_lexer(void)
 {
-    reader_t *reader;
     lexer_t *lexer;
-    const char *p;
-    token_t *tok;
 
     lexer = lexer_create();
-    lexer_push(lexer, STREAM_TYPE_FILE, "3.c");
-    lexer_push(lexer, STREAM_TYPE_STRING, "1.c");
 
-    while (tok = lexer_get(lexer)) {
-        if (tok->type == TOKEN_END) {
-            token_destroy(tok);
-            break;
-        }
-
-        p = tok2id(tok);
-
-        printf("token: %s\n"
-               "line: %d\n"
-               "column: %d\n",
-               p ? p : tok->cs, tok->location.line, tok->location.column);
-        
-        token_destroy(tok);
-    }
 
     lexer_destroy(lexer);
-    reader_destroy(reader);
 }
 
 

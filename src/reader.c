@@ -56,7 +56,7 @@ struct stream_s {
     size_t line;
     size_t column;
 
-    time_t mt;
+    time_t modify_time;
 
     int lastch;
 };
@@ -133,7 +133,7 @@ bool reader_push(reader_t *reader, stream_type_t type, const unsigned char *s)
 time_t reader_mt(reader_t *reader)
 {
     assert(reader->last != NULL);
-    return reader->last->mt;
+    return reader->last->modify_time;
 }
 
 
@@ -285,7 +285,7 @@ bool __stream_init__(cspool_t *cspool, stream_t *stream,
         }
        
         stream->fn = cspool_push_cs(cspool, cstring_new(s));
-        stream->mt = st.st_mtime;
+        stream->modify_time = st.st_mtime;
         text = cspool_push_cs(cspool, cstring_new_n(buf, st.st_size));
 
         pfree(buf);
@@ -297,7 +297,7 @@ bool __stream_init__(cspool_t *cspool, stream_t *stream,
     }
     case STREAM_TYPE_STRING: {
         stream->fn = cspool_push(cspool, "<string>");
-        stream->mt = 0;
+        stream->modify_time = 0;
         text = cspool_push(cspool, s);
         break;
     }
@@ -311,7 +311,7 @@ bool __stream_init__(cspool_t *cspool, stream_t *stream,
     stream->pe = &text[cstring_length(text)];
     stream->line = 1;
     stream->column = 1;
-    stream->lastch = EOF;
+    stream->lastch = '\0';
     return true;
 }
 

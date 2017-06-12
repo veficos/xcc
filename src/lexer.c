@@ -48,7 +48,7 @@ static inline void __lexer_mark_loc__(lexer_t lexer);
 static inline void __lexer_remark_loc__(lexer_t lexer);
 
 
-lexer_t* lexer_create()
+lexer_t* lexer_create(void)
 {
     lexer_t *lexer;
     time_t t;
@@ -75,10 +75,10 @@ void lexer_destroy(lexer_t *lexer)
     assert(lexer != NULL);
 
     array_foreach(lexer->stashs, snapshot, i) {
-        array_foreach(snapshot[i], tokens, j) {
-            token_destroy(tokens[j]);
+        array_foreach(&snapshot[i], tokens, j) {
+            token_destroy(&tokens[j]);
         }
-        array_destroy(snapshot[i]);
+        array_destroy(&snapshot[i]);
     }
 
     array_destroy(lexer->stashs);

@@ -23,7 +23,7 @@ typedef struct lexer_s {
 } lexer_t;
 
 
-lexer_t* lexer_create();
+lexer_t* lexer_create(void);
 void lexer_destroy(lexer_t *lexer);
 bool lexer_push(lexer_t *lexer, stream_type_t type, const unsigned char* s);
 array_t* lexer_tokenize(lexer_t *lexer);
