@@ -8,6 +8,7 @@
 
 
 typedef struct array_s array_t;
+typedef struct token_s token_t;
 typedef struct linenote_caution_s linenote_caution_t;
 
 

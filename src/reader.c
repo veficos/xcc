@@ -24,15 +24,14 @@
 #include "pmalloc.h"
 #include "cstring.h"
 #include "cspool.h"
-#include "utils.h"
-#include "token.h"
-#include "diagnostor.h"
-#include "option.h"
 #include "reader.h"
+#include "utils.h"
+#include "option.h"
+#include "diagnostor.h"
 
 
-#ifndef STREAM_STASHED_SIZE
-#define STREAM_STASHED_SIZE     (12)
+#ifndef STREAM_STASHED_DEPTH
+#define STREAM_STASHED_DEPTH     (12)
 #endif
 
 
@@ -57,12 +56,14 @@ struct stream_s {
     size_t column;
 
     time_t modify_time;
+    time_t change_time;
+    time_t access_time;
 
     int lastch;
 };
 
 
-#define STREAM_LINE_ADVANCE(stream)         \
+#define STREAM_STEP_BY_LINE(stream)         \
     do {                                    \
         (stream)->line++;                   \
         (stream)->column = 1;               \
@@ -73,8 +74,8 @@ struct stream_s {
 static bool __stream_init__(cspool_t *cspool, stream_t *stream,
                             stream_type_t type, const unsigned char *s);
 static void __stream_uninit__(stream_t *stream);
-static void __stream_stash__(stream_t *stream, int ch);
-static int __stream_unstash__(stream_t *stream);
+static void __stream_push__(stream_t *stream, int ch);
+static int __stream_pop__(stream_t *stream);
 static int __stream_next__(stream_t *stream);
 static int __stream_peek__(stream_t *stream);
 
@@ -85,7 +86,6 @@ reader_t* reader_create(void)
     reader->cspool = cspool_create();
     reader->streams = array_create_n(sizeof(stream_t), READER_STREAM_DEPTH);
     reader->last = NULL;
-    reader->lastch = ~EOF;
     return reader;
 }
 
@@ -94,8 +94,6 @@ void reader_destroy(reader_t *reader)
 {
     stream_t *streams;
     size_t i;
-
-    assert(reader != NULL);
 
     array_foreach(reader->streams, streams, i) {
         __stream_uninit__(&streams[i]);
@@ -115,6 +113,33 @@ size_t reader_depth(reader_t *reader)
 }
 
 
+bool reader_is_empty(reader_t *reader)
+{
+    return array_length(reader->streams) == 0;
+}
+
+
+time_t reader_modify_time(reader_t *reader)
+{
+    assert(reader->last != NULL);
+    return reader->last->modify_time;
+}
+
+
+time_t reader_change_time(reader_t *reader)
+{
+    assert(reader->last != NULL);
+    return reader->last->change_time;
+}
+
+
+time_t reader_access_time(reader_t *reader)
+{
+    assert(reader->last != NULL);
+    return reader->last->access_time;
+}
+
+
 bool reader_push(reader_t *reader, stream_type_t type, const unsigned char *s)
 {
     stream_t *stream;
@@ -130,16 +155,9 @@ bool reader_push(reader_t *reader, stream_type_t type, const unsigned char *s)
 }
 
 
-time_t reader_mt(reader_t *reader)
-{
-    assert(reader->last != NULL);
-    return reader->last->modify_time;
-}
-
-
 void reader_pop(reader_t *reader)
 {
-    assert(!array_is_empty(reader->streams));
+    assert(array_is_empty(reader->streams) == false);
 
     __stream_uninit__(reader->last);
 
@@ -155,18 +173,10 @@ void reader_pop(reader_t *reader)
 
 int reader_get(reader_t *reader)
 {
-    int ch = EOF;
-
-    if (reader->lastch == EOF) {
-        reader_pop(reader);
-    }
-
     if (reader->last != NULL) {
-        ch = __stream_next__(reader->last);
+        return __stream_next__(reader->last);
     }
-
-    reader->lastch = ch;
-    return ch;
+    return EOF;
 }
 
 
@@ -181,8 +191,8 @@ int reader_peek(reader_t *reader)
 
 void reader_unget(reader_t *reader, int ch)
 {
-    assert(ch != EOF);
-    __stream_stash__(reader->last, ch);
+    assert(ch != EOF && ch != '\0');
+    __stream_push__(reader->last, ch);
 }
 
 
@@ -230,24 +240,11 @@ cstring_t reader_name(reader_t *reader)
 }
 
 
-bool reader_is_empty(reader_t *reader)
-{
-    return (reader_peek(reader) == EOF) &&
-           (reader_depth(reader) == 0);
-}
-
-
-bool reader_is_eos(reader_t *reader)
-{
-    return (reader_peek(reader) == EOF);
-}
-
-
 cstring_t linenote2cs(linenote_t linenote)
 {
     const unsigned char *p = (const unsigned char *)linenote;
 
-    for (;*p;) {
+    while (*p) {
         if (*p == '\r' || *p == '\n') {
             break;
         }
@@ -286,6 +283,8 @@ bool __stream_init__(cspool_t *cspool, stream_t *stream,
        
         stream->fn = cspool_push_cs(cspool, cstring_new(s));
         stream->modify_time = st.st_mtime;
+        stream->access_time = st.st_atime;
+        stream->change_time = st.st_ctime;
         text = cspool_push_cs(cspool, cstring_new_n(buf, st.st_size));
 
         pfree(buf);
@@ -298,6 +297,8 @@ bool __stream_init__(cspool_t *cspool, stream_t *stream,
     case STREAM_TYPE_STRING: {
         stream->fn = cspool_push(cspool, "<string>");
         stream->modify_time = 0;
+        stream->access_time = 0;
+        stream->change_time = 0;
         text = cspool_push(cspool, s);
         break;
     }
@@ -326,18 +327,17 @@ void __stream_uninit__(stream_t *stream)
 
 
 static
-void __stream_stash__(stream_t *stream, int ch)
+void __stream_push__(stream_t *stream, int ch)
 {
-    assert(ch != EOF);
     if (stream->stashed == NULL) {
-        stream->stashed = cstring_new_n(NULL, STREAM_STASHED_SIZE);
+        stream->stashed = cstring_new_n(NULL, STREAM_STASHED_DEPTH);
     }
     stream->stashed = cstring_push_ch(stream->stashed, ch);
 }
 
 
 static
-int __stream_unstash__(stream_t *stream)
+int __stream_pop__(stream_t *stream)
 {
     return stream->stashed == NULL || cstring_length(stream->stashed) <= 0 ? \
         EOF : cstring_pop_ch(stream->stashed);
@@ -349,16 +349,18 @@ int __stream_next__(stream_t *stream)
 {
     int ch;
 
-    if ((ch = __stream_unstash__(stream)) != EOF) {
+    if ((ch = __stream_pop__(stream)) != EOF) {
         goto done;
     }
 
 nextch:
-    if (stream->pc >= stream->pe || (ch = *stream->pc) == '\0') {
+    if (stream->pc >= stream->pe) {
         ch = stream->lastch == '\n' || 
             stream->lastch == EOF ? EOF : '\n';
         goto done;
     }
+
+    ch = *stream->pc;
 
     stream->pc++;
 
@@ -372,10 +374,10 @@ nextch:
         }
 
         ch = '\n';
-        STREAM_LINE_ADVANCE(stream);
+        STREAM_STEP_BY_LINE(stream);
 
     } else if (ch == '\n') {
-        STREAM_LINE_ADVANCE(stream);
+        STREAM_STEP_BY_LINE(stream);
 
     } else if (ch == '\\') {
         /**
@@ -407,7 +409,7 @@ nextch:
                 }
 
                 stream->pc = pc + 1;
-                STREAM_LINE_ADVANCE(stream);
+                STREAM_STEP_BY_LINE(stream);
                 goto nextch;
             }
             pc++;
@@ -450,11 +452,12 @@ static int __stream_peek__(stream_t *stream)
 
     pc = stream->pc;
 nextch:
-    if (pc >= stream->pe || (ch = *pc) == '\0') {
+    if (pc >= stream->pe) {
         return stream->lastch == '\n' ||
             stream->lastch == EOF ? EOF : '\n';
     }
 
+    ch = *pc;
     pc++;
 
     switch (ch) {

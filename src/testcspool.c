@@ -1,13 +1,13 @@
 
 
 #include "config.h"
-#include "unittest.h"
 #include "cspool.h"
+#include "unittest.h"
 
 
 static void test_cspool(void)
 {
-    cspool_t pool;
+    cspool_t *pool;
     cstring_t cs;
 
     pool = cspool_create();

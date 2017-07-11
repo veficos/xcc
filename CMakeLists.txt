@@ -35,6 +35,21 @@ set(TESTDICT_FILES
         src/unittest.h
         src/testdict.c)
 
+set(TESTCSPOOL_FILES
+        src/config.h
+        src/pmalloc.h
+        src/pmalloc.c
+        src/cstring.h
+        src/cstring.c
+        src/hash.h
+        src/siphash.c
+        src/dict.h
+        src/dict.c
+        src/cspool.h
+        src/cspool.c
+        src/unittest.h
+        src/testcspool.c)
+
 set(TESTSET_FILES
         src/config.h
         src/pmalloc.h
@@ -157,6 +172,7 @@ set(TESTLEXER_FILES
 add_executable(testarray ${TESTARRAY_FILES})
 add_executable(testcstring ${TESTCSTRING_FILES})
 add_executable(testdict ${TESTDICT_FILES})
+add_executable(testcspool ${TESTCSPOOL_FILES})
 add_executable(testset ${TESTSET_FILES})
 add_executable(testmap ${TESTMAP_FILES})
 add_executable(testdiagnostor ${TESTDIAGNOSTOR_FILES})
