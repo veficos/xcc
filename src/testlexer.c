@@ -14,6 +14,18 @@ static void test_lexer(void)
 
     lexer = lexer_create();
 
+    lexer_push(lexer, STREAM_TYPE_STRING, "#include<stdio.h>");
+
+    while (true) {
+        token_t *token = lexer_scan(lexer);
+
+        if (token->type == TOKEN_END) {
+            token_destroy(token);
+            break;
+        }
+
+        printf("%s\n", token_as_text(token));
+    }
 
     lexer_destroy(lexer);
 }

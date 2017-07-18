@@ -5,7 +5,7 @@
 
 
 static inline int __count_leading_ones__(char ch);
-static inline bool __read_rune__(uint32_t *rune, size_t *rune_size, char *s, int n);
+static inline bool __parse_rune__(uint32_t *rune, size_t *rune_size, char *s, int n);
 static inline cstring_t __write8__(cstring_t cs, uint8_t u);
 static inline cstring_t __write16__(cstring_t cs, uint16_t u);
 static inline cstring_t __write32__(cstring_t cs, uint32_t u);
@@ -45,8 +45,6 @@ cstring_t cstring_append_utf8(cstring_t cs, uint32_t rune)
 cstring_t cstring_cast_to_utf16(cstring_t cs)
 {
     cstring_t to;
-    uint32_t rune;
-    size_t rune_size;
     size_t i, length;
 
     length = cstring_length(cs);
@@ -56,7 +54,10 @@ cstring_t cstring_cast_to_utf16(cstring_t cs)
     }
 
     for (i = 0; i < length;) {
-        if (!__read_rune__(&rune, &rune_size, &cs[i], length - i)) {
+        uint32_t rune;
+        size_t rune_size;
+
+        if (!__parse_rune__(&rune, &rune_size, &cs[i], length - i)) {
             cstring_free(to);
             return NULL;
         }
@@ -77,27 +78,28 @@ cstring_t cstring_cast_to_utf16(cstring_t cs)
 
 cstring_t cstring_cast_to_utf32(cstring_t cs)
 {
-    cstring_t ret;
-    uint32_t rune;
-    size_t rune_size;
+    cstring_t to;
     size_t i, length;
 
     length = cstring_length(cs);
-    if ((ret = cstring_new_n(NULL, length * sizeof(uint32_t))) == NULL) {
+    if ((to = cstring_new_n(NULL, length * sizeof(uint32_t))) == NULL) {
         return NULL;
     }
 
     for (i = 0; i < length; ) {
-        if (!__read_rune__(&rune, &rune_size, cs, length - i)) {
+        uint32_t rune;
+        size_t rune_size;
+
+        if (!__parse_rune__(&rune, &rune_size, cs, length - i)) {
             return NULL;
         }
 
-        ret = __write32__(ret, rune);
+        to = __write32__(to, rune);
 
         i += rune_size;
     }
 
-    return ret;
+    return to;
 }
 
 
@@ -117,7 +119,7 @@ int __count_leading_ones__(char ch)
 
 
 static inline
-bool __read_rune__(uint32_t *rune, size_t *rune_size, char *s, int n) {
+bool __parse_rune__(uint32_t *rune, size_t *rune_size, char *s, int n) {
 
     int len;
     int i;

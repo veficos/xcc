@@ -10,6 +10,7 @@
 #include "cstring.h"
 #include "encoding.h"
 
+
 typedef enum token_type_e {
     TOKEN_UNKNOWN = -1,
     TOKEN_EOF,
@@ -161,7 +162,7 @@ typedef enum token_type_e {
 } token_type_t;
 
 typedef const unsigned char* linenote_t;
-typedef struct number_s number_t;
+
 
 #define DEFUALT_LITERALS_LENGTH     12
 #define DEFAULT_FILENAME_LENGTH     32
@@ -175,7 +176,7 @@ typedef struct linenote_caution_s {
 
 
 typedef struct token_location_s {
-    cstring_t fn;
+    cstring_t filename;
     linenote_t linenote;
     size_t line;
     size_t column;
@@ -186,9 +187,8 @@ typedef struct token_location_s {
 typedef struct token_s {
     token_type_t type;
     cstring_t cs;
-    token_location_t location;
-    number_t *number;
 
+    token_location_t location;
 
     /* used by the preprocessor for macro expansion */
     set_t *hideset;
@@ -204,14 +204,14 @@ typedef struct token_s {
 #define token_remark_loc(tok, line, column, linenote) \
     source_location_remark((tok)->loc, line, column, linenote)
 
-
-token_t* token_create(void);
+token_t* token_create(token_type_t type, cstring_t cs, token_location_t *location);
 void token_init(token_t *token);
-void token_destroy(token_t *tok);
-token_t* token_dup(token_t *tok);
-const char* tok2id(token_t *tok);
-const char* token_as_text(token_t *tok);
+void token_destroy(token_t *token);
+token_t* token_copy(token_t *token);
+const char* token_as_name(token_t *token);
+const char* token_as_text(token_t *token);
 
+cstring_t token_restore_text(array_t *tokens);
 
 token_location_t* source_location_create(void);
 void source_location_destroy(token_location_t *loc);
@@ -225,7 +225,7 @@ void source_location_mark(token_location_t *loc,
     loc->line = line;
     loc->column = column;
     loc->linenote = linenote;
-    loc->fn = fn;
+    loc->filename = fn;
 }
 
 

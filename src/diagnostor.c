@@ -152,22 +152,42 @@ void warningf_with_linenote_position(const char *fn, size_t line, size_t column,
     va_start(ap, fmt);
     lc.start = start;
     lc.length = length;
-    diagnostor_notevf_with_linenote_caution(diagnostor, DIAGNOSTOR_LEVEL_WARNING, fn,
-                                            line, column, linenote, &lc, fmt, ap);
+
+    diagnostor_notevf_with_linenote_caution(diagnostor,
+                                            DIAGNOSTOR_LEVEL_WARNING,
+                                            fn,
+                                            line,
+                                            column,
+                                            linenote,
+                                            &lc,
+                                            fmt,
+                                            ap);
     va_end(ap);
 }
 
 
-void errorf_with_linenote_position(const char *fn, size_t line, size_t column, linenote_t linenote,
-                                   size_t start, size_t length, const char *fmt, ...)
+void errorf_with_linenote_position(const char *fn,
+                                   size_t line,
+                                   size_t column,
+                                   linenote_t linenote,
+                                   size_t start,
+                                   size_t length,
+                                   const char *fmt, ...)
 {
     va_list ap;
     linenote_caution_t lc;
     va_start(ap, fmt);
     lc.start = start;
     lc.length = length;
-    diagnostor_notevf_with_linenote_caution(diagnostor, DIAGNOSTOR_LEVEL_ERROR, fn,
-                                            line, column, linenote, &lc, fmt, ap);
+    diagnostor_notevf_with_linenote_caution(diagnostor,
+                                            DIAGNOSTOR_LEVEL_ERROR,
+                                            fn,
+                                            line,
+                                            column,
+                                            linenote,
+                                            &lc,
+                                            fmt,
+                                            ap);
     va_end(ap);
 }
 
@@ -175,11 +195,19 @@ void errorf_with_linenote_position(const char *fn, size_t line, size_t column, l
 void warningf_with_token(token_t *token, const char *fmt, ...)
 {
     va_list ap;
+
     va_start(ap, fmt);
-    diagnostor_notevf_with_linenote_caution(diagnostor, DIAGNOSTOR_LEVEL_WARNING,
-                                            token->location.fn, token->location.line,
-                                            token->location.column, token->location.linenote,
-                                            &token->location.linenote_caution, fmt, ap);
+
+    diagnostor_notevf_with_linenote_caution(diagnostor,
+                                            DIAGNOSTOR_LEVEL_WARNING,
+                                            token->location.filename,
+                                            token->location.line,
+                                            token->location.column,
+                                            token->location.linenote,
+                                            &token->location.linenote_caution,
+                                            fmt,
+                                            ap);
+
     va_end(ap);
 }
 
@@ -187,11 +215,19 @@ void warningf_with_token(token_t *token, const char *fmt, ...)
 void errorf_with_token(token_t *token, const char *fmt, ...)
 {
     va_list ap;
+
     va_start(ap, fmt);
-    diagnostor_notevf_with_linenote_caution(diagnostor, DIAGNOSTOR_LEVEL_ERROR,
-                                            token->location.fn, token->location.line,
-                                            token->location.column, token->location.linenote,
-                                            &token->location.linenote_caution, fmt, ap);
+
+    diagnostor_notevf_with_linenote_caution(diagnostor,
+                                            DIAGNOSTOR_LEVEL_ERROR,
+                                            token->location.filename,
+                                            token->location.line,
+                                            token->location.column,
+                                            token->location.linenote,
+                                            &token->location.linenote_caution,
+                                            fmt,
+                                            ap);
+
     va_end(ap);
 }
 
@@ -536,8 +572,12 @@ static void __write_linenote__(const unsigned char *linenote, size_t outputed, s
 }
 
 
-static void __write_linenote_caution__(diagnostor_level_t level, linenote_t linenote,
-                                       size_t start, size_t length, size_t width)
+static
+void __write_linenote_caution__(diagnostor_level_t level,
+                                linenote_t linenote,
+                                size_t start,
+                                size_t length,
+                                size_t width)
 {
     size_t i, j;
     const char *tilde;

@@ -4,11 +4,13 @@
 #include "token.h"
 
 
-struct token_dictionary_s {
+typedef struct token_dictionary_s {
     token_type_t type;
-    const char *type2str;
-    const char *original;
-} token_dictionary[] = {
+    const char *text;
+    const char *name;
+} token_dictionary_t;
+
+token_dictionary_t __token_dictionary__[] = {
     { TOKEN_L_SQUARE,            "TOKEN_L_SQUARE",            "["        },
     { TOKEN_R_SQUARE,            "TOKEN_R_SQUARE",            "]"        },
     { TOKEN_L_PAREN,             "TOKEN_L_PAREN",             "("        },
@@ -65,15 +67,31 @@ struct token_dictionary_s {
 };
 
 
-token_t* token_create(void)
+token_t* token_create(token_type_t type, cstring_t cs, token_location_t *location)
 {
-    token_t* tok = (token_t*) pmalloc(sizeof(token_t));
-    tok->type = TOKEN_UNKNOWN;
-    tok->cs = cstring_new_n(NULL, 8);
-    tok->hideset = NULL;
-    tok->spaces = 0;
-    tok->is_vararg = false;
-    return tok;
+    token_t *token = (token_t*) pmalloc(sizeof(token_t));
+
+    if (location) {
+        token->location = *location;
+
+    } else {
+        token->location.filename = NULL;
+        token->location.linenote = NULL;
+        token->location.line = 0;
+        token->location.column = 0;
+        token->location.linenote_caution.start = 0;
+        token->location.linenote_caution.length = 0;
+    }
+
+    token->type = type;
+    token->cs = cs;
+
+    token->hideset = NULL;
+    token->begin_of_line = false;
+    token->spaces = 0;
+    token->is_vararg = false;
+
+    return token;
 }
 
 
@@ -83,9 +101,13 @@ void token_destroy(token_t *token)
 
 //    source_location_destroy(token->loc);
 
-    if (token->hideset != NULL) set_destroy(token->hideset);
+    if (token->hideset != NULL) {
+        set_destroy(token->hideset);
+    }
 
-    cstring_free(token->cs);
+    if (token->cs) {
+        cstring_free(token->cs);
+    }
 
     pfree(token);
 }
@@ -111,7 +133,7 @@ void token_init(token_t *token)
 }
 
 
-token_t* token_dup(token_t *tok)
+token_t* token_copy(token_t *tok)
 {
     token_t* ret;
     cstring_t cs = NULL;
@@ -124,18 +146,19 @@ token_t* token_dup(token_t *tok)
     ret->spaces = tok->spaces;
     ret->cs = cstring_dup(tok->cs);
     ret->is_vararg = false;
+
     return ret;
 }
 
 
-const char* tok2id(token_t *tok)
+const char* token_as_name(token_t *token)
 {
     size_t i, length;
-    length = sizeof(token_dictionary) / sizeof(struct token_dictionary_s);
+    length = sizeof(__token_dictionary__) / sizeof(struct token_dictionary_s);
 
     for (i = 0; i < length; i++) {
-        if (token_dictionary[i].type == tok->type) {
-            return token_dictionary[i].type2str;
+        if (__token_dictionary__[i].type == token->type) {
+            return __token_dictionary__[i].text;
         }
     }
 
@@ -143,25 +166,39 @@ const char* tok2id(token_t *tok)
 }
 
 
-const char* token_as_text(token_t *tok)
+const char* token_as_text(token_t *token)
 {
     size_t i, length;
-    length = sizeof(token_dictionary) / sizeof(struct token_dictionary_s);
+    length = sizeof(__token_dictionary__) / sizeof(struct token_dictionary_s);
 
     for (i = 0; i < length; i++) {
-        if (token_dictionary[i].type == tok->type) {
-            return token_dictionary[i].original;
+        if (__token_dictionary__[i].type == token->type) {
+            return __token_dictionary__[i].name;
         }
     }
-    return tok->cs;
+
+    return token->cs;
 }
 
+
+cstring_t token_restore_text(array_t *tokens)
+{
+    token_t **token;
+    cstring_t cs;
+    int i, j;
+
+    cs = cstring_new_n(NULL, array_length(tokens) * 8);
+
+    array_foreach(tokens, token, i) {
+
+    }
+}
 
 token_location_t* source_location_create(void)
 {
     token_location_t *loc = pmalloc(sizeof(token_location_t));
     loc->linenote = NULL;
-    loc->fn = NULL;
+    loc->filename = NULL;
     loc->line = 0;
     loc->column = 0;
     return loc;
@@ -179,7 +216,7 @@ token_location_t* source_location_dup(token_location_t *loc)
 {
     token_location_t *ret = pmalloc(sizeof(token_location_t));
     ret->linenote = loc->linenote;
-    ret->fn = loc->fn;
+    ret->filename = loc->filename;
     ret->line = loc->line;
     ret->column = loc->column;
     return ret;

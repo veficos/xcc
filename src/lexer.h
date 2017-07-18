@@ -17,13 +17,11 @@ typedef enum stream_type_e stream_type_t;
 
 typedef struct lexer_s {
     reader_t *reader;
-    token_t *tok;
-    array_t *stashs;
-    struct tm tm;
 } lexer_t;
 
 
 lexer_t* lexer_create(void);
+lexer_t* lexer_create_csp(cspool_t *csp);
 void lexer_destroy(lexer_t *lexer);
 bool lexer_push(lexer_t *lexer, stream_type_t type, const unsigned char* s);
 array_t* lexer_tokenize(lexer_t *lexer);

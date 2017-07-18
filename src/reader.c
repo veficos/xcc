@@ -84,8 +84,18 @@ reader_t* reader_create(void)
 {
     reader_t *reader = (reader_t*) pmalloc(sizeof(reader_t));
     reader->cspool = cspool_create();
+    reader->clean_csp = true;
     reader->streams = array_create_n(sizeof(stream_t), READER_STREAM_DEPTH);
     reader->last = NULL;
+    return reader;
+}
+
+
+reader_t* reader_create_csp(cspool_t *csp)
+{
+    reader_t *reader = reader_create();
+    reader->cspool = csp;
+    reader->clean_csp = false;
     return reader;
 }
 
@@ -95,13 +105,15 @@ void reader_destroy(reader_t *reader)
     stream_t *streams;
     size_t i;
 
+    if (reader->clean_csp) {
+        cspool_destroy(reader->cspool);
+    }
+
     array_foreach(reader->streams, streams, i) {
         __stream_uninit__(&streams[i]);
     }
 
     array_destroy(reader->streams);
-
-    cspool_destroy(reader->cspool);
 
     pfree(reader);
 }
@@ -233,7 +245,7 @@ size_t reader_column(reader_t *reader)
 }
 
 
-cstring_t reader_name(reader_t *reader)
+cstring_t reader_filename(reader_t *reader)
 {
     assert(reader->last != NULL);
     return reader->last->fn;

@@ -26,10 +26,12 @@ typedef struct reader_s {
     array_t *streams;
     stream_t *last;
     cspool_t *cspool;
+    bool clean_csp;
 } reader_t;
 
 
 reader_t* reader_create(void);
+reader_t* reader_create_csp(cspool_t *csp);
 void reader_destroy(reader_t *reader);
 size_t reader_depth(reader_t *reader);
 bool reader_is_empty(reader_t *reader);
@@ -42,7 +44,7 @@ bool reader_try(reader_t *reader, int ch);
 bool reader_test(reader_t *reader, int ch);
 size_t reader_line(reader_t *reader);
 size_t reader_column(reader_t *reader);
-cstring_t reader_name(reader_t *reader);
+cstring_t reader_filename(reader_t *reader);
 time_t reader_modify_time(reader_t *reader);
 time_t reader_change_time(reader_t *reader);
 time_t reader_access_time(reader_t *reader);
