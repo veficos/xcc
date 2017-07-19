@@ -164,11 +164,6 @@ typedef enum token_type_e {
 typedef const unsigned char* linenote_t;
 
 
-#define DEFUALT_LITERALS_LENGTH     12
-#define DEFAULT_FILENAME_LENGTH     32
-#define DEFAULT_CURRENTLINE_LENGTH  64
-
-
 typedef struct linenote_caution_s {
     size_t start;
     size_t length;
@@ -198,45 +193,14 @@ typedef struct token_s {
 } token_t;
 
 
-#define token_mark_loc(tok, line, column, linenote, fn) \
-    source_location_mark((tok)->loc, line, column, linenote, fn)
-
-#define token_remark_loc(tok, line, column, linenote) \
-    source_location_remark((tok)->loc, line, column, linenote)
-
 token_t* token_create(token_type_t type, cstring_t cs, token_location_t *location);
 void token_init(token_t *token);
 void token_destroy(token_t *token);
 token_t* token_copy(token_t *token);
 const char* token_as_name(token_t *token);
 const char* token_as_text(token_t *token);
-
+void token_add_linenote_caution(token_t *token, size_t start, size_t length);
 cstring_t token_restore_text(array_t *tokens);
-
-token_location_t* source_location_create(void);
-void source_location_destroy(token_location_t *loc);
-token_location_t* source_location_dup(token_location_t *loc);
-
-
-static inline
-void source_location_mark(token_location_t *loc,
-    size_t line, size_t column, linenote_t linenote, cstring_t fn)
-{
-    loc->line = line;
-    loc->column = column;
-    loc->linenote = linenote;
-    loc->filename = fn;
-}
-
-
-static inline
-void source_location_remark(token_location_t *loc,
-    size_t line, size_t column, linenote_t linenote)
-{
-    loc->line = line;
-    loc->column = column;
-    loc->linenote = linenote;
-}
 
 
 #define ent2tokt(ent, t)                                    \

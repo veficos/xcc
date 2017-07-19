@@ -6,15 +6,46 @@
 #include "reader.h"
 #include "lexer.h"
 #include "dict.h"
+#include "unittest.h"
 
+
+static void test_restore_text(void)
+{
+    lexer_t *lexer;
+    array_t *tokens;
+    cstring_t cs;
+
+    lexer = lexer_create();
+    tokens = array_create(sizeof(token_t*));
+
+    lexer_push(lexer, STREAM_TYPE_STRING, "#   include < stdio.h > ");
+
+    while (true) {
+        token_t *token = lexer_scan(lexer);
+        if (token->type == TOKEN_END) {
+            token_destroy(token);
+            break;
+        }
+
+        array_cast_append(token_t*, tokens, token);
+    }
+
+    cs = token_restore_text(tokens);
+
+    TEST_COND("token_restore_text()", cstring_compare(cs, "#   include < stdio.h > \n")==0);
+
+    lexer_destroy(lexer);
+}
 
 static void test_lexer(void)
 {
     lexer_t *lexer;
+    array_t *tokens;
+
 
     lexer = lexer_create();
 
-    lexer_push(lexer, STREAM_TYPE_STRING, "#include<stdio.h>");
+    lexer_push(lexer, STREAM_TYPE_STRING, "#include<stdio.h>/*");
 
     while (true) {
         token_t *token = lexer_scan(lexer);
@@ -24,7 +55,11 @@ static void test_lexer(void)
             break;
         }
 
-        printf("%s\n", token_as_text(token));
+        if (token->type == TOKEN_COMMENT) {
+            printf("%s\n", token->cs);
+        } else {
+            printf("%s\n", token_as_name(token));
+        }
     }
 
     lexer_destroy(lexer);
@@ -37,7 +72,9 @@ int main(void)
     _CrtSetDbgFlag(_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG) | _CRTDBG_LEAK_CHECK_DF);
 #endif
 
-    test_lexer();
+    test_restore_text();
+    //test_lexer();
 
+    TEST_REPORT();
     return 0;
 }

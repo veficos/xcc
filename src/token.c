@@ -60,10 +60,10 @@ token_dictionary_t __token_dictionary__[] = {
     { TOKEN_HASH,                "TOKEN_HASH",                "#"        },
     { TOKEN_HASHHASH,            "TOKEN_HASHHASH",            "##"       },
     { TOKEN_BACKSLASH,           "TOKEN_BACKSLASH",           "\\"       },
-    { TOKEN_NEWLINE,             "TOKEN_NEWLINE",             "\\n"      },
-    { TOKEN_SPACE,               "TOKEN_SPACE",               "spaces"   },
-    { TOKEN_COMMENT,             "TOKEN_COMMENT",             "comment"  },
-    { TOKEN_EOF,                 "TOKEN_EOF",                 "eof"      },
+    { TOKEN_NEWLINE,             "TOKEN_NEWLINE",             "\n"       },
+    { TOKEN_SPACE,               "TOKEN_SPACE",               ""         },
+    { TOKEN_COMMENT,             "TOKEN_COMMENT",             ""         },
+    { TOKEN_EOF,                 "TOKEN_EOF",                 ""         },
 };
 
 
@@ -162,7 +162,7 @@ const char* token_as_name(token_t *token)
         }
     }
 
-    return NULL;
+    return token->cs;
 }
 
 
@@ -181,43 +181,32 @@ const char* token_as_text(token_t *token)
 }
 
 
+void token_add_linenote_caution(token_t *token, size_t start, size_t length)
+{
+    token->location.linenote_caution.start = start;
+    token->location.linenote_caution.length = length;
+}
+
+
 cstring_t token_restore_text(array_t *tokens)
 {
-    token_t **token;
+    token_t **toks;
     cstring_t cs;
     int i, j;
 
     cs = cstring_new_n(NULL, array_length(tokens) * 8);
 
-    array_foreach(tokens, token, i) {
+    array_foreach(tokens, toks, i) {
+        int spaces = toks[i]->spaces;
+        const char *s;
 
+        while (spaces--) {
+            cs = cstring_push_ch(cs, ' ');
+        }
+
+        s = token_as_text(toks[i]);
+        cs = cstring_concat_n(cs, s, strlen(s));
     }
-}
 
-token_location_t* source_location_create(void)
-{
-    token_location_t *loc = pmalloc(sizeof(token_location_t));
-    loc->linenote = NULL;
-    loc->filename = NULL;
-    loc->line = 0;
-    loc->column = 0;
-    return loc;
-}
-
-
-void source_location_destroy(token_location_t *loc)
-{
-    assert(loc != NULL);
-    pfree(loc);
-}
-
-
-token_location_t* source_location_dup(token_location_t *loc)
-{
-    token_location_t *ret = pmalloc(sizeof(token_location_t));
-    ret->linenote = loc->linenote;
-    ret->filename = loc->filename;
-    ret->line = loc->line;
-    ret->column = loc->column;
-    return ret;
+    return cs;
 }

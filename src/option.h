@@ -35,6 +35,7 @@ typedef struct option_s {
     bool w_unterminated_comment: 1;
     bool w_backslash_newline_space: 1;
     bool warn_no_newline_eof: 1;
+    bool reserve_comment: 1;
 } option_t;
 
 

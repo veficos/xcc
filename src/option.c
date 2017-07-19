@@ -17,6 +17,7 @@ static option_t __option__ = {
     true,
     true,
     true,
+    true,
 };
 
 
@@ -53,4 +54,5 @@ void option_init(option_t *opt)
     opt->w_unterminated_comment = true;
     opt->w_backslash_newline_space = true;
     opt->warn_no_newline_eof = true;
+    opt->reserve_comment = true;
 }
