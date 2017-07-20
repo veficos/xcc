@@ -10,60 +10,81 @@ typedef struct token_dictionary_s {
     const char *name;
 } token_dictionary_t;
 
+#define TOKEN_DICTIONARY_ITEM(t, s) \
+    {t, #t, s}
+
 token_dictionary_t __token_dictionary__[] = {
-    { TOKEN_L_SQUARE,            "TOKEN_L_SQUARE",            "["        },
-    { TOKEN_R_SQUARE,            "TOKEN_R_SQUARE",            "]"        },
-    { TOKEN_L_PAREN,             "TOKEN_L_PAREN",             "("        },
-    { TOKEN_R_PAREN,             "TOKEN_R_PAREN",             ")"        },
-    { TOKEN_L_BRACE,             "TOKEN_L_BRACE",             "{"        },
-    { TOKEN_R_BRACE,             "TOKEN_R_BRACE",             "}"        },
-    { TOKEN_PERIOD,              "TOKEN_PERIOD",              "."        },
-    { TOKEN_ELLIPSIS,            "TOKEN_ELLIPSIS",            "..."      },
-    { TOKEN_AMP,                 "TOKEN_AMP",                 "&"        },
-    { TOKEN_AMPAMP,              "TOKEN_AMPAMP",              "&&"       },
-    { TOKEN_AMPEQUAL,            "TOKEN_AMPEQUAL",            "&="       },
-    { TOKEN_STAR,                "TOKEN_STAR",                "*"        },
-    { TOKEN_STAREQUAL,           "TOKEN_STAREQUAL",           "*="       },
-    { TOKEN_PLUS,                "TOKEN_PLUS",                "+"        },
-    { TOKEN_PLUSPLUS,            "TOKEN_PLUSPLUS",            "++"       },
-    { TOKEN_PLUSEQUAL,           "TOKEN_PLUSEQUAL",           "+="       },
-    { TOKEN_MINUS,               "TOKEN_MINUS",               "-"        },
-    { TOKEN_MINUSMINUS,          "TOKEN_MINUSMINUS",          "--"       },
-    { TOKEN_MINUSEQUAL,          "TOKEN_MINUSEQUAL",          "-="       },
-    { TOKEN_ARROW,               "TOKEN_ARROW",               "->"       },
-    { TOKEN_TILDE,               "TOKEN_TILDE",               "~"        },
-    { TOKEN_EXCLAIM,             "TOKEN_EXCLAIM",             "!"        },
-    { TOKEN_EXCLAIMEQUAL,        "TOKEN_EXCLAIMEQUAL",        "!="       },
-    { TOKEN_SLASH,               "TOKEN_SLASH",               "/"        },
-    { TOKEN_SLASHEQUAL,          "TOKEN_SLASHEQUAL",          "/="       },
-    { TOKEN_PERCENT,             "TOKEN_PERCENT",             "%"        },
-    { TOKEN_PERCENTEQUAL,        "TOKEN_PERCENTEQUAL",        "%="       },
-    { TOKEN_LESS,                "TOKEN_LESS",                "<"        },
-    { TOKEN_LESSLESS,            "TOKEN_LESSLESS",            "<<"       },
-    { TOKEN_LESSLESSEQUAL,       "TOKEN_LESSLESSEQUAL",       "<<="      },
-    { TOKEN_LESSEQUAL,           "TOKEN_LESSEQUAL",           "<="       },
-    { TOKEN_GREATER,             "TOKEN_GREATER",             ">"        },
-    { TOKEN_GREATERGREATER,      "TOKEN_GREATERGREATER",      ">>"       },
-    { TOKEN_GREATEREQUAL,        "TOKEN_GREATEREQUAL",        ">="       },
-    { TOKEN_GREATERGREATEREQUAL, "TOKEN_GREATERGREATEREQUAL", ">>="      },
-    { TOKEN_CARET,               "TOKEN_CARET",               "^"        },
-    { TOKEN_CARETEQUAL,          "TOKEN_CARETEQUAL",          "^="       },
-    { TOKEN_PIPE,                "TOKEN_PIPE",                "|"        },
-    { TOKEN_PIPEPIPE,            "TOKEN_PIPEPIPE",            "||"       },
-    { TOKEN_PIPEEQUAL,           "TOKEN_PIPEEQUAL",           "|="       },
-    { TOKEN_QUESTION,            "TOKEN_QUESTION",            "?"        },
-    { TOKEN_COLON,               "TOKEN_COLON",               ":"        },
-    { TOKEN_SEMI,                "TOKEN_SEMI",                ";"        },
-    { TOKEN_EQUAL,               "TOKEN_EQUAL",               "="        },
-    { TOKEN_EQUALEQUAL,          "TOKEN_EQUALEQUAL",          "=="       },
-    { TOKEN_COMMA,               "TOKEN_COMMA",               ","        },
-    { TOKEN_HASH,                "TOKEN_HASH",                "#"        },
-    { TOKEN_HASHHASH,            "TOKEN_HASHHASH",            "##"       },
-    { TOKEN_BACKSLASH,           "TOKEN_BACKSLASH",           "\\"       },
-    { TOKEN_NEWLINE,             "TOKEN_NEWLINE",             "\n"       },
-    { TOKEN_SPACE,               "TOKEN_SPACE",               ""         },
-    { TOKEN_COMMENT,             "TOKEN_COMMENT",             ""         },
-    { TOKEN_EOF,                 "TOKEN_EOF",                 ""         },
+    TOKEN_DICTIONARY_ITEM(TOKEN_UNKNOWN,            "<UNKNOWN>"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_EOF,                "<EOF>"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_END,                "<END>"),
+
+    TOKEN_DICTIONARY_ITEM(TOKEN_BACKSLASH,          "\\"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_NEWLINE,            "\n"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_SPACE,              ""),
+    TOKEN_DICTIONARY_ITEM(TOKEN_COMMENT,            ""),
+
+    TOKEN_DICTIONARY_ITEM(TOKEN_L_SQUARE,            "["),
+    TOKEN_DICTIONARY_ITEM(TOKEN_R_SQUARE,            "]"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_L_PAREN,             "("),
+    TOKEN_DICTIONARY_ITEM(TOKEN_R_PAREN,             ")"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_L_BRACE,             "{"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_R_BRACE,             "}"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_PERIOD,              "."),
+    TOKEN_DICTIONARY_ITEM(TOKEN_ELLIPSIS,            "..."),
+    TOKEN_DICTIONARY_ITEM(TOKEN_AMP,                 "&"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_AMPAMP,              "&&"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_AMPEQUAL,            "&="),
+    TOKEN_DICTIONARY_ITEM(TOKEN_STAR,                "*"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_STAREQUAL,           "*="),
+    TOKEN_DICTIONARY_ITEM(TOKEN_PLUS,                "+"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_PLUSPLUS,            "++"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_PLUSEQUAL,           "+="),
+    TOKEN_DICTIONARY_ITEM(TOKEN_MINUS,               "-"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_MINUSMINUS,          "--"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_MINUSEQUAL,          "-="),
+    TOKEN_DICTIONARY_ITEM(TOKEN_ARROW,               "->"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_TILDE,               "~"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_EXCLAIM,             "!"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_EXCLAIMEQUAL,        "!="),
+    TOKEN_DICTIONARY_ITEM(TOKEN_SLASH,               "/"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_SLASHEQUAL,          "/="),
+    TOKEN_DICTIONARY_ITEM(TOKEN_PERCENT,             "%"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_PERCENTEQUAL,        "%="),
+    TOKEN_DICTIONARY_ITEM(TOKEN_LESS,                "<"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_LESSLESS,            "<<"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_LESSLESSEQUAL,       "<<="),
+    TOKEN_DICTIONARY_ITEM(TOKEN_LESSEQUAL,           "<="),
+    TOKEN_DICTIONARY_ITEM(TOKEN_GREATER,             ">"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_GREATERGREATER,      ">>"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_GREATEREQUAL,        ">="),
+    TOKEN_DICTIONARY_ITEM(TOKEN_GREATERGREATEREQUAL, ">>="),
+    TOKEN_DICTIONARY_ITEM(TOKEN_CARET,               "^"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_CARETEQUAL,          "^="),
+    TOKEN_DICTIONARY_ITEM(TOKEN_PIPE,                "|"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_PIPEPIPE,            "||"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_PIPEEQUAL,           "|="),
+    TOKEN_DICTIONARY_ITEM(TOKEN_QUESTION,            "?"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_COLON,               ":"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_SEMI,                ";"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_EQUAL,               "="),
+    TOKEN_DICTIONARY_ITEM(TOKEN_EQUALEQUAL,          "=="),
+    TOKEN_DICTIONARY_ITEM(TOKEN_COMMA,               ","),
+    TOKEN_DICTIONARY_ITEM(TOKEN_HASH,                "#"),
+    TOKEN_DICTIONARY_ITEM(TOKEN_HASHHASH,            "##"),
+
+    TOKEN_DICTIONARY_ITEM(TOKEN_NUMBER,              ""),
+    TOKEN_DICTIONARY_ITEM(TOKEN_IDENTIFIER,          ""),
+
+    TOKEN_DICTIONARY_ITEM(TOKEN_CONSTANT_STRING,     ""),
+    TOKEN_DICTIONARY_ITEM(TOKEN_CONSTANT_WSTRING,    ""),
+    TOKEN_DICTIONARY_ITEM(TOKEN_CONSTANT_STRING16,   ""),
+    TOKEN_DICTIONARY_ITEM(TOKEN_CONSTANT_STRING32,   ""),
+    TOKEN_DICTIONARY_ITEM(TOKEN_CONSTANT_UTF8STRING, ""),
+    TOKEN_DICTIONARY_ITEM(TOKEN_CONSTANT_CHAR,       ""),
+    TOKEN_DICTIONARY_ITEM(TOKEN_CONSTANT_WCHAR,      ""),
+    TOKEN_DICTIONARY_ITEM(TOKEN_CONSTANT_CHAR16,     ""),
+    TOKEN_DICTIONARY_ITEM(TOKEN_CONSTANT_CHAR32,     ""),
+    TOKEN_DICTIONARY_ITEM(TOKEN_CONSTANT_UTF8CHAR,   ""),
 };
 
 
@@ -171,13 +192,17 @@ const char* token_as_text(token_t *token)
     size_t i, length;
     length = sizeof(__token_dictionary__) / sizeof(struct token_dictionary_s);
 
+    if (token->cs && cstring_length(token->cs)) {
+        return token->cs;
+    }
+
     for (i = 0; i < length; i++) {
         if (__token_dictionary__[i].type == token->type) {
             return __token_dictionary__[i].name;
         }
     }
 
-    return token->cs;
+    return NULL;
 }
 
 
@@ -188,7 +213,7 @@ void token_add_linenote_caution(token_t *token, size_t start, size_t length)
 }
 
 
-cstring_t token_restore_text(array_t *tokens)
+cstring_t tokens_to_text(array_t *tokens)
 {
     token_t **toks;
     cstring_t cs;
@@ -197,9 +222,17 @@ cstring_t token_restore_text(array_t *tokens)
     cs = cstring_new_n(NULL, array_length(tokens) * 8);
 
     array_foreach(tokens, toks, i) {
-        int spaces = toks[i]->spaces;
+        int spaces;
         const char *s;
 
+        if (toks[i]->type == TOKEN_UNKNOWN ||
+                toks[i]->type == TOKEN_EOF ||
+                toks[i]->type == TOKEN_END) {
+            cstring_free(cs);
+            return NULL;
+        }
+
+        spaces  = toks[i]->spaces;
         while (spaces--) {
             cs = cstring_push_ch(cs, ' ');
         }
@@ -209,4 +242,17 @@ cstring_t token_restore_text(array_t *tokens)
     }
 
     return cs;
+}
+
+
+void tokens_free(array_t *tokens)
+{
+    token_t **toks;
+    int i;
+
+    array_foreach(tokens, toks, i) {
+        token_destroy(toks[i]);
+    }
+
+    array_destroy(tokens);
 }

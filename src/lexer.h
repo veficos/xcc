@@ -26,6 +26,7 @@ void lexer_destroy(lexer_t *lexer);
 bool lexer_push(lexer_t *lexer, stream_type_t type, const unsigned char* s);
 array_t* lexer_tokenize(lexer_t *lexer);
 token_t* lexer_scan(lexer_t *lexer);
+token_t* lexer_scan_header_name(lexer_t *lexer);
 token_t* lexer_get(lexer_t *lexer);
 token_t* lexer_peek(lexer_t *lexer);
 void lexer_eat(lexer_t *lexer);

@@ -12,10 +12,15 @@
 
 
 typedef enum token_type_e {
-    TOKEN_UNKNOWN = -1,
-    TOKEN_EOF,
-    TOKEN_END,
-    
+    TOKEN_UNKNOWN = -1,                     /* invalid */
+    TOKEN_EOF,                              /* end of a stream */
+    TOKEN_END,                              /* end of lexer */
+
+    TOKEN_BACKSLASH,                        /* \ */
+    TOKEN_NEWLINE,                          /* \n */
+    TOKEN_SPACE,                            /* spaces */
+    TOKEN_COMMENT,                          /* comment */
+
     TOKEN_L_SQUARE,                         /* [ */
     TOKEN_R_SQUARE,                         /* ] */
     TOKEN_L_PAREN,                          /* ( */
@@ -64,10 +69,10 @@ typedef enum token_type_e {
     TOKEN_COMMA,                            /* , */
     TOKEN_HASH,                             /* # */
     TOKEN_HASHHASH,                         /* ## */
-    TOKEN_BACKSLASH,                        /* \ */
-    TOKEN_NEWLINE,                          /* \n */
-    TOKEN_SPACE,                            /* spaces */
-    TOKEN_COMMENT,                          /* comment */
+
+    TOKEN_IDENTIFIER,                       /* identifier */
+
+    TOKEN_NUMBER,                           /* number */
 
     TOKEN_CONSTANT_STRING,                  /* "" */
     TOKEN_CONSTANT_WSTRING,                 /* L"" */
@@ -80,9 +85,8 @@ typedef enum token_type_e {
     TOKEN_CONSTANT_CHAR16,                  /* u'' */
     TOKEN_CONSTANT_CHAR32,                  /* U'' */
     TOKEN_CONSTANT_UTF8CHAR,                /* u8'' */
-    
-    TOKEN_NUMBER,                           /* number */
-    TOKEN_IDENTIFIER,                       /* identifier */
+
+    TOKEN_PP_HEADER_NAME,                   /* pp header name */
 
     TOKEN_CONST,
     TOKEN_RESTRICT,
@@ -200,7 +204,9 @@ token_t* token_copy(token_t *token);
 const char* token_as_name(token_t *token);
 const char* token_as_text(token_t *token);
 void token_add_linenote_caution(token_t *token, size_t start, size_t length);
-cstring_t token_restore_text(array_t *tokens);
+
+cstring_t tokens_to_text(array_t *tokens);
+void tokens_free(array_t *tokens);
 
 
 #define ent2tokt(ent, t)                                    \

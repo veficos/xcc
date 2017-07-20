@@ -18,11 +18,11 @@ static void test_restore_text(void)
     lexer = lexer_create();
     tokens = array_create(sizeof(token_t*));
 
-    lexer_push(lexer, STREAM_TYPE_STRING, "#   include < stdio.h > ");
+    lexer_push(lexer, STREAM_TYPE_STRING, "#   include < stdio.h > u\"H\" ");
 
     while (true) {
         token_t *token = lexer_scan(lexer);
-        if (token->type == TOKEN_END) {
+        if (token->type == TOKEN_EOF) {
             token_destroy(token);
             break;
         }
@@ -30,9 +30,10 @@ static void test_restore_text(void)
         array_cast_append(token_t*, tokens, token);
     }
 
-    cs = token_restore_text(tokens);
+    cs = tokens_to_text(tokens);
 
-    TEST_COND("token_restore_text()", cstring_compare(cs, "#   include < stdio.h > \n")==0);
+    printf("%s", cs);
+    TEST_COND("tokens_to_text()", cstring_compare(cs, "#   include < stdio.h > u\"H\" \n")==0);
 
     lexer_destroy(lexer);
 }
